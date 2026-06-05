@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GST Autopilot — CA Admin Dashboard</title>
+    <!-- Google Fonts: Outfit and Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/dashboard.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- ── Left Sidebar ── -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <i class="fa-solid fa-indian-rupee-sign brand-icon"></i>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item" title="Overview">
+                    <i class="fa-solid fa-chart-pie"></i>
+                </a>
+                <a href="#" class="nav-item" title="Clients">
+                    <i class="fa-solid fa-users"></i>
+                </a>
+                <a href="#" class="nav-item active" title="Invoices">
+                    <i class="fa-solid fa-file-invoice"></i>
+                </a>
+                <a href="#" class="nav-item" id="nav-gstr-btn" title="GSTR Filings">
+                    <i class="fa-solid fa-clipboard-list"></i>
+                </a>
+                <a href="#" class="nav-item" title="Settings">
+                    <i class="fa-solid fa-gear"></i>
+                </a>
+            </nav>
+            
+            <div class="sidebar-user" title="CA Operator Session">
+                <div class="user-avatar">CA</div>
+            </div>
+        </aside>
+
+        <!-- ── Main Workspace ── -->
+        <main class="main-workspace">
+            <!-- ── Top Header ── -->
+            <header class="header">
+                <div class="header-left">
+                    <h1 class="app-title">GST Autopilot</h1>
+                    <div class="header-meta">
+                        <span class="meta-item">FY 2025-26</span>
+                        <span class="meta-separator">•</span>
+                        <span class="meta-item">Q1</span>
+                        <span class="meta-separator">•</span>
+                        <!-- Client Switcher Dropdown -->
+                        <div class="client-switcher-container">
+                            <label for="client-select">GSTIN</label>
+                            <select id="client-select" class="client-select">
+                                <option value="">Loading Clients...</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="header-right">
+                    <!-- Global Search Bar -->
+                    <div class="search-box">
+                        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                        <input type="text" id="global-search" placeholder="Search invoices, GSTINs...">
+                        <span class="search-kbd">Ctrl K</span>
+                    </div>
+
+                    <button class="icon-btn" title="System Notifications">
+                        <i class="fa-regular fa-bell"></i>
+                        <span class="notification-badge"></span>
+                    </button>
+
+                    <button class="primary-btn sync-btn" id="sync-btn">
+                        <i class="fa-solid fa-rotate sync-icon"></i>
+                        <span>Sync GSTN</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- ── KPI Overview Cards ── -->
+            <section class="kpi-grid">
+                <!-- Card 1: Pending Review -->
+                <div class="kpi-card glassmorphic alert-card">
+                    <div class="kpi-card-header">
+                        <div class="kpi-icon-wrapper red-tint">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                        </div>
+                        <span class="trend-badge red-trend" id="kpi-pending-trend">+0 today</span>
+                    </div>
+                    <div class="kpi-card-body">
+                        <h3 class="kpi-label">PENDING REVIEW</h3>
+                        <p class="kpi-value" id="kpi-pending-count">0</p>
+                        <p class="kpi-subtext" id="kpi-pending-subtext">0 critical · 0 advisory</p>
+                    </div>
+                </div>
+
+                <!-- Card 2: Total Taxable Sales -->
+                <div class="kpi-card glassmorphic">
+                    <div class="kpi-card-header">
+                        <div class="kpi-icon-wrapper blue-tint">
+                            <i class="fa-solid fa-chart-line"></i>
+                        </div>
+                        <span class="trend-badge green-trend">18.4% QoQ</span>
+                    </div>
+                    <div class="kpi-card-body">
+                        <h3 class="kpi-label">TOTAL TAXABLE SALES</h3>
+                        <p class="kpi-value" id="kpi-sales-total">₹0.00</p>
+                        <p class="kpi-subtext" id="kpi-sales-subtext">₹0.00 this quarter</p>
+                    </div>
+                </div>
+
+                <!-- Card 3: ITC Claimed -->
+                <div class="kpi-card glassmorphic">
+                    <div class="kpi-card-header">
+                        <div class="kpi-icon-wrapper green-tint">
+                            <i class="fa-solid fa-shield-halved"></i>
+                        </div>
+                        <span class="trend-badge green-trend">94.1% matched</span>
+                    </div>
+                    <div class="kpi-card-body">
+                        <h3 class="kpi-label">ITC CLAIMED</h3>
+                        <p class="kpi-value" id="kpi-itc-total">₹0.00</p>
+                        <p class="kpi-subtext" id="kpi-itc-subtext">₹0.00 reconciled</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ── Analytical Charts Grid ── -->
+            <section class="analysis-grid">
+                <!-- Monthly ITC Trend Sparkline -->
+                <div class="analysis-card glassmorphic trend-card">
+                    <div class="card-header">
+                        <h2 class="card-title">ITC TREND — LAST 12 MONTHS</h2>
+                        <button class="card-action-btn"><i class="fa-solid fa-download"></i> Export</button>
+                    </div>
+                    <div class="trend-totals">
+                        <span class="trend-value">₹38.4L</span>
+                        <span class="trend-growth"><i class="fa-solid fa-arrow-up"></i> 22.3%</span>
+                    </div>
+                    <div class="chart-container">
+                        <!-- Custom Inline Premium SVG Sparkline -->
+                        <svg class="sparkline-svg" viewBox="0 0 600 120" preserveAspectRatio="none">
+                            <defs>
+                                <linearGradient id="chart-glow" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stop-color="#6366F1" stop-opacity="0.3"/>
+                                    <stop offset="100%" stop-color="#6366F1" stop-opacity="0.0"/>
+                                </linearGradient>
+                            </defs>
+                            <path class="sparkline-area" d="M 0 100 Q 100 80 150 90 T 300 60 T 450 70 T 600 40 L 600 120 L 0 120 Z" fill="url(#chart-glow)"/>
+                            <path class="sparkline-path" d="M 0 100 Q 100 80 150 90 T 300 60 T 450 70 T 600 40" fill="none" stroke="#6366F1" stroke-width="3.5" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- Filing Status -->
+                <div class="analysis-card glassmorphic status-card">
+                    <div class="card-header">
+                        <h2 class="card-title" id="filing-status-title">FILING STATUS — MAY 2026</h2>
+                    </div>
+                    <div class="status-list">
+                        <!-- GSTR-1 -->
+                        <div class="status-item">
+                            <div class="status-meta">
+                                <span class="status-name">GSTR-1</span>
+                                <span class="status-label text-green" id="status-gstr1-val">Filed</span>
+                            </div>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar bg-green" style="width: 100%;"></div>
+                            </div>
+                        </div>
+
+                        <!-- GSTR-3B -->
+                        <div class="status-item">
+                            <div class="status-meta">
+                                <span class="status-name">GSTR-3B</span>
+                                <span class="status-label text-orange" id="status-gstr3b-val">Due Jun 20</span>
+                            </div>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar bg-orange" style="width: 65%;"></div>
+                            </div>
+                        </div>
+
+                        <!-- GSTR-2B -->
+                        <div class="status-item">
+                            <div class="status-meta">
+                                <span class="status-name">GSTR-2B</span>
+                                <span class="status-label text-purple">Auto-matched</span>
+                            </div>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar bg-purple" style="width: 90%;"></div>
+                            </div>
+                        </div>
+
+                        <!-- GSTR-9 -->
+                        <div class="status-item">
+                            <div class="status-meta">
+                                <span class="status-name">GSTR-9</span>
+                                <span class="status-label text-red">Pending</span>
+                            </div>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar bg-red" style="width: 20%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ── Invoice Register Section ── -->
+            <section class="register-section glassmorphic">
+                <div class="register-header">
+                    <div class="register-header-left">
+                        <h2 class="section-title">Invoice Register</h2>
+                        <span class="record-count" id="record-count-txt">0 records · May 2026</span>
+                    </div>
+
+                    <div class="register-filters">
+                        <div class="tabs">
+                            <button class="tab-btn active" data-filter="all">All</button>
+                            <button class="tab-btn" data-filter="approved">Approved</button>
+                            <button class="tab-btn" data-filter="flagged">Audit Flagged</button>
+                            <button class="tab-btn" data-filter="pending_review">Pending Review</button>
+                        </div>
+
+                        <button class="filter-toggle-btn">
+                            <i class="fa-solid fa-sliders"></i>
+                            <span>Filter</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Table -->
+                <div class="table-container">
+                    <table class="invoice-table">
+                        <thead>
+                            <tr>
+                                <th>Invoice Details</th>
+                                <th>Supplier / GSTIN</th>
+                                <th>Category</th>
+                                <th>Taxable Value</th>
+                                <th>Taxes (CGST/SGST/IGST)</th>
+                                <th>Total Amount</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="invoice-rows-body">
+                            <!-- Populated via javascript -->
+                            <tr>
+                                <td colspan="8" class="empty-state">
+                                    <i class="fa-solid fa-spinner fa-spin loading-icon"></i>
+                                    <p>Loading invoice records...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- ── Slide-out Audit Drawer ── -->
+    <div class="drawer-overlay" id="audit-drawer-overlay"></div>
+    <aside class="audit-drawer" id="audit-drawer">
+        <div class="drawer-header">
+            <div class="drawer-header-left">
+                <h3 class="drawer-title" id="drawer-invoice-num">Audit Invoice #--</h3>
+                <span class="drawer-subtitle" id="drawer-invoice-id">ID: --</span>
+            </div>
+            <button class="close-drawer-btn" id="close-drawer-btn">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="drawer-body">
+            <!-- Split Panel Grid -->
+            <div class="drawer-split-grid">
+                <!-- Left panel: Original Image Document Viewport -->
+                <div class="image-viewport-container">
+                    <div class="viewport-header">
+                        <span>Original Document</span>
+                        <div class="viewport-actions">
+                            <button class="viewport-btn" id="zoom-in-btn" title="Zoom In"><i class="fa-solid fa-plus"></i></button>
+                            <button class="viewport-btn" id="zoom-out-btn" title="Zoom Out"><i class="fa-solid fa-minus"></i></button>
+                            <button class="viewport-btn" id="rotate-btn" title="Rotate"><i class="fa-solid fa-rotate-right"></i></button>
+                        </div>
+                    </div>
+                    <div class="viewport-body">
+                        <img id="invoice-doc-img" src="" alt="No invoice file preview available" class="invoice-preview-image">
+                    </div>
+                </div>
+
+                <!-- Right panel: Extracted Fields Forms -->
+                <div class="audit-forms-container">
+                    <!-- System Audit Flags -->
+                    <div class="audit-section-card alert-section-card" id="audit-alerts-card" style="display:none;">
+                        <h4 class="card-section-title"><i class="fa-solid fa-triangle-exclamation"></i> System Validation Checks</h4>
+                        <ul class="alert-list" id="audit-alerts-list">
+                            <!-- Populated dynamic checks -->
+                        </ul>
+                    </div>
+
+                    <!-- CA Audit Forms -->
+                    <form id="audit-form" class="audit-form">
+                        <div class="form-section">
+                            <h4 class="form-section-title">Invoice Details</h4>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="f-inv-num">Invoice Number</label>
+                                    <input type="text" id="f-inv-num">
+                                </div>
+                                <div class="form-group">
+                                    <label for="f-inv-date">Invoice Date</label>
+                                    <input type="date" id="f-inv-date">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h4 class="form-section-title">Supplier details</h4>
+                            <div class="form-group">
+                                <label for="f-sup-name">Supplier Legal Name</label>
+                                <input type="text" id="f-sup-name">
+                            </div>
+                            <div class="form-group">
+                                <label for="f-sup-gst">Supplier GSTIN</label>
+                                <input type="text" id="f-sup-gst" class="gstin-input">
+                                <span class="validation-label" id="f-sup-gst-val"></span>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h4 class="form-section-title">Recipient details</h4>
+                            <div class="form-group">
+                                <label for="f-rec-name">Recipient Name</label>
+                                <input type="text" id="f-rec-name">
+                            </div>
+                            <div class="form-group">
+                                <label for="f-rec-gst">Recipient GSTIN</label>
+                                <input type="text" id="f-rec-gst" class="gstin-input">
+                                <span class="validation-label" id="f-rec-gst-val"></span>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h4 class="form-section-title">Categorisation & Supply</h4>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="f-category">Business Category</label>
+                                    <select id="f-category">
+                                        <option value="Office Supplies">Office Supplies</option>
+                                        <option value="Electronics & Hardware">Electronics & Hardware</option>
+                                        <option value="Software & SaaS">Software & SaaS</option>
+                                        <option value="Professional & Consulting Services">Professional & Consulting Services</option>
+                                        <option value="Rent & Infrastructure">Rent & Infrastructure</option>
+                                        <option value="Food & Beverages">Food & Beverages</option>
+                                        <option value="Motor Vehicle & Cab Bookings">Motor Vehicle & Cab Bookings</option>
+                                        <option value="Travel & Lodging">Travel & Lodging</option>
+                                        <option value="Logistics & Freight">Logistics & Freight</option>
+                                        <option value="Raw Materials">Raw Materials</option>
+                                        <option value="Marketing & Advertising">Marketing & Advertising</option>
+                                        <option value="Utilities">Utilities</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="f-supply-type">Supply Type</label>
+                                    <select id="f-supply-type">
+                                        <option value="INTRA-STATE">INTRA-STATE</option>
+                                        <option value="INTER-STATE">INTER-STATE</option>
+                                        <option value="UNKNOWN">UNKNOWN</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="f-itc-eligible">ITC Claim Status</label>
+                                    <select id="f-itc-eligible">
+                                        <option value="true">Eligible</option>
+                                        <option value="false">Blocked / Ineligible</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="f-pos">Place of Supply (POS)</label>
+                                    <input type="text" id="f-pos">
+                                </div>
+                            </div>
+                            <div class="form-group" id="itc-reason-group" style="display:none;">
+                                <label for="f-itc-reason">Ineligibility Reason</label>
+                                <textarea id="f-itc-reason" rows="2"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h4 class="form-section-title">Amounts Breakdown</h4>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="f-taxable">Taxable Value (₹)</label>
+                                    <input type="number" step="0.01" id="f-taxable">
+                                </div>
+                                <div class="form-group">
+                                    <label for="f-grand">Grand Total (₹)</label>
+                                    <input type="number" step="0.01" id="f-grand">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="f-cgst">CGST (₹)</label>
+                                    <input type="number" step="0.01" id="f-cgst">
+                                </div>
+                                <div class="form-group">
+                                    <label for="f-sgst">SGST (₹)</label>
+                                    <input type="number" step="0.01" id="f-sgst">
+                                </div>
+                                <div class="form-group">
+                                    <label for="f-igst">IGST (₹)</label>
+                                    <input type="number" step="0.01" id="f-igst">
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                    
+                    <!-- Audit Logs Trail -->
+                    <div class="audit-section-card logs-section-card">
+                        <h4 class="card-section-title"><i class="fa-solid fa-history"></i> CA Modification History</h4>
+                        <div class="audit-logs-timeline" id="drawer-logs-timeline">
+                            <span class="timeline-empty">No CA overrides recorded yet.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="drawer-footer">
+            <button class="secondary-btn" id="drawer-cancel-btn">Cancel</button>
+            <div class="footer-actions-right">
+                <button class="primary-btn info-btn" id="drawer-save-btn">
+                    <i class="fa-solid fa-floppy-disk"></i> Save Progress
+                </button>
+                <button class="primary-btn success-btn" id="drawer-approve-btn">
+                    <i class="fa-solid fa-circle-check"></i> Verify & Approve
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ── GSTR Filings Export Modal ── -->
+    <div class="modal-overlay" id="gstr-modal-overlay"></div>
+    <div class="modal" id="gstr-modal">
+        <div class="modal-header">
+            <h3>GSTR Filing offline Toolkit</h3>
+            <button class="close-modal-btn" id="close-gstr-modal-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p>Generate government offline utility compatible JSON files for the selected client and tax period.</p>
+            
+            <div class="modal-form-row">
+                <div class="form-group">
+                    <label>Filing Period</label>
+                    <input type="month" id="modal-gstr-month" value="2026-05">
+                </div>
+                <div class="form-group">
+                    <label>Export Schema Type</label>
+                    <select id="modal-gstr-type">
+                        <option value="GSTR1">GSTR-1 (Sales Invoices & HSN Summary)</option>
+                        <option value="GSTR3B">GSTR-3B (Consolidated Tax Liabilities & ITC)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Export aggregate review panel -->
+            <div class="aggregate-review-panel">
+                <h4>Preview aggregates (Draft Period)</h4>
+                <div class="preview-metrics-row">
+                    <div class="preview-metric">
+                        <span class="label">Taxable Sales</span>
+                        <span class="val" id="prev-sales">₹0.00</span>
+                    </div>
+                    <div class="preview-metric">
+                        <span class="label">Tax Liability</span>
+                        <span class="val" id="prev-tax">₹0.00</span>
+                    </div>
+                    <div class="preview-metric">
+                        <span class="label">Eligible ITC</span>
+                        <span class="val" id="prev-itc">₹0.00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="secondary-btn" id="cancel-gstr-modal-btn">Cancel</button>
+            <button class="primary-btn success-btn" id="export-gstr-json-btn">
+                <i class="fa-solid fa-file-export"></i> Compile & Download JSON
+            </button>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div class="toast" id="toast">Filing updated successfully!</div>
+
+    <script src="/static/dashboard.js"></script>
+</body>
+</html>
