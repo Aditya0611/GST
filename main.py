@@ -431,6 +431,15 @@ async def health_check():
 
 # ── Dashboard API Endpoints ───────────────────────────────────────────────────
 
+@app.get("/", response_class=HTMLResponse)
+async def get_landing():
+    """Serves the GST Autopilot landing page."""
+    landing_path = os.path.join("static", "index.html")
+    if not os.path.exists(landing_path):
+        return HTMLResponse("<h1>Landing page not found.</h1>", status_code=404)
+    return FileResponse(landing_path)
+
+
 @app.get("/dashboard", response_class=HTMLResponse)
 async def get_dashboard():
     """Serves the main CA Review Dashboard HTML page."""
@@ -438,6 +447,100 @@ async def get_dashboard():
     if not os.path.exists(dashboard_path):
         raise HTTPException(status_code=404, detail="Dashboard UI not built yet.")
     return FileResponse(dashboard_path)
+
+
+@app.get("/onboarding", response_class=HTMLResponse)
+async def get_onboarding():
+    """Serves the business onboarding page."""
+    onboarding_path = os.path.join("static", "onboarding.html")
+    if not os.path.exists(onboarding_path):
+        return HTMLResponse("<h1>Onboarding page not found.</h1>", status_code=404)
+    return FileResponse(onboarding_path)
+
+
+@app.get("/success", response_class=HTMLResponse)
+async def get_success():
+    """Serves the onboarding success confirmation page."""
+    success_path = os.path.join("static", "success.html")
+    if not os.path.exists(success_path):
+        return HTMLResponse("<h1>Success page not found.</h1>", status_code=404)
+    return FileResponse(success_path)
+
+
+@app.get("/ca-assign", response_class=HTMLResponse)
+async def get_ca_assign():
+    """Serves the CA assignment page (Step 2 of 3 in onboarding)."""
+    ca_path = os.path.join("static", "ca_assign.html")
+    if not os.path.exists(ca_path):
+        return HTMLResponse("<h1>CA assignment page not found.</h1>", status_code=404)
+    return FileResponse(ca_path)
+
+
+@app.post("/api/ca/link")
+async def api_link_ca(request: Request):
+    """Validates a CA invite code and links the CA to the client session."""
+    try:
+        body = await request.json()
+        invite_code = str(body.get("invite_code", "")).strip()
+
+        if not invite_code or len(invite_code) != 6 or not invite_code.isdigit():
+            raise HTTPException(status_code=400, detail="Invite code must be exactly 6 digits.")
+
+        # TODO: Replace with real CA lookup in your DB.
+        # For now, any 6-digit code starting with a non-zero digit is accepted
+        # so you can test the flow end-to-end.
+        if invite_code[0] == "0":
+            raise HTTPException(status_code=404, detail="Invite code not found. Please verify the code with your CA.")
+
+        logger.info("CA linked with invite code: %s", invite_code)
+        return {"status": "success", "invite_code": invite_code}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Failed to link CA:")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/onboard")
+async def api_onboard_client(request: Request):
+    """Processes business onboarding details (GSTIN & WhatsApp)."""
+    try:
+        body = await request.json()
+        gstin = body.get("gstin", "").strip().upper()
+        whatsapp_number = body.get("whatsapp", "").replace(" ", "").replace("-", "").strip()
+        
+        if not gstin or not whatsapp_number:
+            raise HTTPException(status_code=400, detail="GSTIN and WhatsApp number are required.")
+        
+        whatsapp_digits = "".join(c for c in whatsapp_number if c.isdigit())
+        if len(whatsapp_digits) == 10:
+            whatsapp_digits = "91" + whatsapp_digits
+        elif len(whatsapp_digits) < 10 or len(whatsapp_digits) > 13:
+            raise HTTPException(status_code=400, detail="Invalid WhatsApp number format. Must be 10 digits.")
+
+        if len(gstin) != 15:
+            raise HTTPException(status_code=400, detail="GSTIN must be exactly 15 alphanumeric characters.")
+
+        # Deriving business name based on GSTIN
+        client_name = f"Business {gstin[:2]}{gstin[2:7]}"
+        await db.get_or_create_client(whatsapp_digits, name=client_name)
+        await db.update_client_profile(whatsapp_digits, gstin, registered=True, name=client_name)
+        
+        logger.info("Successfully onboarded client: phone=%s, GSTIN=%s", whatsapp_digits, gstin)
+        
+        return {
+            "status": "success",
+            "client": {
+                "phone_number": whatsapp_digits,
+                "gstin": gstin,
+                "name": client_name
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Failed to onboard client:")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/clients")

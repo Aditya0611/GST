@@ -1,509 +1,843 @@
 <!DOCTYPE html>
-<html lang="en">
+<html class="dark" lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GST Autopilot — CA Admin Dashboard</title>
-    <!-- Google Fonts: Outfit and Inter -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/dashboard.css">
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>GST Review Portal — CA Admin Dashboard</title>
+    <meta name="description" content="CA Admin portal for GST invoice review, audit, and GSTR filing compilation."/>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+    <!-- Material Symbols -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet"/>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary":           "#6366f1",
+                        "primary-dim":       "#818cf8",
+                        "background":        "#0f1117",
+                        "surface":           "#161b22",
+                        "surface-alt":       "#1c2128",
+                        "outline":           "#30363d",
+                        "on-surface":        "#e6edf3",
+                        "on-surface-variant":"#8b949e",
+                        "success":           "#238636",
+                        "success-dim":       "#3fb950",
+                        "warning":           "#d29922",
+                        "warning-dim":       "#e3b341",
+                        "error":             "#f85149",
+                        "error-dim":         "#ffa198"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.375rem",
+                        "lg":      "0.5rem",
+                        "xl":      "0.75rem",
+                        "2xl":     "1rem",
+                        "full":    "9999px"
+                    },
+                    spacing: {
+                        "margin-mobile": "16px",
+                        "gutter":        "24px",
+                        "container-max": "1280px",
+                        "stack-gap":     "24px"
+                    },
+                    fontFamily: {
+                        "body":     ["Plus Jakarta Sans", "sans-serif"],
+                        "headline": ["Plus Jakarta Sans", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* ── Fonts & base ── */
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #0f1117; color: #e6edf3; }
+
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f1117; }
+        ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6366f1; }
+
+        /* ── Glassmorphic header ── */
+        .glass-header {
+            background: rgba(15, 17, 23, 0.85);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        /* ── Audit Drawer ── */
+        #audit-drawer {
+            position: fixed; top: 0; right: -100%; width: 800px; max-width: 96vw;
+            height: 100vh; z-index: 200;
+            background: #161b22;
+            border-left: 1px solid #30363d;
+            transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+        #audit-drawer.active { right: 0; }
+
+        #audit-drawer-overlay {
+            position: fixed; inset: 0; z-index: 190;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(2px);
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        #audit-drawer-overlay.active { opacity: 1; pointer-events: all; }
+
+        /* ── GSTR Modal ── */
+        #gstr-modal-overlay {
+            position: fixed; inset: 0; z-index: 300;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.25s ease;
+        }
+        #gstr-modal-overlay.active { opacity: 1; pointer-events: all; }
+
+        #gstr-modal {
+            position: fixed; top: 50%; left: 50%;
+            transform: translate(-50%, -58%) scale(0.96);
+            z-index: 310; width: 540px; max-width: 96vw;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px; overflow: hidden;
+            opacity: 0; pointer-events: none;
+            transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        #gstr-modal.active { opacity: 1; pointer-events: all; transform: translate(-50%, -50%) scale(1); }
+
+        /* ── Toast ── */
+        #toast {
+            position: fixed; bottom: 24px; right: 24px; z-index: 400;
+            padding: 12px 20px; border-radius: 8px;
+            font-size: 13px; font-weight: 700; color: #fff;
+            background: #6366f1;
+            box-shadow: 0 8px 32px rgba(99, 102, 241, 0.4);
+            transform: translateY(80px); opacity: 0;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            pointer-events: none;
+        }
+        #toast.active { transform: translateY(0); opacity: 1; }
+
+        /* ── Table rows ── */
+        #invoice-rows-body tr { cursor: pointer; }
+        #invoice-rows-body tr:hover { background: rgba(28, 33, 40, 0.6); }
+
+        /* ── Status Badges ── */
+        .badge-approved {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 3px 10px; border-radius: 99px; font-size: 10px; font-weight: 700;
+            letter-spacing: 0.05em; text-transform: uppercase;
+            background: rgba(35, 134, 54, 0.12); color: #3fb950; border: 1px solid rgba(35,134,54,0.3);
+        }
+        .badge-flagged {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 3px 10px; border-radius: 99px; font-size: 10px; font-weight: 700;
+            letter-spacing: 0.05em; text-transform: uppercase;
+            background: rgba(248, 81, 73, 0.12); color: #ffa198; border: 1px solid rgba(248,81,73,0.3);
+        }
+        .badge-pending {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 3px 10px; border-radius: 99px; font-size: 10px; font-weight: 700;
+            letter-spacing: 0.05em; text-transform: uppercase;
+            background: rgba(210, 153, 34, 0.12); color: #e3b341; border: 1px solid rgba(210,153,34,0.3);
+        }
+
+        /* ── Drawer form styles ── */
+        .audit-form label {
+            display: block; font-size: 11px; font-weight: 700; color: #8b949e;
+            margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.06em;
+        }
+        .audit-form input,
+        .audit-form select,
+        .audit-form textarea {
+            width: 100%; background: #0f1117;
+            border: 1px solid #30363d; border-radius: 6px;
+            padding: 8px 12px; font-size: 13px; color: #e6edf3;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            transition: border-color 0.15s, box-shadow 0.15s; outline: none;
+        }
+        .audit-form input:focus,
+        .audit-form select:focus,
+        .audit-form textarea:focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        }
+        .audit-form select option { background: #161b22; }
+        .audit-form input[type="date"] { color-scheme: dark; }
+        .audit-form input[type="number"] { font-variant-numeric: tabular-nums; }
+
+        .gstin-input.valid   { border-color: #238636 !important; }
+        .gstin-input.invalid { border-color: #f85149 !important; }
+        .validation-label { font-size: 11px; margin-top: 3px; display: block; }
+
+        /* ── Timeline ── */
+        .timeline-item {
+            display: flex; flex-direction: column; gap: 3px;
+            padding: 10px 0; border-bottom: 1px solid #1c2128;
+        }
+        .timeline-item:last-child { border-bottom: none; }
+        .timeline-user  { font-size: 12px; font-weight: 700; color: #818cf8; }
+        .timeline-time  { font-size: 11px; color: #8b949e; }
+        .timeline-change { font-size: 13px; color: #e6edf3; margin-top: 2px; }
+        .timeline-change code { background: #0f1117; padding: 1px 6px; border-radius: 4px; font-family: monospace; font-size: 11px; border: 1px solid #30363d; }
+        .timeline-empty { font-size: 13px; color: #8b949e; font-style: italic; }
+
+        /* ── Image viewport ── */
+        .invoice-preview-image { max-width: 100%; max-height: 100%; object-fit: contain; transition: transform 0.25s ease; }
+        #itc-reason-group { display: none; }
+
+        /* ── GSTR modal aggregates ── */
+        .preview-metrics-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px; }
+        .preview-metric { background: #0f1117; border: 1px solid #30363d; border-radius: 8px; padding: 14px; text-align: center; }
+        .preview-metric .label { display: block; font-size: 10px; font-weight: 700; color: #8b949e; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+        .preview-metric .val { font-size: 18px; font-weight: 800; color: #818cf8; }
+
+        /* ── Sync button loading ── */
+        #sync-btn.loading .sync-icon { animation: spin 0.8s linear infinite; display: inline-block; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── Tab buttons ── */
+        .tab-btn { padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 700; color: #8b949e; transition: all 0.15s; background: transparent; border: none; cursor: pointer; }
+        .tab-btn:hover { color: #e6edf3; background: rgba(255,255,255,0.05); }
+        .tab-btn.active { background: rgba(99,102,241,0.15); color: #818cf8; border: 1px solid rgba(99,102,241,0.25); }
+
+        /* ── Progress bars ── */
+        .progress-bar-container { height: 5px; background: rgba(255,255,255,0.07); border-radius: 4px; overflow: hidden; margin-top: 6px; }
+        .progress-bar { height: 100%; border-radius: 4px; transition: width 0.7s ease; }
+        .bg-green  { background: #3fb950; }
+        .bg-orange { background: #e3b341; }
+        .bg-purple { background: #818cf8; }
+        .bg-red    { background: #ffa198; }
+
+        /* ── Empty / loading ── */
+        .empty-state { text-align: center; padding: 56px 24px; color: #8b949e; }
+        .loading-icon { font-size: 36px; margin-bottom: 12px; display: block; }
+        @keyframes fadePulse { 0%,100%{opacity:.4} 50%{opacity:1} }
+        .loading-pulse { animation: fadePulse 1.5s ease infinite; }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+        .fade-up { animation: fadeUp 0.4s ease forwards; }
+    </style>
 </head>
-<body>
-    <div class="dashboard-container">
-        <!-- ── Left Sidebar ── -->
-        <aside class="sidebar">
-            <div class="sidebar-brand">
-                <i class="fa-solid fa-indian-rupee-sign brand-icon"></i>
+<body class="min-h-screen antialiased selection:bg-primary/30 selection:text-white">
+
+<!-- ══════════════════════════════════════════════
+     SIDEBAR
+══════════════════════════════════════════════ -->
+<aside class="fixed left-0 top-0 h-full w-64 flex flex-col z-50 border-r border-outline" style="background:#161b22;">
+    <!-- Brand -->
+    <div class="h-16 flex items-center gap-3 px-6 border-b border-outline shrink-0">
+        <div class="w-9 h-9 rounded-lg bg-primary flex items-center justify-center shrink-0 shadow-lg shadow-primary/30">
+            <span class="material-symbols-outlined text-white text-[20px]" style="font-variation-settings:'FILL' 1;">assured_workload</span>
+        </div>
+        <div>
+            <h1 class="font-bold text-[15px] text-white tracking-tight">GST Admin</h1>
+            <p class="text-[10px] text-on-surface-variant uppercase font-bold tracking-widest">Enterprise Portal</p>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="flex-1 overflow-y-auto p-3 space-y-0.5">
+        <a href="#" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-on-surface-variant hover:text-white hover:bg-surface-alt transition-all text-[13px] font-medium">
+            <span class="material-symbols-outlined text-[20px]">dashboard</span>
+            <span>Overview</span>
+        </a>
+        <a href="#" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-primary bg-primary/10 border border-primary/20 transition-all text-[13px] font-bold">
+            <span class="material-symbols-outlined text-[20px]" style="font-variation-settings:'FILL' 1;">description</span>
+            <span>Invoices</span>
+        </a>
+        <a href="#" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-on-surface-variant hover:text-white hover:bg-surface-alt transition-all text-[13px] font-medium">
+            <span class="material-symbols-outlined text-[20px]">group</span>
+            <span>Clients</span>
+        </a>
+        <a href="#" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-on-surface-variant hover:text-white hover:bg-surface-alt transition-all text-[13px] font-medium" id="nav-gstr-btn">
+            <span class="material-symbols-outlined text-[20px]">account_balance_wallet</span>
+            <span>GSTR Filing</span>
+        </a>
+
+        <div class="pt-5 pb-1.5 px-4">
+            <span class="text-[9px] font-bold text-on-surface-variant uppercase tracking-[0.12em]">Management</span>
+        </div>
+
+        <a href="#" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-on-surface-variant hover:text-white hover:bg-surface-alt transition-all text-[13px] font-medium">
+            <span class="material-symbols-outlined text-[20px]">settings</span>
+            <span>Settings</span>
+        </a>
+    </nav>
+
+    <!-- Profile -->
+    <div class="p-3 border-t border-outline shrink-0">
+        <div class="flex items-center gap-3 p-2.5 rounded-lg bg-surface-alt border border-outline">
+            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-primary-dim flex items-center justify-center text-white font-bold text-[13px] shrink-0 ring-2 ring-primary/20">
+                CA
             </div>
-            
-            <nav class="sidebar-nav">
-                <a href="#" class="nav-item" title="Overview">
-                    <i class="fa-solid fa-chart-pie"></i>
-                </a>
-                <a href="#" class="nav-item" title="Clients">
-                    <i class="fa-solid fa-users"></i>
-                </a>
-                <a href="#" class="nav-item active" title="Invoices">
-                    <i class="fa-solid fa-file-invoice"></i>
-                </a>
-                <a href="#" class="nav-item" id="nav-gstr-btn" title="GSTR Filings">
-                    <i class="fa-solid fa-clipboard-list"></i>
-                </a>
-                <a href="#" class="nav-item" title="Settings">
-                    <i class="fa-solid fa-gear"></i>
-                </a>
-            </nav>
-            
-            <div class="sidebar-user" title="CA Operator Session">
-                <div class="user-avatar">CA</div>
+            <div class="min-w-0">
+                <p class="text-[13px] font-bold text-white truncate">CA Admin Profile</p>
+                <p class="text-[11px] text-on-surface-variant truncate">admin@firm.com</p>
             </div>
-        </aside>
+        </div>
+    </div>
+</aside>
 
-        <!-- ── Main Workspace ── -->
-        <main class="main-workspace">
-            <!-- ── Top Header ── -->
-            <header class="header">
-                <div class="header-left">
-                    <h1 class="app-title">GST Autopilot</h1>
-                    <div class="header-meta">
-                        <span class="meta-item">FY 2025-26</span>
-                        <span class="meta-separator">•</span>
-                        <span class="meta-item">Q1</span>
-                        <span class="meta-separator">•</span>
-                        <!-- Client Switcher Dropdown -->
-                        <div class="client-switcher-container">
-                            <label for="client-select">GSTIN</label>
-                            <select id="client-select" class="client-select">
-                                <option value="">Loading Clients...</option>
-                            </select>
-                        </div>
+<!-- ══════════════════════════════════════════════
+     TOP HEADER
+══════════════════════════════════════════════ -->
+<header class="fixed top-0 right-0 h-16 flex items-center justify-between px-8 z-40 glass-header border-b border-outline"
+        style="left: 256px;">
+    <div class="flex items-center gap-6 flex-1">
+        <h2 class="font-bold text-[17px] text-white whitespace-nowrap">GST Review Portal</h2>
+        <!-- Context selectors -->
+        <div class="flex items-center gap-2">
+            <!-- Client dropdown -->
+            <div class="relative">
+                <select id="client-select"
+                    class="appearance-none bg-surface-alt border border-outline rounded-md pl-3 pr-8 py-1.5 text-[13px] font-semibold text-on-surface focus:outline-none focus:border-primary/60 hover:border-primary/40 transition-colors cursor-pointer min-w-[180px]"
+                    style="color:#e6edf3;">
+                    <option value="">Loading Clients…</option>
+                </select>
+                <span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant pointer-events-none">expand_more</span>
+            </div>
+            <!-- Month picker -->
+            <div class="relative flex items-center gap-2 bg-surface-alt border border-outline rounded-md px-3 py-1.5 hover:border-primary/40 transition-colors">
+                <span class="material-symbols-outlined text-[16px] text-primary">calendar_today</span>
+                <input type="month" id="month-picker"
+                    class="bg-transparent text-[13px] font-semibold text-on-surface focus:outline-none cursor-pointer"
+                    style="color-scheme: dark;"/>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right actions -->
+    <div class="flex items-center gap-4">
+        <!-- Search -->
+        <div class="relative">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant">search</span>
+            <input id="global-search" type="text" placeholder="Search invoices, GSTINs…"
+                class="bg-surface-alt border border-outline rounded-full pl-10 pr-4 py-1.5 text-[13px] focus:ring-1 focus:ring-primary focus:border-primary w-56 transition-all outline-none placeholder:text-on-surface-variant/50"
+                style="color:#e6edf3;"/>
+        </div>
+        <!-- Sync button -->
+        <button id="sync-btn" class="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md text-[13px] font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 focus:outline-none">
+            <span class="material-symbols-outlined text-[16px] sync-icon">sync</span>
+            <span>Sync Portal</span>
+        </button>
+        <div class="h-8 w-px bg-outline mx-1"></div>
+        <!-- Notifications -->
+        <button class="p-2 text-on-surface-variant hover:text-white transition-colors relative">
+            <span class="material-symbols-outlined text-[22px]">notifications</span>
+            <span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
+        </button>
+        <!-- Avatar -->
+        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary-dim flex items-center justify-center text-white font-bold text-[11px] cursor-pointer ring-2 ring-outline hover:ring-primary/50 transition-all">
+            CA
+        </div>
+    </div>
+</header>
+
+<!-- ══════════════════════════════════════════════
+     MAIN CONTENT
+══════════════════════════════════════════════ -->
+<main class="pt-16 min-h-screen" style="margin-left: 256px;">
+    <div class="p-8 space-y-stack-gap max-w-container-max mx-auto">
+
+        <!-- ── Page Header ── -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-2 fade-up">
+            <div>
+                <!-- Breadcrumb -->
+                <nav class="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-widest text-on-surface-variant mb-2">
+                    <a href="/" class="hover:text-primary transition-colors">Home</a>
+                    <span class="material-symbols-outlined text-[12px]">chevron_right</span>
+                    <span class="text-on-surface">Invoices</span>
+                </nav>
+                <h2 class="text-[28px] font-extrabold text-white tracking-tight">Invoice Review</h2>
+                <p class="text-[14px] text-on-surface-variant mt-1">
+                    Found <span class="text-warning-dim font-bold" id="record-count-txt">— pending</span> invoices requiring audit for GSTR-2B reconciliation.
+                </p>
+            </div>
+            <div class="flex items-center gap-3">
+                <button class="flex items-center gap-2 px-4 py-2 border border-outline rounded-md text-[13px] font-bold text-on-surface hover:bg-surface-alt hover:border-primary/40 transition-colors">
+                    <span class="material-symbols-outlined text-[18px]">file_download</span>
+                    Export CSV
+                </button>
+                <div class="h-9 w-px bg-outline"></div>
+                <!-- Filing Status Badges -->
+                <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-success/10 border border-success/20">
+                        <span class="material-symbols-outlined text-success-dim text-[14px]" style="font-variation-settings:'FILL' 1;">check_circle</span>
+                        <span class="text-[11px] font-bold text-success-dim uppercase tracking-wider">GSTR-1</span>
+                        <span id="status-gstr1-val" class="text-[11px] font-semibold text-success-dim">Filed</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-warning/10 border border-warning/20">
+                        <span class="material-symbols-outlined text-warning-dim text-[14px]">pending</span>
+                        <span class="text-[11px] font-bold text-warning-dim uppercase tracking-wider">GSTR-3B</span>
+                        <span id="status-gstr3b-val" class="text-[11px] font-semibold text-warning-dim">Pending</span>
                     </div>
                 </div>
+            </div>
+        </div>
 
-                <div class="header-right">
-                    <!-- Global Search Bar -->
-                    <div class="search-box">
-                        <i class="fa-solid fa-magnifying-glass search-icon"></i>
-                        <input type="text" id="global-search" placeholder="Search invoices, GSTINs...">
-                        <span class="search-kbd">Ctrl K</span>
+        <!-- ── KPI Cards Grid (4 columns) ── -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 fade-up">
+
+            <!-- Pending -->
+            <div class="bg-surface border border-outline rounded-xl p-5 hover:border-primary/40 hover:-translate-y-0.5 transition-all group shadow-lg shadow-black/20">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="p-2 rounded-lg bg-warning/10 text-warning-dim">
+                        <span class="material-symbols-outlined text-[22px]">assignment_late</span>
+                    </span>
+                    <span class="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">Pending</span>
+                </div>
+                <div class="text-[26px] font-extrabold text-white" id="kpi-pending-count">—</div>
+                <div class="text-[12px] text-on-surface-variant mt-1 italic" id="kpi-pending-subtext">Audit required</div>
+                <div class="mt-2">
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-warning/10 text-warning-dim border border-warning/20" id="kpi-pending-trend">+0 total</span>
+                </div>
+            </div>
+
+            <!-- Total Taxable -->
+            <div class="bg-surface border border-outline rounded-xl p-5 hover:border-primary/40 hover:-translate-y-0.5 transition-all group shadow-lg shadow-black/20">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="p-2 rounded-lg bg-primary/10 text-primary-dim">
+                        <span class="material-symbols-outlined text-[22px]">receipt_long</span>
+                    </span>
+                    <span class="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">Total Taxable</span>
+                </div>
+                <div class="text-[26px] font-extrabold text-white" id="kpi-sales-total">₹0</div>
+                <div class="text-[12px] text-success-dim mt-1 flex items-center gap-1 font-semibold" id="kpi-sales-subtext">
+                    <span class="material-symbols-outlined text-[14px]">trending_up</span> this period
+                </div>
+                <div class="mt-2">
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary-dim border border-primary/20">+12% vs last month</span>
+                </div>
+            </div>
+
+            <!-- ITC Claimable -->
+            <div class="bg-surface border border-outline rounded-xl p-5 hover:border-primary/40 hover:-translate-y-0.5 transition-all group shadow-lg shadow-black/20">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="p-2 rounded-lg bg-success/10 text-success-dim">
+                        <span class="material-symbols-outlined text-[22px]">verified_user</span>
+                    </span>
+                    <span class="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">ITC Claimable</span>
+                </div>
+                <div class="text-[26px] font-extrabold text-white" id="kpi-itc-total">₹0</div>
+                <div class="text-[12px] text-on-surface-variant mt-1 italic" id="kpi-itc-subtext">Provisional calculation</div>
+                <div class="mt-2">
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-success/10 text-success-dim border border-success/20">94.1% matched</span>
+                </div>
+            </div>
+
+            <!-- Mismatch -->
+            <div class="bg-surface border border-outline rounded-xl p-5 hover:border-error/30 hover:-translate-y-0.5 transition-all group shadow-lg shadow-black/20">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="p-2 rounded-lg bg-error/10 text-error-dim">
+                        <span class="material-symbols-outlined text-[22px]">report</span>
+                    </span>
+                    <span class="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">Mismatch</span>
+                </div>
+                <div class="text-[26px] font-extrabold text-white">12</div>
+                <div class="text-[12px] text-error-dim mt-1 font-semibold italic">Requires GSTR-2B sync</div>
+                <div class="mt-2">
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-error/10 text-error-dim border border-error/20">Critical</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── ITC Trend Sparkline ── -->
+        <div class="bg-surface border border-outline rounded-xl p-5 fade-up shadow-lg shadow-black/20">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h3 class="font-bold text-[14px] text-white">ITC Trend — Last 12 Months</h3>
+                    <div class="flex items-baseline gap-2 mt-1">
+                        <span class="text-[22px] font-extrabold text-primary-dim">₹38.4L</span>
+                        <span class="text-[12px] font-bold text-success-dim flex items-center gap-0.5">
+                            <span class="material-symbols-outlined text-[14px]">trending_up</span> 22.3% YoY
+                        </span>
                     </div>
-
-                    <button class="icon-btn" title="System Notifications">
-                        <i class="fa-regular fa-bell"></i>
-                        <span class="notification-badge"></span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="hidden md:flex items-center gap-4 text-[11px] text-on-surface-variant mr-4">
+                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-primary inline-block"></span>ITC Claimed</span>
+                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-success inline-block"></span>Eligible</span>
+                    </div>
+                    <button class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-bold text-on-surface-variant hover:text-white hover:bg-surface-alt border border-outline transition-colors">
+                        <span class="material-symbols-outlined text-[16px]">download</span> Export
                     </button>
-
-                    <button class="primary-btn sync-btn" id="sync-btn">
-                        <i class="fa-solid fa-rotate sync-icon"></i>
-                        <span>Sync GSTN</span>
-                    </button>
+                    <p class="text-[11px] font-bold text-on-surface-variant" id="filing-status-title">Filing Status</p>
                 </div>
-            </header>
+            </div>
+            <!-- SVG Sparkline -->
+            <div class="h-20 relative">
+                <svg class="w-full h-full" viewBox="0 0 700 80" preserveAspectRatio="none">
+                    <defs>
+                        <linearGradient id="grad1" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#6366f1" stop-opacity="0.3"/>
+                            <stop offset="100%" stop-color="#6366f1" stop-opacity="0"/>
+                        </linearGradient>
+                        <linearGradient id="grad2" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#238636" stop-opacity="0.2"/>
+                            <stop offset="100%" stop-color="#238636" stop-opacity="0"/>
+                        </linearGradient>
+                    </defs>
+                    <!-- ITC area -->
+                    <path d="M0 70 C80 65 140 60 200 55 S320 42 380 36 S500 28 560 22 S640 14 700 10 L700 80 L0 80 Z" fill="url(#grad1)"/>
+                    <path d="M0 70 C80 65 140 60 200 55 S320 42 380 36 S500 28 560 22 S640 14 700 10" fill="none" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round"/>
+                    <!-- Eligible area -->
+                    <path d="M0 75 C80 70 140 68 200 64 S320 55 380 50 S500 44 560 40 S640 35 700 32 L700 80 L0 80 Z" fill="url(#grad2)"/>
+                    <path d="M0 75 C80 70 140 68 200 64 S320 55 380 50 S500 44 560 40 S640 35 700 32" fill="none" stroke="#238636" stroke-width="2" stroke-linecap="round" stroke-dasharray="4 2"/>
+                    <!-- Month labels -->
+                    <text x="0"   y="80" font-size="8" fill="#8b949e" font-family="Plus Jakarta Sans">Jul</text>
+                    <text x="116" y="80" font-size="8" fill="#8b949e" font-family="Plus Jakarta Sans">Sep</text>
+                    <text x="233" y="80" font-size="8" fill="#8b949e" font-family="Plus Jakarta Sans">Nov</text>
+                    <text x="350" y="80" font-size="8" fill="#8b949e" font-family="Plus Jakarta Sans">Jan</text>
+                    <text x="466" y="80" font-size="8" fill="#8b949e" font-family="Plus Jakarta Sans">Mar</text>
+                    <text x="650" y="80" font-size="8" fill="#8b949e" font-family="Plus Jakarta Sans">Jun</text>
+                </svg>
+            </div>
+        </div>
 
-            <!-- ── KPI Overview Cards ── -->
-            <section class="kpi-grid">
-                <!-- Card 1: Pending Review -->
-                <div class="kpi-card glassmorphic alert-card">
-                    <div class="kpi-card-header">
-                        <div class="kpi-icon-wrapper red-tint">
-                            <i class="fa-solid fa-triangle-exclamation"></i>
-                        </div>
-                        <span class="trend-badge red-trend" id="kpi-pending-trend">+0 today</span>
-                    </div>
-                    <div class="kpi-card-body">
-                        <h3 class="kpi-label">PENDING REVIEW</h3>
-                        <p class="kpi-value" id="kpi-pending-count">0</p>
-                        <p class="kpi-subtext" id="kpi-pending-subtext">0 critical · 0 advisory</p>
-                    </div>
-                </div>
+        <!-- ── Invoice Table ── -->
+        <div class="bg-surface border border-outline rounded-xl overflow-hidden shadow-2xl shadow-black/30 fade-up">
 
-                <!-- Card 2: Total Taxable Sales -->
-                <div class="kpi-card glassmorphic">
-                    <div class="kpi-card-header">
-                        <div class="kpi-icon-wrapper blue-tint">
-                            <i class="fa-solid fa-chart-line"></i>
-                        </div>
-                        <span class="trend-badge green-trend">18.4% QoQ</span>
+            <!-- Table Toolbar -->
+            <div class="p-4 border-b border-outline flex flex-col md:flex-row md:items-center justify-between gap-4" style="background:rgba(28,33,40,0.5);">
+                <div class="flex items-center gap-3">
+                    <!-- Tab filters -->
+                    <div class="flex items-center gap-0.5 p-1 rounded-lg bg-background border border-outline">
+                        <button class="tab-btn active" data-filter="all">All</button>
+                        <button class="tab-btn" data-filter="approved">Approved</button>
+                        <button class="tab-btn" data-filter="flagged">Flagged</button>
+                        <button class="tab-btn" data-filter="pending_review">Pending</button>
                     </div>
-                    <div class="kpi-card-body">
-                        <h3 class="kpi-label">TOTAL TAXABLE SALES</h3>
-                        <p class="kpi-value" id="kpi-sales-total">₹0.00</p>
-                        <p class="kpi-subtext" id="kpi-sales-subtext">₹0.00 this quarter</p>
-                    </div>
-                </div>
-
-                <!-- Card 3: ITC Claimed -->
-                <div class="kpi-card glassmorphic">
-                    <div class="kpi-card-header">
-                        <div class="kpi-icon-wrapper green-tint">
-                            <i class="fa-solid fa-shield-halved"></i>
-                        </div>
-                        <span class="trend-badge green-trend">94.1% matched</span>
-                    </div>
-                    <div class="kpi-card-body">
-                        <h3 class="kpi-label">ITC CLAIMED</h3>
-                        <p class="kpi-value" id="kpi-itc-total">₹0.00</p>
-                        <p class="kpi-subtext" id="kpi-itc-subtext">₹0.00 reconciled</p>
-                    </div>
-                </div>
-            </section>
-
-            <!-- ── Analytical Charts Grid ── -->
-            <section class="analysis-grid">
-                <!-- Monthly ITC Trend Sparkline -->
-                <div class="analysis-card glassmorphic trend-card">
-                    <div class="card-header">
-                        <h2 class="card-title">ITC TREND — LAST 12 MONTHS</h2>
-                        <button class="card-action-btn"><i class="fa-solid fa-download"></i> Export</button>
-                    </div>
-                    <div class="trend-totals">
-                        <span class="trend-value">₹38.4L</span>
-                        <span class="trend-growth"><i class="fa-solid fa-arrow-up"></i> 22.3%</span>
-                    </div>
-                    <div class="chart-container">
-                        <!-- Custom Inline Premium SVG Sparkline -->
-                        <svg class="sparkline-svg" viewBox="0 0 600 120" preserveAspectRatio="none">
-                            <defs>
-                                <linearGradient id="chart-glow" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stop-color="#6366F1" stop-opacity="0.3"/>
-                                    <stop offset="100%" stop-color="#6366F1" stop-opacity="0.0"/>
-                                </linearGradient>
-                            </defs>
-                            <path class="sparkline-area" d="M 0 100 Q 100 80 150 90 T 300 60 T 450 70 T 600 40 L 600 120 L 0 120 Z" fill="url(#chart-glow)"/>
-                            <path class="sparkline-path" d="M 0 100 Q 100 80 150 90 T 300 60 T 450 70 T 600 40" fill="none" stroke="#6366F1" stroke-width="3.5" stroke-linecap="round"/>
-                        </svg>
+                    <!-- Category filter -->
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[16px] text-on-surface-variant">filter_alt</span>
+                        <select class="bg-surface border border-outline rounded-md pl-8 pr-8 py-1.5 text-[12px] font-semibold text-on-surface appearance-none focus:ring-1 focus:ring-primary focus:border-primary outline-none min-w-[130px] filter-toggle-btn"
+                                style="color:#8b949e;">
+                            <option>All Categories</option>
+                            <option>IT Services</option>
+                            <option>Rent</option>
+                            <option>Marketing</option>
+                            <option>Consumables</option>
+                        </select>
+                        <span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-[16px] text-on-surface-variant pointer-events-none">expand_more</span>
                     </div>
                 </div>
-
-                <!-- Filing Status -->
-                <div class="analysis-card glassmorphic status-card">
-                    <div class="card-header">
-                        <h2 class="card-title" id="filing-status-title">FILING STATUS — MAY 2026</h2>
-                    </div>
-                    <div class="status-list">
-                        <!-- GSTR-1 -->
-                        <div class="status-item">
-                            <div class="status-meta">
-                                <span class="status-name">GSTR-1</span>
-                                <span class="status-label text-green" id="status-gstr1-val">Filed</span>
-                            </div>
-                            <div class="progress-bar-container">
-                                <div class="progress-bar bg-green" style="width: 100%;"></div>
-                            </div>
-                        </div>
-
-                        <!-- GSTR-3B -->
-                        <div class="status-item">
-                            <div class="status-meta">
-                                <span class="status-name">GSTR-3B</span>
-                                <span class="status-label text-orange" id="status-gstr3b-val">Due Jun 20</span>
-                            </div>
-                            <div class="progress-bar-container">
-                                <div class="progress-bar bg-orange" style="width: 65%;"></div>
-                            </div>
-                        </div>
-
-                        <!-- GSTR-2B -->
-                        <div class="status-item">
-                            <div class="status-meta">
-                                <span class="status-name">GSTR-2B</span>
-                                <span class="status-label text-purple">Auto-matched</span>
-                            </div>
-                            <div class="progress-bar-container">
-                                <div class="progress-bar bg-purple" style="width: 90%;"></div>
-                            </div>
-                        </div>
-
-                        <!-- GSTR-9 -->
-                        <div class="status-item">
-                            <div class="status-meta">
-                                <span class="status-name">GSTR-9</span>
-                                <span class="status-label text-red">Pending</span>
-                            </div>
-                            <div class="progress-bar-container">
-                                <div class="progress-bar bg-red" style="width: 20%;"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- ── Invoice Register Section ── -->
-            <section class="register-section glassmorphic">
-                <div class="register-header">
-                    <div class="register-header-left">
-                        <h2 class="section-title">Invoice Register</h2>
-                        <span class="record-count" id="record-count-txt">0 records · May 2026</span>
-                    </div>
-
-                    <div class="register-filters">
-                        <div class="tabs">
-                            <button class="tab-btn active" data-filter="all">All</button>
-                            <button class="tab-btn" data-filter="approved">Approved</button>
-                            <button class="tab-btn" data-filter="flagged">Audit Flagged</button>
-                            <button class="tab-btn" data-filter="pending_review">Pending Review</button>
-                        </div>
-
-                        <button class="filter-toggle-btn">
-                            <i class="fa-solid fa-sliders"></i>
-                            <span>Filter</span>
+                <div class="flex items-center gap-3">
+                    <span class="text-[12px] text-on-surface-variant">Showing from database</span>
+                    <div class="flex items-center border border-outline rounded-md overflow-hidden bg-background">
+                        <button class="p-1.5 hover:bg-surface transition-colors disabled:opacity-30 border-r border-outline" disabled>
+                            <span class="material-symbols-outlined text-[18px] text-on-surface-variant">chevron_left</span>
+                        </button>
+                        <button class="p-1.5 hover:bg-surface transition-colors">
+                            <span class="material-symbols-outlined text-[18px] text-on-surface-variant">chevron_right</span>
                         </button>
                     </div>
                 </div>
+            </div>
 
-                <!-- Table -->
-                <div class="table-container">
-                    <table class="invoice-table">
-                        <thead>
-                            <tr>
-                                <th>Invoice Details</th>
-                                <th>Supplier / GSTIN</th>
-                                <th>Category</th>
-                                <th>Taxable Value</th>
-                                <th>Taxes (CGST/SGST/IGST)</th>
-                                <th>Total Amount</th>
-                                <th>Status</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="invoice-rows-body">
-                            <!-- Populated via javascript -->
-                            <tr>
-                                <td colspan="8" class="empty-state">
-                                    <i class="fa-solid fa-spinner fa-spin loading-icon"></i>
-                                    <p>Loading invoice records...</p>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+            <!-- Table -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b border-outline" style="background:rgba(28,33,40,0.8);">
+                            <th class="py-4 px-6 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest whitespace-nowrap">Invoice #</th>
+                            <th class="py-4 px-6 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Supplier / GSTIN</th>
+                            <th class="py-4 px-6 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Date</th>
+                            <th class="py-4 px-6 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Category</th>
+                            <th class="py-4 px-6 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest text-right">Taxable</th>
+                            <th class="py-4 px-6 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest text-right">Total (₹)</th>
+                            <th class="py-4 px-6 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest text-center">Status</th>
+                            <th class="py-4 px-6 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="invoice-rows-body" class="divide-y divide-outline/60 text-sm">
+                        <tr>
+                            <td colspan="8" class="empty-state loading-pulse">
+                                <span class="material-symbols-outlined loading-icon" style="font-size:32px;">sync</span>
+                                <p class="text-[14px] font-medium">Loading invoice records…</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Table Footer -->
+            <div class="p-4 border-t border-outline flex items-center justify-between" style="background:rgba(28,33,40,0.5);">
+                <button class="flex items-center gap-2 text-[13px] font-bold text-on-surface-variant hover:text-white transition-colors">
+                    <span class="material-symbols-outlined text-[18px]">history</span>
+                    Audit Log
+                </button>
+                <div class="flex items-center gap-1">
+                    <button class="w-8 h-8 rounded flex items-center justify-center bg-primary text-white text-[12px] font-bold shadow-lg shadow-primary/20">1</button>
+                    <button class="w-8 h-8 rounded flex items-center justify-center text-on-surface-variant hover:bg-background text-[12px] font-bold transition-colors">2</button>
+                    <button class="w-8 h-8 rounded flex items-center justify-center text-on-surface-variant hover:bg-background text-[12px] font-bold transition-colors">3</button>
+                    <span class="px-1 text-on-surface-variant text-[12px]">…</span>
+                    <button class="w-8 h-8 rounded flex items-center justify-center text-on-surface-variant hover:bg-background text-[12px] font-bold transition-colors">12</button>
                 </div>
-            </section>
-        </main>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- ══════════════════════════════════════════════
+     AUDIT DRAWER
+══════════════════════════════════════════════ -->
+<div id="audit-drawer-overlay"></div>
+<aside id="audit-drawer">
+    <!-- Header -->
+    <div class="flex items-center justify-between px-6 py-4 border-b border-outline shrink-0" style="background:#161b22;">
+        <div>
+            <h3 class="font-bold text-[16px] text-white" id="drawer-invoice-num">Audit Invoice #—</h3>
+            <span class="text-[12px] text-on-surface-variant" id="drawer-invoice-id">DB ID: —</span>
+        </div>
+        <button id="close-drawer-btn" class="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant hover:text-white hover:bg-surface-alt border border-transparent hover:border-outline transition-all">
+            <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
     </div>
 
-    <!-- ── Slide-out Audit Drawer ── -->
-    <div class="drawer-overlay" id="audit-drawer-overlay"></div>
-    <aside class="audit-drawer" id="audit-drawer">
-        <div class="drawer-header">
-            <div class="drawer-header-left">
-                <h3 class="drawer-title" id="drawer-invoice-num">Audit Invoice #--</h3>
-                <span class="drawer-subtitle" id="drawer-invoice-id">ID: --</span>
-            </div>
-            <button class="close-drawer-btn" id="close-drawer-btn">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        </div>
+    <!-- Body -->
+    <div class="flex-1 overflow-y-auto min-h-0">
+        <div class="grid grid-cols-1 md:grid-cols-2 h-full">
 
-        <div class="drawer-body">
-            <!-- Split Panel Grid -->
-            <div class="drawer-split-grid">
-                <!-- Left panel: Original Image Document Viewport -->
-                <div class="image-viewport-container">
-                    <div class="viewport-header">
-                        <span>Original Document</span>
-                        <div class="viewport-actions">
-                            <button class="viewport-btn" id="zoom-in-btn" title="Zoom In"><i class="fa-solid fa-plus"></i></button>
-                            <button class="viewport-btn" id="zoom-out-btn" title="Zoom Out"><i class="fa-solid fa-minus"></i></button>
-                            <button class="viewport-btn" id="rotate-btn" title="Rotate"><i class="fa-solid fa-rotate-right"></i></button>
-                        </div>
-                    </div>
-                    <div class="viewport-body">
-                        <img id="invoice-doc-img" src="" alt="No invoice file preview available" class="invoice-preview-image">
+            <!-- Document Viewer -->
+            <div class="flex flex-col border-r border-outline" style="background:#0f1117; min-height: 400px;">
+                <div class="flex items-center justify-between px-4 py-3 border-b border-outline shrink-0">
+                    <span class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Original Document</span>
+                    <div class="flex items-center gap-1">
+                        <button id="zoom-in-btn"  title="Zoom In"  class="w-7 h-7 rounded flex items-center justify-center text-on-surface-variant hover:text-white hover:bg-surface-alt transition-colors"><span class="material-symbols-outlined text-[16px]">add</span></button>
+                        <button id="zoom-out-btn" title="Zoom Out" class="w-7 h-7 rounded flex items-center justify-center text-on-surface-variant hover:text-white hover:bg-surface-alt transition-colors"><span class="material-symbols-outlined text-[16px]">remove</span></button>
+                        <button id="rotate-btn"   title="Rotate"   class="w-7 h-7 rounded flex items-center justify-center text-on-surface-variant hover:text-white hover:bg-surface-alt transition-colors"><span class="material-symbols-outlined text-[16px]">rotate_right</span></button>
                     </div>
                 </div>
+                <div class="flex-1 flex items-center justify-center p-4 overflow-hidden">
+                    <img id="invoice-doc-img" src="" alt="No invoice preview" class="invoice-preview-image"/>
+                </div>
+            </div>
 
-                <!-- Right panel: Extracted Fields Forms -->
-                <div class="audit-forms-container">
-                    <!-- System Audit Flags -->
-                    <div class="audit-section-card alert-section-card" id="audit-alerts-card" style="display:none;">
-                        <h4 class="card-section-title"><i class="fa-solid fa-triangle-exclamation"></i> System Validation Checks</h4>
-                        <ul class="alert-list" id="audit-alerts-list">
-                            <!-- Populated dynamic checks -->
-                        </ul>
+            <!-- Audit Forms -->
+            <div class="flex flex-col overflow-y-auto p-4 gap-4 bg-surface">
+
+                <!-- System Alerts -->
+                <div id="audit-alerts-card" class="rounded-lg border border-error/30 p-4" style="display:none; background:rgba(248,81,73,0.06);">
+                    <h4 class="text-[11px] font-bold text-error-dim uppercase tracking-wider flex items-center gap-2 mb-3">
+                        <span class="material-symbols-outlined text-[16px]">warning</span> System Validation Checks
+                    </h4>
+                    <ul id="audit-alerts-list" class="space-y-1.5 text-[13px] text-error-dim list-disc list-inside"></ul>
+                </div>
+
+                <form id="audit-form" class="audit-form flex flex-col gap-3">
+                    <!-- Invoice Details -->
+                    <div class="rounded-lg border border-outline p-4" style="background:#0f1117;">
+                        <h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-3 pb-2 border-b border-outline">Invoice Details</h4>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div><label for="f-inv-num">Invoice Number</label><input type="text" id="f-inv-num"/></div>
+                            <div><label for="f-inv-date">Invoice Date</label><input type="date" id="f-inv-date"/></div>
+                        </div>
                     </div>
 
-                    <!-- CA Audit Forms -->
-                    <form id="audit-form" class="audit-form">
-                        <div class="form-section">
-                            <h4 class="form-section-title">Invoice Details</h4>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="f-inv-num">Invoice Number</label>
-                                    <input type="text" id="f-inv-num">
-                                </div>
-                                <div class="form-group">
-                                    <label for="f-inv-date">Invoice Date</label>
-                                    <input type="date" id="f-inv-date">
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="form-section">
-                            <h4 class="form-section-title">Supplier details</h4>
-                            <div class="form-group">
-                                <label for="f-sup-name">Supplier Legal Name</label>
-                                <input type="text" id="f-sup-name">
-                            </div>
-                            <div class="form-group">
+                    <!-- Supplier -->
+                    <div class="rounded-lg border border-outline p-4" style="background:#0f1117;">
+                        <h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-3 pb-2 border-b border-outline">Supplier Details</h4>
+                        <div class="flex flex-col gap-3">
+                            <div><label for="f-sup-name">Supplier Legal Name</label><input type="text" id="f-sup-name"/></div>
+                            <div>
                                 <label for="f-sup-gst">Supplier GSTIN</label>
-                                <input type="text" id="f-sup-gst" class="gstin-input">
+                                <input type="text" id="f-sup-gst" class="gstin-input uppercase"/>
                                 <span class="validation-label" id="f-sup-gst-val"></span>
                             </div>
                         </div>
+                    </div>
 
-                        <div class="form-section">
-                            <h4 class="form-section-title">Recipient details</h4>
-                            <div class="form-group">
-                                <label for="f-rec-name">Recipient Name</label>
-                                <input type="text" id="f-rec-name">
-                            </div>
-                            <div class="form-group">
+                    <!-- Recipient -->
+                    <div class="rounded-lg border border-outline p-4" style="background:#0f1117;">
+                        <h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-3 pb-2 border-b border-outline">Recipient Details</h4>
+                        <div class="flex flex-col gap-3">
+                            <div><label for="f-rec-name">Recipient Name</label><input type="text" id="f-rec-name"/></div>
+                            <div>
                                 <label for="f-rec-gst">Recipient GSTIN</label>
-                                <input type="text" id="f-rec-gst" class="gstin-input">
+                                <input type="text" id="f-rec-gst" class="gstin-input uppercase"/>
                                 <span class="validation-label" id="f-rec-gst-val"></span>
                             </div>
                         </div>
+                    </div>
 
-                        <div class="form-section">
-                            <h4 class="form-section-title">Categorisation & Supply</h4>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="f-category">Business Category</label>
-                                    <select id="f-category">
-                                        <option value="Office Supplies">Office Supplies</option>
-                                        <option value="Electronics & Hardware">Electronics & Hardware</option>
-                                        <option value="Software & SaaS">Software & SaaS</option>
-                                        <option value="Professional & Consulting Services">Professional & Consulting Services</option>
-                                        <option value="Rent & Infrastructure">Rent & Infrastructure</option>
-                                        <option value="Food & Beverages">Food & Beverages</option>
-                                        <option value="Motor Vehicle & Cab Bookings">Motor Vehicle & Cab Bookings</option>
-                                        <option value="Travel & Lodging">Travel & Lodging</option>
-                                        <option value="Logistics & Freight">Logistics & Freight</option>
-                                        <option value="Raw Materials">Raw Materials</option>
-                                        <option value="Marketing & Advertising">Marketing & Advertising</option>
-                                        <option value="Utilities">Utilities</option>
-                                        <option value="Other">Other</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label for="f-supply-type">Supply Type</label>
-                                    <select id="f-supply-type">
-                                        <option value="INTRA-STATE">INTRA-STATE</option>
-                                        <option value="INTER-STATE">INTER-STATE</option>
-                                        <option value="UNKNOWN">UNKNOWN</option>
-                                    </select>
-                                </div>
+                    <!-- Categorisation -->
+                    <div class="rounded-lg border border-outline p-4" style="background:#0f1117;">
+                        <h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-3 pb-2 border-b border-outline">Categorisation & Supply</h4>
+                        <div class="grid grid-cols-2 gap-3 mb-3">
+                            <div>
+                                <label for="f-category">Business Category</label>
+                                <select id="f-category">
+                                    <option value="Office Supplies">Office Supplies</option>
+                                    <option value="Electronics & Hardware">Electronics & Hardware</option>
+                                    <option value="Software & SaaS">Software & SaaS</option>
+                                    <option value="Professional & Consulting Services">Professional Services</option>
+                                    <option value="Rent & Infrastructure">Rent & Infrastructure</option>
+                                    <option value="Food & Beverages">Food & Beverages</option>
+                                    <option value="Motor Vehicle & Cab Bookings">Motor Vehicle</option>
+                                    <option value="Travel & Lodging">Travel & Lodging</option>
+                                    <option value="Logistics & Freight">Logistics & Freight</option>
+                                    <option value="Raw Materials">Raw Materials</option>
+                                    <option value="Marketing & Advertising">Marketing & Advertising</option>
+                                    <option value="Utilities">Utilities</option>
+                                    <option value="Other">Other</option>
+                                </select>
                             </div>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="f-itc-eligible">ITC Claim Status</label>
-                                    <select id="f-itc-eligible">
-                                        <option value="true">Eligible</option>
-                                        <option value="false">Blocked / Ineligible</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label for="f-pos">Place of Supply (POS)</label>
-                                    <input type="text" id="f-pos">
-                                </div>
-                            </div>
-                            <div class="form-group" id="itc-reason-group" style="display:none;">
-                                <label for="f-itc-reason">Ineligibility Reason</label>
-                                <textarea id="f-itc-reason" rows="2"></textarea>
+                            <div>
+                                <label for="f-supply-type">Supply Type</label>
+                                <select id="f-supply-type">
+                                    <option value="INTRA-STATE">INTRA-STATE</option>
+                                    <option value="INTER-STATE">INTER-STATE</option>
+                                    <option value="UNKNOWN">UNKNOWN</option>
+                                </select>
                             </div>
                         </div>
-
-                        <div class="form-section">
-                            <h4 class="form-section-title">Amounts Breakdown</h4>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="f-taxable">Taxable Value (₹)</label>
-                                    <input type="number" step="0.01" id="f-taxable">
-                                </div>
-                                <div class="form-group">
-                                    <label for="f-grand">Grand Total (₹)</label>
-                                    <input type="number" step="0.01" id="f-grand">
-                                </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label for="f-itc-eligible">ITC Claim Status</label>
+                                <select id="f-itc-eligible">
+                                    <option value="true">Eligible</option>
+                                    <option value="false">Blocked / Ineligible</option>
+                                </select>
                             </div>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="f-cgst">CGST (₹)</label>
-                                    <input type="number" step="0.01" id="f-cgst">
-                                </div>
-                                <div class="form-group">
-                                    <label for="f-sgst">SGST (₹)</label>
-                                    <input type="number" step="0.01" id="f-sgst">
-                                </div>
-                                <div class="form-group">
-                                    <label for="f-igst">IGST (₹)</label>
-                                    <input type="number" step="0.01" id="f-igst">
-                                </div>
-                            </div>
+                            <div><label for="f-pos">Place of Supply (POS)</label><input type="text" id="f-pos"/></div>
                         </div>
-                    </form>
-                    
-                    <!-- Audit Logs Trail -->
-                    <div class="audit-section-card logs-section-card">
-                        <h4 class="card-section-title"><i class="fa-solid fa-history"></i> CA Modification History</h4>
-                        <div class="audit-logs-timeline" id="drawer-logs-timeline">
-                            <span class="timeline-empty">No CA overrides recorded yet.</span>
+                        <div id="itc-reason-group" class="mt-3">
+                            <label for="f-itc-reason">Ineligibility Reason</label>
+                            <textarea id="f-itc-reason" rows="2"></textarea>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
 
-        <div class="drawer-footer">
-            <button class="secondary-btn" id="drawer-cancel-btn">Cancel</button>
-            <div class="footer-actions-right">
-                <button class="primary-btn info-btn" id="drawer-save-btn">
-                    <i class="fa-solid fa-floppy-disk"></i> Save Progress
-                </button>
-                <button class="primary-btn success-btn" id="drawer-approve-btn">
-                    <i class="fa-solid fa-circle-check"></i> Verify & Approve
-                </button>
-            </div>
-        </div>
-    </aside>
-
-    <!-- ── GSTR Filings Export Modal ── -->
-    <div class="modal-overlay" id="gstr-modal-overlay"></div>
-    <div class="modal" id="gstr-modal">
-        <div class="modal-header">
-            <h3>GSTR Filing offline Toolkit</h3>
-            <button class="close-modal-btn" id="close-gstr-modal-btn">&times;</button>
-        </div>
-        <div class="modal-body">
-            <p>Generate government offline utility compatible JSON files for the selected client and tax period.</p>
-            
-            <div class="modal-form-row">
-                <div class="form-group">
-                    <label>Filing Period</label>
-                    <input type="month" id="modal-gstr-month" value="2026-05">
-                </div>
-                <div class="form-group">
-                    <label>Export Schema Type</label>
-                    <select id="modal-gstr-type">
-                        <option value="GSTR1">GSTR-1 (Sales Invoices & HSN Summary)</option>
-                        <option value="GSTR3B">GSTR-3B (Consolidated Tax Liabilities & ITC)</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- Export aggregate review panel -->
-            <div class="aggregate-review-panel">
-                <h4>Preview aggregates (Draft Period)</h4>
-                <div class="preview-metrics-row">
-                    <div class="preview-metric">
-                        <span class="label">Taxable Sales</span>
-                        <span class="val" id="prev-sales">₹0.00</span>
+                    <!-- Amounts -->
+                    <div class="rounded-lg border border-outline p-4" style="background:#0f1117;">
+                        <h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-3 pb-2 border-b border-outline">Amounts Breakdown</h4>
+                        <div class="grid grid-cols-2 gap-3 mb-3">
+                            <div><label for="f-taxable">Taxable Value (₹)</label><input type="number" step="0.01" id="f-taxable"/></div>
+                            <div><label for="f-grand">Grand Total (₹)</label><input type="number" step="0.01" id="f-grand"/></div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-3">
+                            <div><label for="f-cgst">CGST (₹)</label><input type="number" step="0.01" id="f-cgst"/></div>
+                            <div><label for="f-sgst">SGST (₹)</label><input type="number" step="0.01" id="f-sgst"/></div>
+                            <div><label for="f-igst">IGST (₹)</label><input type="number" step="0.01" id="f-igst"/></div>
+                        </div>
                     </div>
-                    <div class="preview-metric">
-                        <span class="label">Tax Liability</span>
-                        <span class="val" id="prev-tax">₹0.00</span>
-                    </div>
-                    <div class="preview-metric">
-                        <span class="label">Eligible ITC</span>
-                        <span class="val" id="prev-itc">₹0.00</span>
+                </form>
+
+                <!-- CA Modification History -->
+                <div class="rounded-lg border border-outline p-4" style="background:#0f1117;">
+                    <h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[14px]">history</span> CA Modification History
+                    </h4>
+                    <div id="drawer-logs-timeline">
+                        <span class="timeline-empty">No CA overrides recorded yet.</span>
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="modal-footer">
-            <button class="secondary-btn" id="cancel-gstr-modal-btn">Cancel</button>
-            <button class="primary-btn success-btn" id="export-gstr-json-btn">
-                <i class="fa-solid fa-file-export"></i> Compile & Download JSON
-            </button>
         </div>
     </div>
 
-    <!-- Notification Toast -->
-    <div class="toast" id="toast">Filing updated successfully!</div>
+    <!-- Footer -->
+    <div class="shrink-0 flex items-center justify-between px-6 py-3 border-t border-outline" style="background:#161b22;">
+        <button id="drawer-cancel-btn" class="px-4 py-2 rounded-md text-[13px] font-bold text-on-surface-variant hover:text-white hover:bg-surface-alt border border-outline transition-colors">
+            Cancel
+        </button>
+        <div class="flex items-center gap-2">
+            <button id="drawer-save-btn" class="flex items-center gap-2 px-4 py-2 rounded-md text-[13px] font-bold text-white bg-primary/80 hover:bg-primary transition-all">
+                <span class="material-symbols-outlined text-[16px]">save</span> Save Progress
+            </button>
+            <button id="drawer-approve-btn" class="flex items-center gap-2 px-4 py-2 rounded-md text-[13px] font-bold text-white transition-all" style="background:#238636;">
+                <span class="material-symbols-outlined text-[16px]" style="font-variation-settings:'FILL' 1;">task_alt</span> Verify & Approve
+            </button>
+        </div>
+    </div>
+</aside>
 
-    <script src="/static/dashboard.js"></script>
+<!-- ══════════════════════════════════════════════
+     GSTR FILING MODAL
+══════════════════════════════════════════════ -->
+<div id="gstr-modal-overlay"></div>
+<div id="gstr-modal">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-outline" style="background:#1c2128;">
+        <h3 class="font-bold text-[16px] text-white flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary text-[20px]">file_export</span>
+            GSTR Filing Offline Toolkit
+        </h3>
+        <button id="close-gstr-modal-btn" class="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant hover:text-white hover:bg-surface-alt border border-transparent hover:border-outline transition-all">
+            <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+    </div>
+    <div class="p-6 space-y-4">
+        <p class="text-[13px] text-on-surface-variant">Generate government offline utility-compatible JSON files for the selected client and tax period.</p>
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Filing Period</label>
+                <input type="month" id="modal-gstr-month" value="2026-05"
+                    class="w-full px-3 py-2 rounded-md text-[13px] font-semibold border border-outline focus:outline-none focus:border-primary transition-colors"
+                    style="background:#0f1117; color:#e6edf3; color-scheme:dark;"/>
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Export Schema</label>
+                <select id="modal-gstr-type"
+                    class="w-full px-3 py-2 rounded-md text-[13px] font-semibold border border-outline focus:outline-none focus:border-primary transition-colors appearance-none"
+                    style="background:#0f1117; color:#e6edf3;">
+                    <option value="GSTR1">GSTR-1 (Sales Invoices & HSN Summary)</option>
+                    <option value="GSTR3B">GSTR-3B (Consolidated Tax Liabilities & ITC)</option>
+                </select>
+            </div>
+        </div>
+        <!-- Preview Aggregates -->
+        <div class="rounded-lg border border-outline p-4" style="background:#0f1117;">
+            <h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-3">Preview Aggregates</h4>
+            <div class="preview-metrics-row">
+                <div class="preview-metric"><span class="label">Taxable Sales</span><span class="val" id="prev-sales">₹0.00</span></div>
+                <div class="preview-metric"><span class="label">Tax Liability</span><span class="val" id="prev-tax">₹0.00</span></div>
+                <div class="preview-metric"><span class="label">Eligible ITC</span><span class="val" id="prev-itc">₹0.00</span></div>
+            </div>
+        </div>
+    </div>
+    <div class="flex items-center justify-between px-6 py-4 border-t border-outline" style="background:#1c2128;">
+        <button id="cancel-gstr-modal-btn" class="px-4 py-2 rounded-md text-[13px] font-bold text-on-surface-variant hover:text-white hover:bg-surface-alt border border-outline transition-colors">
+            Cancel
+        </button>
+        <button id="export-gstr-json-btn" class="flex items-center gap-2 px-5 py-2 rounded-md text-[13px] font-bold text-white bg-primary hover:bg-primary/90 transition-all shadow-lg shadow-primary/20">
+            <span class="material-symbols-outlined text-[16px]">file_export</span> Compile & Download JSON
+        </button>
+    </div>
+</div>
+
+<!-- Toast -->
+<div id="toast">Filing updated successfully!</div>
+
+<!-- ── Bridge: month picker → JS state ── -->
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const mp = document.getElementById('month-picker');
+        if (mp) {
+            mp.value = new Date().toISOString().slice(0, 7);
+            mp.addEventListener('change', (e) => {
+                if (window.state) {
+                    window.state.selectedMonth = e.target.value;
+                    if (window.fetchData) window.fetchData();
+                }
+            });
+        }
+    });
+</script>
+
+<script src="/static/dashboard.js"></script>
+
+<!-- ── Post-load: patch JS rendering for new theme ── -->
+<script>
+    // Override renderInvoiceTable row template for new indigo theme
+    const _origRender = window.renderInvoiceTable;
+</script>
 </body>
 </html>

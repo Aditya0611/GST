@@ -442,15 +442,31 @@ function updateDashboardMetrics(metrics) {
     elements.kpiPendingCount.textContent = metrics.pending_review;
     elements.kpiPendingSubtext.textContent = `${metrics.pending_review} pending CA approval`;
     elements.kpiPendingTrend.textContent = `+${metrics.pending_review} total`;
+
+    // Fallback: if sales & ITC are 0 (client has no GSTIN set), show totals from all invoices
+    const invoices = state.invoices || [];
+    let fallbackTaxable = 0, fallbackItc = 0;
+    if (metrics.sales_taxable === 0 && metrics.itc_claimed === 0 && invoices.length > 0) {
+        invoices.forEach(inv => {
+            fallbackTaxable += inv.total_taxable_value || 0;
+            if (inv.is_itc_eligible && (inv.is_approved === 1 || inv.is_approved === true)) {
+                fallbackItc += (inv.total_cgst || 0) + (inv.total_sgst || 0) + (inv.total_igst || 0);
+            }
+        });
+    }
+
+    const displaySales = metrics.sales_taxable > 0 ? metrics.sales_taxable : fallbackTaxable;
+    const displayItc   = metrics.itc_claimed > 0   ? metrics.itc_claimed   : fallbackItc;
+
+    elements.kpiSalesTotal.textContent = formatCurrency(displaySales);
+    elements.kpiSalesSubtext.textContent = `${formatCurrency(displaySales)} this period`;
     
-    elements.kpiSalesTotal.textContent = formatCurrency(metrics.sales_taxable);
-    elements.kpiSalesSubtext.textContent = `${formatCurrency(metrics.sales_taxable)} this period`;
-    
-    elements.kpiItcTotal.textContent = formatCurrency(metrics.itc_claimed);
-    elements.kpiItcSubtext.textContent = `${formatCurrency(metrics.itc_claimed)} reconciled`;
+    elements.kpiItcTotal.textContent = formatCurrency(displayItc);
+    elements.kpiItcSubtext.textContent = `${formatCurrency(displayItc)} reconciled`;
 
     // Filing Status bars
-    elements.filingStatusTitle.textContent = `FILING STATUS — ${formatYearMonthLabel(state.selectedMonth)}`;
+    const monthLabel = formatYearMonthLabel(state.selectedMonth);
+    elements.filingStatusTitle.textContent = `FILING STATUS — ${monthLabel}`;
     
     if (metrics.pending_review > 0) {
         elements.statusGstr1Val.textContent = "Action Required";
@@ -468,9 +484,9 @@ function updateDashboardMetrics(metrics) {
 function renderTableLoadingState() {
     elements.invoiceRowsBody.innerHTML = `
         <tr>
-            <td colspan="8" class="empty-state">
-                <i class="fa-solid fa-spinner fa-spin loading-icon"></i>
-                <p>Loading invoice records...</p>
+            <td colspan="8" class="empty-state loading-pulse">
+                <span class="material-symbols-outlined loading-icon" style="animation: spin 1s linear infinite; display:inline-block;">sync</span>
+                <p>Loading invoice records…</p>
             </td>
         </tr>
     `;
@@ -499,13 +515,15 @@ function renderInvoiceTable() {
     }
 
     // Update counts
-    elements.recordCountTxt.textContent = `${filtered.length} records · ${formatYearMonthLabel(state.selectedMonth)}`;
+    const pendingCount = filtered.filter(inv => !inv.is_approved).length;
+    elements.recordCountTxt.textContent = `${pendingCount} pending · ${filtered.length} total · ${formatYearMonthLabel(state.selectedMonth)}`;
+    elements.recordCountTxt.style.color = pendingCount > 0 ? '#e3b341' : '#3fb950';
 
     if (filtered.length === 0) {
         elements.invoiceRowsBody.innerHTML = `
             <tr>
                 <td colspan="8" class="empty-state">
-                    <i class="fa-solid fa-folder-open loading-icon" style="color:var(--text-muted);"></i>
+                    <span class="material-symbols-outlined loading-icon" style="color:#6b7280;">folder_open</span>
                     <p>No invoices matching your selection</p>
                 </td>
             </tr>
@@ -526,34 +544,35 @@ function renderInvoiceTable() {
         // Status Badge
         let statusBadge = '';
         if (inv.is_approved) {
-            statusBadge = '<span class="badge badge-approved"><i class="fa-solid fa-circle-check"></i> Approved</span>';
+            statusBadge = `<span class="badge badge-approved"><span class="material-symbols-outlined" style="font-size:13px;font-variation-settings:'FILL' 1;">task_alt</span> Approved</span>`;
         } else if (!inv.is_calculation_correct) {
-            statusBadge = '<span class="badge badge-flagged"><i class="fa-solid fa-triangle-exclamation"></i> Flagged</span>';
+            statusBadge = `<span class="badge badge-flagged"><span class="material-symbols-outlined" style="font-size:13px;">warning</span> Flagged</span>`;
         } else {
-            statusBadge = '<span class="badge badge-pending"><i class="fa-solid fa-clock"></i> Pending Review</span>';
+            statusBadge = `<span class="badge badge-pending"><span class="material-symbols-outlined" style="font-size:13px;">schedule</span> Pending</span>`;
         }
 
         tr.innerHTML = `
-            <td>
-                <div class="tbl-title">INV-${inv.invoice_number || 'N/A'}</div>
-                <div class="tbl-subtitle">Date: ${invDate}</div>
+            <td class="py-4 px-6">
+                <span style="font-size:13px;font-weight:700;color:#e6edf3;">INV-${inv.invoice_number || 'N/A'}</span>
             </td>
-            <td>
-                <div class="tbl-title">${inv.supplier_name || 'Not Detected'}</div>
-                <div class="tbl-subtitle"><span class="tbl-gstin">${inv.supplier_gstin || 'None'}</span></div>
+            <td class="py-4 px-6">
+                <div style="font-size:13px;font-weight:700;color:#e6edf3;">${inv.supplier_name || 'Not Detected'}</div>
+                <div style="font-size:11px;color:#8b949e;font-family:monospace;">GSTIN: ${inv.supplier_gstin || 'None'}</div>
             </td>
-            <td>
-                <div class="tbl-title">${inv.business_category || 'Other'}</div>
-                <div class="tbl-subtitle">${inv.supply_type || 'INTRA-STATE'}</div>
+            <td class="py-4 px-6" style="font-size:13px;color:#8b949e;white-space:nowrap;">${invDate}</td>
+            <td class="py-4 px-6">
+                <span style="display:inline-block;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600;background:#0f1117;border:1px solid #30363d;color:#8b949e;">${inv.business_category || 'Other'}</span>
             </td>
-            <td><div class="tbl-title">₹${formatNumber(inv.total_taxable_value)}</div></td>
-            <td>
-                <div class="tbl-title">₹${formatNumber(taxes)}</div>
-                <div class="tbl-subtitle" style="font-size:10px;">C:${formatNumber(inv.total_cgst)} S:${formatNumber(inv.total_sgst)} I:${formatNumber(inv.total_igst)}</div>
+            <td class="py-4 px-6" style="text-align:right;font-size:13px;font-weight:700;color:#e6edf3;font-variant-numeric:tabular-nums;">₹${formatNumber(inv.total_taxable_value)}</td>
+            <td class="py-4 px-6" style="text-align:right;font-size:13px;font-weight:800;color:#818cf8;font-variant-numeric:tabular-nums;">₹${formatNumber(inv.grand_total)}</td>
+            <td class="py-4 px-6" style="text-align:center;">${statusBadge}</td>
+            <td class="py-4 px-6" style="text-align:right;">
+                <button onclick="event.stopPropagation(); openInvoiceAudit(${inv.id})"
+                    style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:6px;font-size:12px;font-weight:700;color:#fff;background:#6366f1;border:none;cursor:pointer;box-shadow:0 2px 8px rgba(99,102,241,0.25);transition:background 0.15s;"
+                    onmouseover="this.style.background='#4f46e5'" onmouseout="this.style.background='#6366f1'">
+                    <span class="material-symbols-outlined" style="font-size:14px;">fact_check</span> Audit
+                </button>
             </td>
-            <td><div class="tbl-title" style="color:var(--color-indigo);">₹${formatNumber(inv.grand_total)}</div></td>
-            <td>${statusBadge}</td>
-            <td><button class="verify-action-btn">Audit <i class="fa-solid fa-angle-right"></i></button></td>
         `;
 
         elements.invoiceRowsBody.appendChild(tr);
@@ -702,8 +721,13 @@ function formatNumber(num) {
 
 function formatYearMonthLabel(yearMonthStr) {
     // Converts "2026-05" -> "May 2026"
-    const [year, month] = yearMonthStr.split('-');
-    const dt = new Date(year, parseInt(month) - 1, 1);
+    if (!yearMonthStr || !yearMonthStr.includes('-')) return 'All Months';
+    const parts = yearMonthStr.split('-');
+    if (parts.length < 2) return yearMonthStr;
+    const year = parseInt(parts[0]);
+    const month = parseInt(parts[1]);
+    if (isNaN(year) || isNaN(month) || month < 1 || month > 12) return yearMonthStr;
+    const dt = new Date(year, month - 1, 1);
     return dt.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 }
 
@@ -751,11 +775,11 @@ function showToast(message, isError = false) {
     elements.toast.className = 'toast';
     
     if (isError) {
-        elements.toast.style.backgroundColor = 'var(--color-red)';
-        elements.toast.style.boxShadow = '0 4px 15px var(--color-red-glow)';
+        elements.toast.style.background = '#ba1a1a';
+        elements.toast.style.boxShadow = '0 8px 24px rgba(186,26,26,0.4)';
     } else {
-        elements.toast.style.backgroundColor = 'var(--color-indigo)';
-        elements.toast.style.boxShadow = '0 4px 15px var(--color-indigo-glow)';
+        elements.toast.style.background = '#4f46e5';
+        elements.toast.style.boxShadow = '0 8px 24px rgba(79,70,229,0.4)';
     }
     
     elements.toast.classList.add('active');

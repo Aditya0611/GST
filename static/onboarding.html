@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>GST Filing - Onboarding</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "error-container": "#ffdad6",
+                      "secondary-container": "#e0ffd5",
+                      "on-primary-fixed": "#0f0069",
+                      "on-primary": "#ffffff",
+                      "primary-fixed": "#e2dfff",
+                      "on-tertiary": "#ffffff",
+                      "inverse-surface": "#27313f",
+                      "surface": "#f8f9ff",
+                      "on-tertiary-fixed": "#1a1b23",
+                      "outline-variant": "#c7c4d8",
+                      "surface-bright": "#f8f9ff",
+                      "secondary-fixed-dim": "#4edea3",
+                      "tertiary-fixed": "#e3e1ed",
+                      "on-primary-fixed-variant": "#3323cc",
+                      "surface-container-high": "#dee9fc",
+                      "surface-container-highest": "#d9e3f6",
+                      "inverse-primary": "#c3c0ff",
+                      "surface-container-low": "#eff4ff",
+                      "outline": "#777587",
+                      "on-secondary": "#ffffff",
+                      "surface-container-lowest": "#ffffff",
+                      "primary": "#3525cd",
+                      "on-primary-container": "#dad7ff",
+                      "secondary": "#006c49",
+                      "on-secondary-container": "#00714d",
+                      "on-secondary-fixed": "#002113",
+                      "secondary-fixed": "#6ffbbe",
+                      "surface-variant": "#d9e3f6",
+                      "tertiary-container": "#5f5f69",
+                      "primary-container": "#4f46e5",
+                      "on-error-container": "#93000a",
+                      "primary-fixed-dim": "#c3c0ff",
+                      "on-tertiary-fixed-variant": "#46464f",
+                      "background": "#f8f9ff",
+                      "on-surface-variant": "#464555",
+                      "surface-tint": "#4d44e3",
+                      "surface-container": "#e6eeff",
+                      "on-surface": "#121c2a",
+                      "on-tertiary-container": "#dbdae5",
+                      "on-secondary-fixed-variant": "#005236",
+                      "on-background": "#121c2a",
+                      "tertiary-fixed-dim": "#c7c5d1",
+                      "on-error": "#ffffff",
+                      "error": "#ba1a1a",
+                      "inverse-on-surface": "#eaf1ff",
+                      "surface-dim": "#d0dbed",
+                      "tertiary": "#474751"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "gutter": "24px",
+                      "onboarding-card-width": "480px",
+                      "stack-gap": "32px",
+                      "margin-mobile": "16px",
+                      "form-gap": "20px",
+                      "container-max": "1200px"
+              },
+              "fontFamily": {
+                      "body-md": ["Plus Jakarta Sans"],
+                      "headline-lg-mobile": ["Plus Jakarta Sans"],
+                      "headline-lg": ["Plus Jakarta Sans"],
+                      "body-lg": ["Plus Jakarta Sans"],
+                      "headline-md": ["Plus Jakarta Sans"],
+                      "label-sm": ["Plus Jakarta Sans"],
+                      "label-md": ["Plus Jakarta Sans"]
+              },
+              "fontSize": {
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "headline-lg-mobile": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                      "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                      "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                      "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                      "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600"}]
+              }
+            },
+          },
+        }
+    </script>
+    <style>
+        .glow-focus:focus-within {
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-up {
+            animation: fadeUp 0.4s ease forwards;
+        }
+    </style>
+</head>
+<body class="bg-surface font-body-md text-on-surface antialiased min-h-screen flex flex-col pt-16">
+    <!-- TopAppBar -->
+    <header class="fixed top-0 left-0 w-full z-40 flex flex-col items-center px-margin-mobile md:px-gutter py-4 bg-surface h-16 justify-center border-b border-outline-variant/30 shadow-sm">
+        <div class="w-full max-w-onboarding-card-width flex items-center relative">
+            <a href="/" class="absolute left-0 text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center w-10 h-10 rounded-full hover:bg-surface-variant">
+                <span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+            </a>
+            <h1 class="text-headline-md font-headline-md font-bold text-primary w-full text-center">Onboarding</h1>
+        </div>
+    </header>
+
+    <!-- Main Content Canvas -->
+    <main class="flex-grow flex items-start md:items-center justify-center p-margin-mobile md:p-gutter pt-8">
+        <!-- Onboarding Card Container -->
+        <div class="w-full max-w-onboarding-card-width bg-surface-container-lowest rounded-xl border border-outline-variant shadow-sm overflow-hidden flex flex-col transition-all duration-300">
+            <!-- Progress Indicator -->
+            <div class="w-full h-1 bg-surface-variant relative">
+                <div id="progress-bar" class="absolute top-0 left-0 h-full bg-primary transition-all duration-300" style="width: 33.3%;"></div>
+            </div>
+            <!-- Card Body -->
+            <div class="p-6 md:p-8 flex flex-col gap-stack-gap">
+                
+                <!-- Form State -->
+                <div id="form-state" class="flex flex-col gap-stack-gap">
+                    <!-- Section Header -->
+                    <div class="flex flex-col gap-2 text-center md:text-left">
+                        <span class="text-label-sm font-label-sm text-primary uppercase tracking-widest">Step 1 of 3</span>
+                        <h2 class="text-headline-lg-mobile md:text-headline-lg font-headline-lg-mobile md:font-headline-lg text-on-surface">Let's get started</h2>
+                        <p class="text-body-md font-body-md text-on-surface-variant">Enter your details to verify your business and setup communications.</p>
+                    </div>
+                    <!-- Form Area -->
+                    <form id="onboarding-form" class="flex flex-col gap-form-gap">
+                        <!-- Input Group: GST Number -->
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-label-md font-label-md text-on-surface" for="gstin">GST Number (GSTIN)</label>
+                            <div class="relative glow-focus rounded-DEFAULT transition-shadow duration-200">
+                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <span class="material-symbols-outlined text-outline" data-icon="corporate_fare">corporate_fare</span>
+                                </span>
+                                <input class="w-full pl-10 pr-4 py-3 bg-surface-container-lowest border border-outline-variant rounded-DEFAULT text-body-md font-body-md text-on-surface placeholder:text-outline focus:border-primary focus:ring-0 outline-none transition-colors duration-200 uppercase" id="gstin" name="gstin" placeholder="e.g. 22AAAAA0000A1Z5" type="text" required/>
+                            </div>
+                            <p class="text-label-sm font-label-sm text-on-surface-variant mt-1">15-character alphanumeric GSTIN</p>
+                        </div>
+                        <!-- Input Group: WhatsApp Number -->
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-label-md font-label-md text-on-surface" for="whatsapp">WhatsApp Number</label>
+                            <div class="relative glow-focus rounded-DEFAULT transition-shadow duration-200 flex">
+                                <span class="inline-flex items-center px-3 border border-r-0 border-outline-variant bg-surface-variant text-on-surface-variant rounded-l-DEFAULT text-body-md font-body-md">
+                                    +91
+                                </span>
+                                <input class="flex-1 w-full px-4 py-3 bg-surface-container-lowest border border-outline-variant rounded-r-DEFAULT text-body-md font-body-md text-on-surface placeholder:text-outline focus:border-primary focus:ring-0 outline-none transition-colors duration-200" id="whatsapp" name="whatsapp" placeholder="98765 43210" type="tel" required/>
+                            </div>
+                            <p class="text-label-sm font-label-sm text-on-surface-variant mt-1">We'll send updates and OTPs here</p>
+                        </div>
+                        
+                        <!-- Error Alert Box -->
+                        <div id="error-message" class="hidden p-3 bg-error-container text-error rounded-lg border border-error/20 text-label-sm font-label-sm flex items-start gap-2">
+                            <span class="material-symbols-outlined text-[18px]">error</span>
+                            <span id="error-text">Failed to submit onboarding.</span>
+                        </div>
+
+                        <!-- Trust/Privacy Badge -->
+                        <div class="flex items-start gap-3 mt-2 p-3 bg-surface-container-low rounded-lg border border-outline-variant/50">
+                            <span class="material-symbols-outlined text-secondary mt-0.5 text-[20px]" data-icon="lock">lock</span>
+                            <p class="text-label-sm font-label-sm text-on-surface-variant leading-relaxed">
+                                Your data is securely encrypted. We use this information strictly for GST verification and account setup.
+                            </p>
+                        </div>
+                        <!-- Action Button -->
+                        <button id="submit-btn" class="w-full mt-4 bg-primary-container text-on-primary py-3 px-6 rounded-lg text-label-md font-label-md font-semibold hover:bg-surface-tint active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2" type="submit">
+                            Verify &amp; Continue
+                            <span class="material-symbols-outlined text-[18px]" data-icon="arrow_forward">arrow_forward</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Success State -->
+                <div id="success-state" class="hidden flex flex-col items-center justify-center text-center gap-6 animate-fade-up">
+                    <div class="w-16 h-16 rounded-full bg-secondary flex items-center justify-center text-white shadow-lg shadow-secondary/20">
+                        <span class="material-symbols-outlined text-[36px]" style="font-variation-settings:'FILL' 1;">check_circle</span>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <h2 class="text-headline-lg-mobile md:text-headline-lg font-headline-lg text-on-surface">Registration Complete</h2>
+                        <p class="text-body-md text-on-surface-variant">Your business details are registered with GST Autopilot.</p>
+                    </div>
+                    <div class="w-full p-4 rounded-xl border border-outline-variant/50 flex flex-col gap-2 text-left bg-surface-container-low">
+                        <div class="flex justify-between border-b border-outline-variant/30 pb-2"><span class="text-on-surface-variant font-medium">GSTIN:</span><span id="display-gstin" class="font-mono text-primary font-bold uppercase"></span></div>
+                        <div class="flex justify-between pt-1"><span class="text-on-surface-variant font-medium">WhatsApp:</span><span id="display-whatsapp" class="text-on-surface font-semibold"></span></div>
+                    </div>
+                    <div class="flex flex-col gap-4 w-full">
+                        <div class="p-3.5 bg-surface-container bg-opacity-50 rounded-lg border border-outline-variant/50 text-left flex items-start gap-3">
+                            <span class="material-symbols-outlined text-primary mt-0.5" style="font-variation-settings:'FILL' 1;">chat</span>
+                            <p class="text-label-sm text-on-surface-variant leading-relaxed">
+                                <strong>Start Autopilot:</strong> Try sending an invoice photo or PDF on WhatsApp. The bot will automatically extract tax lines and prompt your CA.
+                            </p>
+                        </div>
+                        <a href="/dashboard" class="w-full bg-primary-container text-on-primary py-3 px-6 rounded-lg text-label-md font-label-md font-semibold hover:bg-surface-tint active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2">
+                            Go to CA Dashboard
+                            <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+                        </a>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const gstinInput = document.getElementById('gstin');
+            const whatsappInput = document.getElementById('whatsapp');
+            const form = document.getElementById('onboarding-form');
+            const formState = document.getElementById('form-state');
+            const successState = document.getElementById('success-state');
+            const errorBox = document.getElementById('error-message');
+            const errorText = document.getElementById('error-text');
+            const progressBar = document.getElementById('progress-bar');
+            const submitBtn = document.getElementById('submit-btn');
+
+            if(gstinInput) {
+                gstinInput.addEventListener('input', function(e) {
+                    this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 15);
+                });
+            }
+
+            if(whatsappInput) {
+                whatsappInput.addEventListener('input', function(e) {
+                    let val = this.value.replace(/\D/g, '');
+                    if (val.length > 10) val = val.substring(0, 10);
+                    
+                    if (val.length > 5) {
+                        this.value = val.substring(0, 5) + ' ' + val.substring(5, 10);
+                    } else {
+                        this.value = val;
+                    }
+                });
+            }
+
+            if(form) {
+                form.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    errorBox.classList.add('hidden');
+                    
+                    const gstin = gstinInput.value.trim();
+                    const rawWhatsapp = whatsappInput.value.replace(/\s+/g, '');
+
+                    if (gstin.length !== 15) {
+                        showError("GSTIN must be exactly 15 alphanumeric characters.");
+                        return;
+                    }
+                    if (rawWhatsapp.length !== 10) {
+                        showError("WhatsApp number must be exactly 10 digits.");
+                        return;
+                    }
+
+                    // Disable button and show loading state
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = 'Verifying details... <span class="material-symbols-outlined text-[18px] animate-spin">sync</span>';
+
+                    try {
+                        const response = await fetch('/api/onboard', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                gstin: gstin,
+                                whatsapp: rawWhatsapp
+                            })
+                        });
+
+                        const result = await response.json();
+                        if (response.ok) {
+                            progressBar.style.width = '100%';
+                            setTimeout(() => {
+                                window.location.href = '/ca-assign';
+                            }, 500);
+                        } else {
+                            showError(result.detail || "Verification failed. Please try again.");
+                        }
+                    } catch (error) {
+                        console.error('Error during onboarding submission:', error);
+                        showError("Network error. Please check your connection and try again.");
+                    } finally {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = 'Verify & Continue <span class="material-symbols-outlined text-[18px]">arrow_forward</span>';
+                    }
+                });
+            }
+
+            function showError(message) {
+                errorText.textContent = message;
+                errorBox.classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>GST Filing - Assign Your CA</title>
+    <meta name="description" content="Link your Chartered Accountant account to enable seamless GST filing with GST Autopilot."/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet"/>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "error-container": "#ffdad6",
+                        "secondary-container": "#e0ffd5",
+                        "on-primary-fixed": "#0f0069",
+                        "on-primary": "#ffffff",
+                        "primary-fixed": "#e2dfff",
+                        "on-tertiary": "#ffffff",
+                        "inverse-surface": "#27313f",
+                        "surface": "#f8f9ff",
+                        "on-tertiary-fixed": "#1a1b23",
+                        "outline-variant": "#c7c4d8",
+                        "surface-bright": "#f8f9ff",
+                        "secondary-fixed-dim": "#4edea3",
+                        "tertiary-fixed": "#e3e1ed",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "surface-container-high": "#dee9fc",
+                        "surface-container-highest": "#d9e3f6",
+                        "inverse-primary": "#c3c0ff",
+                        "surface-container-low": "#eff4ff",
+                        "outline": "#777587",
+                        "on-secondary": "#ffffff",
+                        "surface-container-lowest": "#ffffff",
+                        "primary": "#3525cd",
+                        "on-primary-container": "#dad7ff",
+                        "secondary": "#006c49",
+                        "on-secondary-container": "#00714d",
+                        "on-secondary-fixed": "#002113",
+                        "secondary-fixed": "#6ffbbe",
+                        "surface-variant": "#d9e3f6",
+                        "tertiary-container": "#5f5f69",
+                        "primary-container": "#4f46e5",
+                        "on-error-container": "#93000a",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "on-tertiary-fixed-variant": "#46464f",
+                        "background": "#f8f9ff",
+                        "on-surface-variant": "#464555",
+                        "surface-tint": "#4d44e3",
+                        "surface-container": "#e6eeff",
+                        "on-surface": "#121c2a",
+                        "on-tertiary-container": "#dbdae5",
+                        "on-secondary-fixed-variant": "#005236",
+                        "on-background": "#121c2a",
+                        "tertiary-fixed-dim": "#c7c5d1",
+                        "on-error": "#ffffff",
+                        "error": "#ba1a1a",
+                        "inverse-on-surface": "#eaf1ff",
+                        "surface-dim": "#d0dbed",
+                        "tertiary": "#474751"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "24px",
+                        "onboarding-card-width": "480px",
+                        "stack-gap": "32px",
+                        "margin-mobile": "16px",
+                        "form-gap": "20px",
+                        "container-max": "1200px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Plus Jakarta Sans"],
+                        "headline-lg-mobile": ["Plus Jakarta Sans"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "body-lg": ["Plus Jakarta Sans"],
+                        "headline-md": ["Plus Jakarta Sans"],
+                        "label-sm": ["Plus Jakarta Sans"],
+                        "label-md": ["Plus Jakarta Sans"]
+                    },
+                    "fontSize": {
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                        "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600"}]
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* OTP-style input boxes */
+        .code-input {
+            width: 48px;
+            height: 56px;
+            text-align: center;
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: 0;
+            border: 2px solid #c7c4d8;
+            border-radius: 0.5rem;
+            background: #ffffff;
+            color: #121c2a;
+            transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+            outline: none;
+            caret-color: #3525cd;
+        }
+        .code-input:focus {
+            border-color: #3525cd;
+            box-shadow: 0 0 0 4px rgba(53, 37, 205, 0.12);
+            transform: scale(1.05);
+        }
+        .code-input.filled {
+            border-color: #3525cd;
+            background: #f0eeff;
+        }
+        .code-input.error {
+            border-color: #ba1a1a;
+            box-shadow: 0 0 0 4px rgba(186, 26, 26, 0.1);
+            animation: shake 0.3s ease;
+        }
+        .code-input.success {
+            border-color: #006c49;
+            background: #e0ffd5;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-4px); }
+            40% { transform: translateX(4px); }
+            60% { transform: translateX(-4px); }
+            80% { transform: translateX(4px); }
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-up {
+            animation: fadeUp 0.35s ease forwards;
+        }
+
+        @keyframes pulse-ring {
+            0% { transform: scale(0.9); opacity: 0.7; }
+            50% { transform: scale(1.05); opacity: 0.3; }
+            100% { transform: scale(0.9); opacity: 0.7; }
+        }
+        .pulse-ring {
+            animation: pulse-ring 2s ease-in-out infinite;
+        }
+
+        @keyframes success-pop {
+            0% { transform: scale(0.5); opacity: 0; }
+            60% { transform: scale(1.15); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .success-pop {
+            animation: success-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        .ca-card {
+            transition: all 0.2s ease;
+        }
+        .ca-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(53, 37, 205, 0.08);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen flex flex-col antialiased">
+
+    <!-- Top App Bar -->
+    <header class="fixed top-0 left-0 w-full z-40 flex justify-center border-b border-outline-variant/30 bg-surface/90 backdrop-blur-sm shadow-sm">
+        <div class="w-full max-w-onboarding-card-width flex items-center justify-between px-margin-mobile md:px-gutter py-4 h-16">
+            <a href="/onboarding" id="back-btn" class="text-on-surface-variant hover:text-primary transition-colors hover:bg-surface-variant p-2 rounded-full flex items-center justify-center w-10 h-10">
+                <span class="material-symbols-outlined text-[20px]">arrow_back</span>
+            </a>
+            <h1 class="text-headline-md font-headline-md font-bold text-primary">Onboarding</h1>
+            <div class="w-10"></div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow flex items-start md:items-center justify-center pt-24 pb-12 px-margin-mobile md:px-gutter">
+        <div class="w-full max-w-onboarding-card-width flex flex-col gap-6">
+
+            <!-- Card -->
+            <div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm relative ca-card animate-fade-up">
+
+                <!-- Progress Bar -->
+                <div class="w-full h-1 bg-surface-variant">
+                    <div id="progress-bar" class="h-full bg-primary transition-all duration-700 ease-in-out" style="width: 66.6%;"></div>
+                </div>
+
+                <!-- Card Body -->
+                <div class="p-6 md:p-8 flex flex-col gap-stack-gap">
+
+                    <!-- === FORM STATE === -->
+                    <div id="form-state" class="flex flex-col gap-stack-gap">
+
+                        <!-- Header -->
+                        <div class="text-center flex flex-col gap-2">
+                            <span class="text-label-sm font-label-sm text-primary uppercase tracking-widest">Step 2 of 3</span>
+                            <h2 class="text-headline-lg-mobile md:text-headline-lg font-headline-lg text-on-surface">Assign Your CA</h2>
+                            <p class="text-body-md font-body-md text-on-surface-variant max-w-xs mx-auto">
+                                Enter the 6-digit invite code your Chartered Accountant sent you.
+                            </p>
+                        </div>
+
+                        <!-- CA Avatar Preview -->
+                        <div class="flex flex-col items-center gap-3">
+                            <div class="relative">
+                                <div class="pulse-ring absolute inset-0 rounded-full bg-primary/20"></div>
+                                <div class="w-16 h-16 rounded-full bg-gradient-to-br from-primary-container to-primary flex items-center justify-center shadow-md relative">
+                                    <span class="material-symbols-outlined text-[32px] text-on-primary" style="font-variation-settings:'FILL' 1;">person</span>
+                                </div>
+                                <div class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-surface-container-lowest border-2 border-outline-variant flex items-center justify-center">
+                                    <span class="material-symbols-outlined text-[10px] text-on-surface-variant">link</span>
+                                </div>
+                            </div>
+                            <p class="text-label-sm font-label-sm text-on-surface-variant">Waiting to link a CA profile…</p>
+                        </div>
+
+                        <!-- OTP Code Inputs -->
+                        <div class="flex flex-col gap-3">
+                            <label class="text-label-md font-label-md text-on-surface text-center">6-Digit Invite Code</label>
+                            <div class="flex items-center justify-center gap-2 md:gap-3" id="code-inputs-wrapper">
+                                <input class="code-input" id="c0" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off"/>
+                                <input class="code-input" id="c1" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off"/>
+                                <input class="code-input" id="c2" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off"/>
+                                <span class="text-outline-variant text-lg font-bold select-none">–</span>
+                                <input class="code-input" id="c3" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off"/>
+                                <input class="code-input" id="c4" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off"/>
+                                <input class="code-input" id="c5" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off"/>
+                            </div>
+                            <p class="text-label-sm font-label-sm text-on-surface-variant flex items-center justify-center gap-1">
+                                <span class="material-symbols-outlined text-[14px]">info</span>
+                                Check your email or WhatsApp messages for the code.
+                            </p>
+                        </div>
+
+                        <!-- Error Message -->
+                        <div id="error-message" class="hidden p-3 bg-error-container text-error rounded-lg border border-error/20 text-label-sm font-label-sm flex items-start gap-2">
+                            <span class="material-symbols-outlined text-[18px] shrink-0">error</span>
+                            <span id="error-text">Invalid invite code. Please try again.</span>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="flex flex-col gap-3">
+                            <button id="link-btn" class="w-full bg-primary text-on-primary py-3 px-6 rounded-lg text-label-md font-label-md hover:bg-on-primary-fixed-variant active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed" type="button" disabled>
+                                Link CA Account
+                                <span class="material-symbols-outlined text-[18px]">link</span>
+                            </button>
+                            <button id="skip-btn" class="w-full text-on-surface-variant py-3 px-6 rounded-lg text-label-md font-label-md hover:bg-surface-variant/60 active:scale-[0.98] transition-all duration-200 bg-transparent border border-outline-variant/60 flex items-center justify-center gap-2" type="button">
+                                <span class="material-symbols-outlined text-[18px]">skip_next</span>
+                                I don't have a CA yet
+                            </button>
+                        </div>
+
+                        <!-- Trust Badge -->
+                        <div class="flex items-center justify-center gap-2 text-label-sm font-label-sm text-on-surface-variant opacity-60 pt-2">
+                            <span class="material-symbols-outlined text-[14px]">lock</span>
+                            Secure connection via GSTN
+                        </div>
+
+                    </div>
+
+                    <!-- === SUCCESS STATE (hidden by default) === -->
+                    <div id="success-state" class="hidden flex flex-col items-center justify-center text-center gap-6 py-4 animate-fade-up">
+                        <div class="success-pop w-20 h-20 rounded-full bg-secondary-container flex items-center justify-center shadow-lg">
+                            <span class="material-symbols-outlined text-[48px] text-secondary" style="font-variation-settings:'FILL' 1;">how_to_reg</span>
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            <h2 class="text-headline-lg-mobile font-headline-lg text-on-surface">CA Linked!</h2>
+                            <p class="text-body-md text-on-surface-variant">Your Chartered Accountant has been successfully connected to your account.</p>
+                        </div>
+                        <!-- CA Info Card -->
+                        <div class="w-full p-4 rounded-xl border border-secondary/30 bg-secondary-container/20 flex items-center gap-4 text-left">
+                            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-secondary-fixed-dim to-secondary flex items-center justify-center shrink-0">
+                                <span class="material-symbols-outlined text-[24px] text-on-secondary" style="font-variation-settings:'FILL' 1;">person</span>
+                            </div>
+                            <div class="flex flex-col gap-0.5 min-w-0">
+                                <span class="text-label-md font-label-md text-on-surface">CA Account</span>
+                                <span id="linked-code-display" class="text-label-sm font-label-sm text-on-surface-variant font-mono">Code: ──────</span>
+                            </div>
+                            <span class="ml-auto material-symbols-outlined text-secondary text-[24px]" style="font-variation-settings:'FILL' 1;">verified</span>
+                        </div>
+                        <a href="/success" id="continue-btn" class="w-full bg-primary text-on-primary py-3 px-6 rounded-lg text-label-md font-label-md hover:bg-on-primary-fixed-variant active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2">
+                            Continue to Summary
+                            <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+                        </a>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Help link -->
+            <p class="text-center text-label-sm font-label-sm text-on-surface-variant">
+                Need help? <a href="mailto:support@gstautopilot.in" class="text-primary hover:underline font-semibold">Contact support</a>
+            </p>
+
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const inputs = Array.from({ length: 6 }, (_, i) => document.getElementById(`c${i}`));
+            const linkBtn = document.getElementById('link-btn');
+            const skipBtn = document.getElementById('skip-btn');
+            const errorBox = document.getElementById('error-message');
+            const errorText = document.getElementById('error-text');
+            const formState = document.getElementById('form-state');
+            const successState = document.getElementById('success-state');
+            const progressBar = document.getElementById('progress-bar');
+            const linkedCodeDisplay = document.getElementById('linked-code-display');
+
+            // ── OTP Input Navigation ──────────────────────────────────────────
+            inputs.forEach((input, idx) => {
+                input.addEventListener('input', (e) => {
+                    // Allow only digits
+                    const val = e.target.value.replace(/\D/g, '');
+                    e.target.value = val ? val[0] : '';
+
+                    // Toggle filled style
+                    input.classList.toggle('filled', !!e.target.value);
+
+                    // Auto-advance
+                    if (val && idx < 5) {
+                        inputs[idx + 1].focus();
+                    }
+
+                    updateLinkButton();
+                    clearError();
+                });
+
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Backspace') {
+                        if (!input.value && idx > 0) {
+                            inputs[idx - 1].value = '';
+                            inputs[idx - 1].classList.remove('filled');
+                            inputs[idx - 1].focus();
+                        } else {
+                            input.value = '';
+                            input.classList.remove('filled');
+                        }
+                        updateLinkButton();
+                    } else if (e.key === 'ArrowLeft' && idx > 0) {
+                        inputs[idx - 1].focus();
+                    } else if (e.key === 'ArrowRight' && idx < 5) {
+                        inputs[idx + 1].focus();
+                    }
+                });
+
+                // Handle paste into any box
+                input.addEventListener('paste', (e) => {
+                    e.preventDefault();
+                    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').substring(0, 6);
+                    pasted.split('').forEach((char, i) => {
+                        if (inputs[idx + i]) {
+                            inputs[idx + i].value = char;
+                            inputs[idx + i].classList.add('filled');
+                        }
+                    });
+                    const nextFocus = Math.min(idx + pasted.length, 5);
+                    inputs[nextFocus].focus();
+                    updateLinkButton();
+                });
+            });
+
+            // ── Auto-focus first input ────────────────────────────────────────
+            inputs[0].focus();
+
+            // ── Enable/Disable Link Button ────────────────────────────────────
+            function updateLinkButton() {
+                const code = getCode();
+                linkBtn.disabled = code.length !== 6;
+            }
+
+            function getCode() {
+                return inputs.map(i => i.value).join('');
+            }
+
+            function clearError() {
+                errorBox.classList.add('hidden');
+                inputs.forEach(i => i.classList.remove('error'));
+            }
+
+            function showError(msg) {
+                errorText.textContent = msg;
+                errorBox.classList.remove('hidden');
+                inputs.forEach(i => i.classList.add('error'));
+                setTimeout(() => inputs.forEach(i => i.classList.remove('error')), 600);
+            }
+
+            function setLoading(loading) {
+                linkBtn.disabled = loading;
+                if (loading) {
+                    linkBtn.innerHTML = `Verifying… <span class="material-symbols-outlined text-[18px] animate-spin">sync</span>`;
+                } else {
+                    linkBtn.innerHTML = `Link CA Account <span class="material-symbols-outlined text-[18px]">link</span>`;
+                }
+            }
+
+            // ── Link CA Button ────────────────────────────────────────────────
+            linkBtn.addEventListener('click', async () => {
+                const code = getCode();
+                if (code.length !== 6) return;
+
+                clearError();
+                setLoading(true);
+
+                try {
+                    const response = await fetch('/api/ca/link', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ invite_code: code })
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        // Animate progress bar to 100%
+                        progressBar.style.width = '100%';
+                        // Mark inputs as success
+                        inputs.forEach(i => i.classList.add('success'));
+
+                        // Show success state after short delay
+                        setTimeout(() => {
+                            linkedCodeDisplay.textContent = `Code: ${code.substring(0, 3)}–${code.substring(3)}`;
+                            formState.classList.add('hidden');
+                            successState.classList.remove('hidden');
+                        }, 600);
+                    } else {
+                        showError(result.detail || 'Invalid invite code. Please check with your CA.');
+                        setLoading(false);
+                    }
+                } catch (err) {
+                    console.error('CA link error:', err);
+                    showError('Network error. Please check your connection and try again.');
+                    setLoading(false);
+                }
+            });
+
+            // ── Skip Button ───────────────────────────────────────────────────
+            skipBtn.addEventListener('click', () => {
+                // Proceed to success without linking a CA
+                progressBar.style.width = '100%';
+                setTimeout(() => {
+                    window.location.href = '/success';
+                }, 400);
+            });
+        });
+    </script>
+</body>
+</html>
