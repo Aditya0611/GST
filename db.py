@@ -562,96 +562,149 @@ async def insert_audit_log(conn, invoice_id: int, ca_user: str, action: str, fie
 async def get_monthly_metrics(client_phone: str, year_month: str) -> dict:
     """
     Computes key performance indicators (KPIs) for a given month:
-    - Total sales
+    - Total sales & GST liability
     - Taxable expenses
-    - Total eligible ITC (from approved purchase invoices)
+    - Eligible ITC breakdown (CGST/SGST/IGST) from approved purchase invoices
+    - Blocked ITC (ineligible) amount
+    - Net GST payable (sales liability - eligible ITC)
     - Pending review count
+    - Flagged (calculation errors) count
     """
     conn = await get_connection()
     like_str = f"{year_month}%"
-    
+
     try:
         if IS_POSTGRES:
-            # Pending review count
+            client_gstin = await conn.fetchval("SELECT gstin FROM clients WHERE phone_number = $1", client_phone)
+
             pending_cnt = await conn.fetchval(
                 "SELECT COUNT(*) FROM invoices WHERE client_phone = $1 AND invoice_date LIKE $2 AND is_approved = FALSE",
                 client_phone, like_str
-            )
-            
-            # Taxable value & GST liability (from sales)
-            # Sales are categorized when the supplier_gstin matches client's GSTIN
-            # Fetch client gstin
-            client_gstin = await conn.fetchval("SELECT gstin FROM clients WHERE phone_number = $1", client_phone)
-            
+            ) or 0
+
+            flagged_cnt = await conn.fetchval(
+                "SELECT COUNT(*) FROM invoices WHERE client_phone = $1 AND invoice_date LIKE $2 AND is_calculation_correct = FALSE",
+                client_phone, like_str
+            ) or 0
+
             sales_taxable = 0.0
             sales_gst = 0.0
             purchase_taxable = 0.0
-            purchase_itc_claimed = 0.0
+            itc_cgst = 0.0
+            itc_sgst = 0.0
+            itc_igst = 0.0
+            itc_blocked = 0.0
 
             if client_gstin:
-                # Sales: client is supplier
                 sales_row = await conn.fetchrow("""
-                    SELECT SUM(total_taxable_value) as taxable, SUM(total_cgst + total_sgst + total_igst) as gst
-                    FROM invoices 
+                    SELECT SUM(total_taxable_value) as taxable,
+                           SUM(COALESCE(total_cgst,0) + COALESCE(total_sgst,0) + COALESCE(total_igst,0)) as gst
+                    FROM invoices
                     WHERE client_phone = $1 AND invoice_date LIKE $2 AND supplier_gstin = $3
                 """, client_phone, like_str, client_gstin)
-                
                 if sales_row and sales_row["taxable"]:
                     sales_taxable = float(sales_row["taxable"])
                     sales_gst = float(sales_row["gst"] or 0.0)
 
-                # Purchases: client is recipient
-                purchase_row = await conn.fetchrow("""
-                    SELECT SUM(total_taxable_value) as taxable, SUM(total_cgst + total_sgst + total_igst) as gst
-                    FROM invoices 
-                    WHERE client_phone = $1 AND invoice_date LIKE $2 AND recipient_gstin = $3 AND is_itc_eligible = TRUE AND is_approved = TRUE
+                # Eligible ITC — broken down by tax head
+                itc_row = await conn.fetchrow("""
+                    SELECT SUM(COALESCE(total_cgst,0)) as cgst,
+                           SUM(COALESCE(total_sgst,0)) as sgst,
+                           SUM(COALESCE(total_igst,0)) as igst,
+                           SUM(total_taxable_value) as taxable
+                    FROM invoices
+                    WHERE client_phone = $1 AND invoice_date LIKE $2
+                      AND recipient_gstin = $3 AND is_itc_eligible = TRUE AND is_approved = TRUE
                 """, client_phone, like_str, client_gstin)
+                if itc_row and itc_row["taxable"]:
+                    purchase_taxable = float(itc_row["taxable"])
+                    itc_cgst = float(itc_row["cgst"] or 0.0)
+                    itc_sgst = float(itc_row["sgst"] or 0.0)
+                    itc_igst = float(itc_row["igst"] or 0.0)
 
-                if purchase_row and purchase_row["taxable"]:
-                    purchase_taxable = float(purchase_row["taxable"])
-                    purchase_itc_claimed = float(purchase_row["gst"] or 0.0)
+                # Blocked ITC
+                blocked_row = await conn.fetchrow("""
+                    SELECT SUM(COALESCE(total_cgst,0) + COALESCE(total_sgst,0) + COALESCE(total_igst,0)) as gst
+                    FROM invoices
+                    WHERE client_phone = $1 AND invoice_date LIKE $2
+                      AND recipient_gstin = $3 AND is_itc_eligible = FALSE AND is_approved = TRUE
+                """, client_phone, like_str, client_gstin)
+                if blocked_row and blocked_row["gst"]:
+                    itc_blocked = float(blocked_row["gst"])
             else:
-                # Fallback if no GSTIN matches, treat all invoices as purchases for simplicity (Expenses tracker)
-                purchase_row = await conn.fetchrow("""
-                    SELECT SUM(total_taxable_value) as taxable, SUM(total_cgst + total_sgst + total_igst) as gst
-                    FROM invoices 
-                    WHERE client_phone = $1 AND invoice_date LIKE $2 AND is_itc_eligible = TRUE AND is_approved = TRUE
+                itc_row = await conn.fetchrow("""
+                    SELECT SUM(COALESCE(total_cgst,0)) as cgst,
+                           SUM(COALESCE(total_sgst,0)) as sgst,
+                           SUM(COALESCE(total_igst,0)) as igst,
+                           SUM(total_taxable_value) as taxable
+                    FROM invoices
+                    WHERE client_phone = $1 AND invoice_date LIKE $2
+                      AND is_itc_eligible = TRUE AND is_approved = TRUE
                 """, client_phone, like_str)
-                if purchase_row and purchase_row["taxable"]:
-                    purchase_taxable = float(purchase_row["taxable"])
-                    purchase_itc_claimed = float(purchase_row["gst"] or 0.0)
-            
+                if itc_row and itc_row["taxable"]:
+                    purchase_taxable = float(itc_row["taxable"])
+                    itc_cgst = float(itc_row["cgst"] or 0.0)
+                    itc_sgst = float(itc_row["sgst"] or 0.0)
+                    itc_igst = float(itc_row["igst"] or 0.0)
+
+                blocked_row = await conn.fetchrow("""
+                    SELECT SUM(COALESCE(total_cgst,0) + COALESCE(total_sgst,0) + COALESCE(total_igst,0)) as gst
+                    FROM invoices
+                    WHERE client_phone = $1 AND invoice_date LIKE $2
+                      AND is_itc_eligible = FALSE AND is_approved = TRUE
+                """, client_phone, like_str)
+                if blocked_row and blocked_row["gst"]:
+                    itc_blocked = float(blocked_row["gst"])
+
+            itc_claimed = itc_cgst + itc_sgst + itc_igst
+            net_gst_payable = max(0.0, sales_gst - itc_claimed)
+
             return {
-                "pending_review": pending_cnt or 0,
+                "pending_review": pending_cnt,
+                "flagged_count": flagged_cnt,
                 "sales_taxable": sales_taxable,
                 "sales_gst_liability": sales_gst,
                 "expenses_taxable": purchase_taxable,
-                "itc_claimed": purchase_itc_claimed,
+                "itc_claimed": itc_claimed,
+                "itc_cgst": itc_cgst,
+                "itc_sgst": itc_sgst,
+                "itc_igst": itc_igst,
+                "itc_blocked": itc_blocked,
+                "net_gst_payable": net_gst_payable,
             }
         else:
             # SQLite Implementation
-            # Client details
+            conn.row_factory = sqlite3.Row
+
             cursor = await conn.execute("SELECT gstin FROM clients WHERE phone_number = ?", (client_phone,))
             row = await cursor.fetchone()
             client_gstin = row[0] if row else None
 
-            # Pending count
             cursor = await conn.execute(
                 "SELECT COUNT(*) FROM invoices WHERE client_phone = ? AND invoice_date LIKE ? AND is_approved = 0",
                 (client_phone, like_str)
             )
             pending_cnt = (await cursor.fetchone())[0]
 
+            cursor = await conn.execute(
+                "SELECT COUNT(*) FROM invoices WHERE client_phone = ? AND invoice_date LIKE ? AND is_calculation_correct = 0",
+                (client_phone, like_str)
+            )
+            flagged_cnt = (await cursor.fetchone())[0]
+
             sales_taxable = 0.0
             sales_gst = 0.0
             purchase_taxable = 0.0
-            purchase_itc_claimed = 0.0
+            itc_cgst = 0.0
+            itc_sgst = 0.0
+            itc_igst = 0.0
+            itc_blocked = 0.0
 
             if client_gstin:
-                # Sales
                 cursor = await conn.execute("""
-                    SELECT SUM(total_taxable_value), SUM(total_cgst + total_sgst + total_igst)
-                    FROM invoices 
+                    SELECT SUM(total_taxable_value),
+                           SUM(COALESCE(total_cgst,0) + COALESCE(total_sgst,0) + COALESCE(total_igst,0))
+                    FROM invoices
                     WHERE client_phone = ? AND invoice_date LIKE ? AND supplier_gstin = ?
                 """, (client_phone, like_str, client_gstin))
                 res = await cursor.fetchone()
@@ -659,33 +712,175 @@ async def get_monthly_metrics(client_phone: str, year_month: str) -> dict:
                     sales_taxable = float(res[0])
                     sales_gst = float(res[1] or 0.0)
 
-                # Purchases (approved only for claiming ITC)
                 cursor = await conn.execute("""
-                    SELECT SUM(total_taxable_value), SUM(total_cgst + total_sgst + total_igst)
-                    FROM invoices 
-                    WHERE client_phone = ? AND invoice_date LIKE ? AND recipient_gstin = ? AND is_itc_eligible = 1 AND is_approved = 1
+                    SELECT SUM(COALESCE(total_cgst,0)), SUM(COALESCE(total_sgst,0)),
+                           SUM(COALESCE(total_igst,0)), SUM(total_taxable_value)
+                    FROM invoices
+                    WHERE client_phone = ? AND invoice_date LIKE ? AND recipient_gstin = ?
+                      AND is_itc_eligible = 1 AND is_approved = 1
+                """, (client_phone, like_str, client_gstin))
+                res = await cursor.fetchone()
+                if res and res[3] is not None:
+                    itc_cgst = float(res[0] or 0.0)
+                    itc_sgst = float(res[1] or 0.0)
+                    itc_igst = float(res[2] or 0.0)
+                    purchase_taxable = float(res[3])
+
+                cursor = await conn.execute("""
+                    SELECT SUM(COALESCE(total_cgst,0) + COALESCE(total_sgst,0) + COALESCE(total_igst,0))
+                    FROM invoices
+                    WHERE client_phone = ? AND invoice_date LIKE ? AND recipient_gstin = ?
+                      AND is_itc_eligible = 0 AND is_approved = 1
                 """, (client_phone, like_str, client_gstin))
                 res = await cursor.fetchone()
                 if res and res[0] is not None:
-                    purchase_taxable = float(res[0])
-                    purchase_itc_claimed = float(res[1] or 0.0)
+                    itc_blocked = float(res[0])
             else:
                 cursor = await conn.execute("""
-                    SELECT SUM(total_taxable_value), SUM(total_cgst + total_sgst + total_igst)
-                    FROM invoices 
+                    SELECT SUM(COALESCE(total_cgst,0)), SUM(COALESCE(total_sgst,0)),
+                           SUM(COALESCE(total_igst,0)), SUM(total_taxable_value)
+                    FROM invoices
                     WHERE client_phone = ? AND invoice_date LIKE ? AND is_itc_eligible = 1 AND is_approved = 1
                 """, (client_phone, like_str))
                 res = await cursor.fetchone()
+                if res and res[3] is not None:
+                    itc_cgst = float(res[0] or 0.0)
+                    itc_sgst = float(res[1] or 0.0)
+                    itc_igst = float(res[2] or 0.0)
+                    purchase_taxable = float(res[3])
+
+                cursor = await conn.execute("""
+                    SELECT SUM(COALESCE(total_cgst,0) + COALESCE(total_sgst,0) + COALESCE(total_igst,0))
+                    FROM invoices
+                    WHERE client_phone = ? AND invoice_date LIKE ? AND is_itc_eligible = 0 AND is_approved = 1
+                """, (client_phone, like_str))
+                res = await cursor.fetchone()
                 if res and res[0] is not None:
-                    purchase_taxable = float(res[0])
-                    purchase_itc_claimed = float(res[1] or 0.0)
+                    itc_blocked = float(res[0])
+
+            itc_claimed = itc_cgst + itc_sgst + itc_igst
+            net_gst_payable = max(0.0, sales_gst - itc_claimed)
 
             return {
                 "pending_review": pending_cnt,
+                "flagged_count": flagged_cnt,
                 "sales_taxable": sales_taxable,
                 "sales_gst_liability": sales_gst,
                 "expenses_taxable": purchase_taxable,
-                "itc_claimed": purchase_itc_claimed,
+                "itc_claimed": itc_claimed,
+                "itc_cgst": itc_cgst,
+                "itc_sgst": itc_sgst,
+                "itc_igst": itc_igst,
+                "itc_blocked": itc_blocked,
+                "net_gst_payable": net_gst_payable,
             }
     finally:
         await conn.close()
+
+
+async def get_itc_monthly_trend(client_phone: str, num_months: int = 12) -> list[dict]:
+    """
+    Returns month-by-month ITC trend for the last `num_months` months.
+    Each entry: { month: 'YYYY-MM', itc_eligible, itc_blocked, sales_gst }
+    Used to power the dashboard sparkline chart.
+    """
+    from datetime import date
+    import calendar
+
+    conn = await get_connection()
+    try:
+        conn.row_factory = sqlite3.Row
+        cursor = await conn.execute("SELECT gstin FROM clients WHERE phone_number = ?", (client_phone,))
+        row = await cursor.fetchone()
+        client_gstin = row[0] if row else None
+
+        today = date.today()
+        results = []
+
+        for i in range(num_months - 1, -1, -1):
+            # Calculate the month offset
+            month_offset = today.month - 1 - i
+            year = today.year + month_offset // 12
+            month = month_offset % 12 + 1
+            if month_offset < 0:
+                year = today.year - 1 + (today.month - i - 1) // 12
+                month = ((today.month - i - 1) % 12 + 12) % 12 + 1
+
+            # Recalculate properly
+            total_months = (today.year * 12 + today.month - 1) - i
+            year = total_months // 12
+            month = total_months % 12 + 1
+
+            year_month = f"{year:04d}-{month:02d}"
+            like_str = f"{year_month}%"
+
+            if IS_POSTGRES:
+                # Eligible ITC
+                if client_gstin:
+                    itc_row = await conn.fetchrow("""
+                        SELECT SUM(COALESCE(total_cgst,0) + COALESCE(total_sgst,0) + COALESCE(total_igst,0)) as eligible
+                        FROM invoices WHERE client_phone = $1 AND invoice_date LIKE $2
+                          AND recipient_gstin = $3 AND is_itc_eligible = TRUE AND is_approved = TRUE
+                    """, client_phone, like_str, client_gstin)
+                    blocked_row = await conn.fetchrow("""
+                        SELECT SUM(COALESCE(total_cgst,0) + COALESCE(total_sgst,0) + COALESCE(total_igst,0)) as blocked
+                        FROM invoices WHERE client_phone = $1 AND invoice_date LIKE $2
+                          AND recipient_gstin = $3 AND is_itc_eligible = FALSE AND is_approved = TRUE
+                    """, client_phone, like_str, client_gstin)
+                    sales_row = await conn.fetchrow("""
+                        SELECT SUM(COALESCE(total_cgst,0) + COALESCE(total_sgst,0) + COALESCE(total_igst,0)) as gst
+                        FROM invoices WHERE client_phone = $1 AND invoice_date LIKE $2 AND supplier_gstin = $3
+                    """, client_phone, like_str, client_gstin)
+                    results.append({
+                        "month": year_month,
+                        "itc_eligible": float(itc_row["eligible"] or 0),
+                        "itc_blocked": float(blocked_row["blocked"] or 0),
+                        "sales_gst": float(sales_row["gst"] or 0),
+                    })
+                else:
+                    results.append({"month": year_month, "itc_eligible": 0, "itc_blocked": 0, "sales_gst": 0})
+            else:
+                # SQLite
+                if client_gstin:
+                    c = await conn.execute("""
+                        SELECT SUM(COALESCE(total_cgst,0) + COALESCE(total_sgst,0) + COALESCE(total_igst,0))
+                        FROM invoices WHERE client_phone = ? AND invoice_date LIKE ?
+                          AND recipient_gstin = ? AND is_itc_eligible = 1 AND is_approved = 1
+                    """, (client_phone, like_str, client_gstin))
+                    itc_elig = (await c.fetchone())[0] or 0
+
+                    c = await conn.execute("""
+                        SELECT SUM(COALESCE(total_cgst,0) + COALESCE(total_sgst,0) + COALESCE(total_igst,0))
+                        FROM invoices WHERE client_phone = ? AND invoice_date LIKE ?
+                          AND recipient_gstin = ? AND is_itc_eligible = 0 AND is_approved = 1
+                    """, (client_phone, like_str, client_gstin))
+                    itc_blk = (await c.fetchone())[0] or 0
+
+                    c = await conn.execute("""
+                        SELECT SUM(COALESCE(total_cgst,0) + COALESCE(total_sgst,0) + COALESCE(total_igst,0))
+                        FROM invoices WHERE client_phone = ? AND invoice_date LIKE ? AND supplier_gstin = ?
+                    """, (client_phone, like_str, client_gstin))
+                    sales_gst = (await c.fetchone())[0] or 0
+                else:
+                    c = await conn.execute("""
+                        SELECT SUM(COALESCE(total_cgst,0) + COALESCE(total_sgst,0) + COALESCE(total_igst,0))
+                        FROM invoices WHERE client_phone = ? AND invoice_date LIKE ?
+                          AND is_itc_eligible = 1 AND is_approved = 1
+                    """, (client_phone, like_str))
+                    itc_elig = (await c.fetchone())[0] or 0
+                    itc_blk = 0
+                    sales_gst = 0
+
+                results.append({
+                    "month": year_month,
+                    "itc_eligible": float(itc_elig),
+                    "itc_blocked": float(itc_blk),
+                    "sales_gst": float(sales_gst),
+                })
+
+        return results
+    finally:
+        await conn.close()
+
+
+

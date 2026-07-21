@@ -1,8 +1,13 @@
+import sys
+import os
+os.environ["PYTHONIOENCODING"] = "utf-8"
+import io
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+
 import asyncio
 import hmac
 import hashlib
 import json
-import os
 import shutil
 from pathlib import Path
 from unittest.mock import AsyncMock, patch

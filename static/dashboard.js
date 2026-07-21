@@ -29,6 +29,23 @@ const elements = {
     kpiSalesSubtext: document.getElementById('kpi-sales-subtext'),
     kpiItcTotal: document.getElementById('kpi-itc-total'),
     kpiItcSubtext: document.getElementById('kpi-itc-subtext'),
+    kpiFlaggedCount: document.getElementById('kpi-flagged-count'),
+
+    // Net GST Payable row
+    netSalesGst: document.getElementById('net-sales-gst'),
+    netItcAmount: document.getElementById('net-itc-amount'),
+    netGstPayable: document.getElementById('net-gst-payable'),
+    netItcBlocked: document.getElementById('net-itc-blocked'),
+    netItcCgst: document.getElementById('net-itc-cgst'),
+    netItcSgst: document.getElementById('net-itc-sgst'),
+    netItcIgst: document.getElementById('net-itc-igst'),
+    itcUtilisationBar: document.getElementById('itc-utilisation-bar'),
+    itcUtilisationPct: document.getElementById('itc-utilisation-pct'),
+
+    // Sparkline
+    sparklineTotalLabel: document.getElementById('sparkline-total-label'),
+    sparklineTrendLabel: document.getElementById('sparkline-trend-label'),
+    sparklineCanvas: document.getElementById('itc-sparkline-chart'),
     
     // Filing list
     filingStatusTitle: document.getElementById('filing-status-title'),
@@ -94,10 +111,15 @@ const elements = {
     prevSales: document.getElementById('prev-sales'),
     prevTax: document.getElementById('prev-tax'),
     prevItc: document.getElementById('prev-itc'),
+    prevItcBlocked: document.getElementById('prev-itc-blocked'),
+    prevNetGst: document.getElementById('prev-net-gst'),
     
     // Toast
     toast: document.getElementById('toast')
 };
+
+// Chart.js instance (stored to destroy on re-render)
+let itcSparklineChart = null;
 
 // ── App Init ──
 window.addEventListener('DOMContentLoaded', () => {
@@ -233,6 +255,9 @@ async function fetchData() {
         // 3. Populate widgets
         updateDashboardMetrics(metrics);
         renderInvoiceTable();
+
+        // 4. Render real ITC sparkline chart
+        renderITCSparkline();
     } catch (e) {
         console.error("Failed to fetch dashboard data:", e);
         showToast("Failed to load dashboard metrics.", true);
@@ -390,6 +415,10 @@ async function updateGstrModalPreviews() {
         elements.prevSales.textContent = formatCurrency(m.sales_taxable);
         elements.prevTax.textContent = formatCurrency(m.sales_gst_liability);
         elements.prevItc.textContent = formatCurrency(m.itc_claimed);
+
+        // New: blocked ITC and net payable
+        if (elements.prevItcBlocked) elements.prevItcBlocked.textContent = formatCurrency(m.itc_blocked || 0);
+        if (elements.prevNetGst)     elements.prevNetGst.textContent = formatCurrency(m.net_gst_payable ?? 0);
     } catch (e) {
         console.error("Error updating preview aggregates:", e);
     }
@@ -443,26 +472,56 @@ function updateDashboardMetrics(metrics) {
     elements.kpiPendingSubtext.textContent = `${metrics.pending_review} pending CA approval`;
     elements.kpiPendingTrend.textContent = `+${metrics.pending_review} total`;
 
+    // Flagged count (was hardcoded 12 before)
+    if (elements.kpiFlaggedCount) {
+        elements.kpiFlaggedCount.textContent = metrics.flagged_count ?? 0;
+    }
+
     // Fallback: if sales & ITC are 0 (client has no GSTIN set), show totals from all invoices
     const invoices = state.invoices || [];
-    let fallbackTaxable = 0, fallbackItc = 0;
+    let fallbackTaxable = 0, fallbackItc = 0, fallbackCgst = 0, fallbackSgst = 0, fallbackIgst = 0;
     if (metrics.sales_taxable === 0 && metrics.itc_claimed === 0 && invoices.length > 0) {
         invoices.forEach(inv => {
             fallbackTaxable += inv.total_taxable_value || 0;
             if (inv.is_itc_eligible && (inv.is_approved === 1 || inv.is_approved === true)) {
+                fallbackCgst += inv.total_cgst || 0;
+                fallbackSgst += inv.total_sgst || 0;
+                fallbackIgst += inv.total_igst || 0;
                 fallbackItc += (inv.total_cgst || 0) + (inv.total_sgst || 0) + (inv.total_igst || 0);
             }
         });
     }
 
-    const displaySales = metrics.sales_taxable > 0 ? metrics.sales_taxable : fallbackTaxable;
-    const displayItc   = metrics.itc_claimed > 0   ? metrics.itc_claimed   : fallbackItc;
+    const displaySales   = metrics.sales_taxable > 0   ? metrics.sales_taxable   : fallbackTaxable;
+    const displayItc     = metrics.itc_claimed   > 0   ? metrics.itc_claimed     : fallbackItc;
+    const displayCgst    = metrics.itc_cgst      > 0   ? metrics.itc_cgst        : fallbackCgst;
+    const displaySgst    = metrics.itc_sgst      > 0   ? metrics.itc_sgst        : fallbackSgst;
+    const displayIgst    = metrics.itc_igst      > 0   ? metrics.itc_igst        : fallbackIgst;
+    const displayBlocked = metrics.itc_blocked   || 0;
+    const displaySalesGst = metrics.sales_gst_liability || 0;
+    const displayNetGst  = metrics.net_gst_payable ?? Math.max(0, displaySalesGst - displayItc);
 
     elements.kpiSalesTotal.textContent = formatCurrency(displaySales);
     elements.kpiSalesSubtext.textContent = `${formatCurrency(displaySales)} this period`;
     
     elements.kpiItcTotal.textContent = formatCurrency(displayItc);
-    elements.kpiItcSubtext.textContent = `${formatCurrency(displayItc)} reconciled`;
+    elements.kpiItcSubtext.textContent = displayItc > 0 ? `${formatCurrency(displayItc)} reconciled` : 'Approve invoices to claim';
+
+    // ── Net GST Payable row ──────────────────────────────────────────────────
+    if (elements.netSalesGst)    elements.netSalesGst.textContent  = formatCurrency(displaySalesGst);
+    if (elements.netItcAmount)   elements.netItcAmount.textContent = formatCurrency(displayItc);
+    if (elements.netGstPayable)  elements.netGstPayable.textContent = formatCurrency(displayNetGst);
+    if (elements.netItcBlocked)  elements.netItcBlocked.textContent = formatCurrency(displayBlocked);
+    if (elements.netItcCgst)     elements.netItcCgst.textContent   = formatCurrency(displayCgst);
+    if (elements.netItcSgst)     elements.netItcSgst.textContent   = formatCurrency(displaySgst);
+    if (elements.netItcIgst)     elements.netItcIgst.textContent   = formatCurrency(displayIgst);
+
+    // ITC Utilisation progress bar (ITC / Sales GST Liability * 100)
+    if (elements.itcUtilisationBar && elements.itcUtilisationPct) {
+        const utilisationPct = displaySalesGst > 0 ? Math.min(100, (displayItc / displaySalesGst) * 100) : 0;
+        elements.itcUtilisationBar.style.width = `${utilisationPct.toFixed(1)}%`;
+        elements.itcUtilisationPct.textContent = `${utilisationPct.toFixed(1)}%`;
+    }
 
     // Filing Status bars
     const monthLabel = formatYearMonthLabel(state.selectedMonth);
@@ -478,6 +537,120 @@ function updateDashboardMetrics(metrics) {
         elements.statusGstr1Val.className = "status-label text-green";
         elements.statusGstr3bVal.textContent = "Ready";
         elements.statusGstr3bVal.className = "status-label text-green";
+    }
+}
+
+// ── ITC Sparkline Chart (real Chart.js) ──────────────────────────────────────
+async function renderITCSparkline() {
+    if (!state.selectedClientPhone || !elements.sparklineCanvas) return;
+
+    try {
+        const response = await fetch(`/api/itc/summary?client_phone=${state.selectedClientPhone}&months=12`);
+        const trendData = await response.json(); // [{month, itc_eligible, itc_blocked, sales_gst}, ...]
+
+        const labels      = trendData.map(d => {
+            const [y, m] = d.month.split('-');
+            return new Date(parseInt(y), parseInt(m) - 1, 1).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+        });
+        const itcEligible = trendData.map(d => d.itc_eligible);
+        const itcBlocked  = trendData.map(d => d.itc_blocked);
+        const salesGst    = trendData.map(d => d.sales_gst);
+
+        // Calculate total eligible ITC and YoY-style trend (last 6 vs first 6)
+        const totalEligible = itcEligible.reduce((a, b) => a + b, 0);
+        const firstHalf  = itcEligible.slice(0, 6).reduce((a, b) => a + b, 0);
+        const secondHalf = itcEligible.slice(6).reduce((a, b) => a + b, 0);
+        let trendPct = 0;
+        if (firstHalf > 0) trendPct = ((secondHalf - firstHalf) / firstHalf) * 100;
+
+        // Update summary label
+        if (elements.sparklineTotalLabel) elements.sparklineTotalLabel.textContent = formatCurrency(totalEligible);
+        if (elements.sparklineTrendLabel) {
+            const arrow = trendPct >= 0 ? 'trending_up' : 'trending_down';
+            const color = trendPct >= 0 ? '#4edea3' : '#ffb4ab';
+            elements.sparklineTrendLabel.innerHTML = `<span class="material-symbols-outlined text-[14px]">${arrow}</span> ${Math.abs(trendPct).toFixed(1)}% vs prev 6mo`;
+            elements.sparklineTrendLabel.style.color = color;
+        }
+
+        // Destroy old chart before creating new one
+        if (itcSparklineChart) {
+            itcSparklineChart.destroy();
+            itcSparklineChart = null;
+        }
+
+        const ctx = elements.sparklineCanvas.getContext('2d');
+        itcSparklineChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'ITC Eligible',
+                        data: itcEligible,
+                        borderColor: '#d0bcff',
+                        backgroundColor: 'rgba(208,188,255,0.12)',
+                        borderWidth: 2.5,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 3,
+                        pointBackgroundColor: '#d0bcff',
+                    },
+                    {
+                        label: 'Blocked ITC',
+                        data: itcBlocked,
+                        borderColor: '#ffb4ab',
+                        backgroundColor: 'rgba(255,180,171,0.08)',
+                        borderWidth: 1.5,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 2,
+                        pointBackgroundColor: '#ffb4ab',
+                        borderDash: [4, 3],
+                    },
+                    {
+                        label: 'Sales GST',
+                        data: salesGst,
+                        borderColor: '#4edea3',
+                        backgroundColor: 'transparent',
+                        borderWidth: 1.5,
+                        fill: false,
+                        tension: 0.4,
+                        pointRadius: 2,
+                        pointBackgroundColor: '#4edea3',
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 600 },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#1d1f29',
+                        borderColor: '#494454',
+                        borderWidth: 1,
+                        titleColor: '#cbc3d7',
+                        bodyColor: '#e1e1ef',
+                        callbacks: {
+                            label: ctx => ` ${ctx.dataset.label}: ${formatCurrency(ctx.parsed.y)}`
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(73,68,84,0.4)', drawBorder: false },
+                        ticks: { color: '#cbc3d7', font: { size: 10 }, maxRotation: 0 }
+                    },
+                    y: {
+                        grid: { color: 'rgba(73,68,84,0.4)', drawBorder: false },
+                        ticks: { color: '#cbc3d7', font: { size: 10 }, callback: v => '₹' + (v >= 1000 ? (v/1000).toFixed(0)+'K' : v) }
+                    }
+                }
+            }
+        });
+    } catch (e) {
+        console.error('ITC sparkline failed:', e);
     }
 }
 
@@ -789,3 +962,191 @@ function showToast(message, isError = false) {
         elements.toast.classList.remove('active');
     }, 3500);
 }
+
+
+// ── AI Chatbot Controller ──
+
+document.addEventListener('DOMContentLoaded', () => {
+    const chatTriggerBtn = document.getElementById('chatbot-trigger-btn');
+    const chatPanel = document.getElementById('chatbot-panel');
+    const closeChatBtn = document.getElementById('close-chatbot-btn');
+    const chatForm = document.getElementById('chatbot-form');
+    const chatInput = document.getElementById('chatbot-input');
+    const chatMessages = document.getElementById('chatbot-messages');
+    
+    if (!chatTriggerBtn || !chatPanel || !closeChatBtn || !chatForm || !chatInput || !chatMessages) {
+        console.error("Chatbot DOM elements not found.");
+        return;
+    }
+
+    // Toggle panel visibility
+    chatTriggerBtn.addEventListener('click', () => {
+        const isClosed = chatPanel.classList.contains('opacity-0');
+        
+        if (isClosed) {
+            chatPanel.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+            chatPanel.classList.add('opacity-100', 'pointer-events-all', 'translate-y-0');
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            chatInput.focus();
+        } else {
+            chatPanel.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+            chatPanel.classList.remove('opacity-100', 'pointer-events-all', 'translate-y-0');
+        }
+    });
+
+    closeChatBtn.addEventListener('click', () => {
+        chatPanel.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+        chatPanel.classList.remove('opacity-100', 'pointer-events-all', 'translate-y-0');
+    });
+
+    // Handle chips clicks using event delegation
+    chatMessages.addEventListener('click', (e) => {
+        if (e.target && e.target.classList.contains('chat-chip')) {
+            const query = e.target.textContent;
+            chatInput.value = query;
+            chatForm.dispatchEvent(new Event('submit'));
+        }
+    });
+
+    // Send chat message
+    chatForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const text = chatInput.value.trim();
+        if (!text) return;
+
+        // Clear input
+        chatInput.value = '';
+
+        // Render user message bubble
+        appendMessage('user', text);
+
+        // Render typing indicator
+        const typingId = appendTypingIndicator();
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        try {
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text })
+            });
+            const data = await response.json();
+            
+            // Remove typing indicator
+            removeTypingIndicator(typingId);
+
+            if (response.ok && data.response) {
+                appendMessage('bot', data.response);
+            } else {
+                appendMessage('bot', `⚠️ Error: ${data.detail || 'Failed to generate response.'}`);
+            }
+        } catch (err) {
+            console.error("Chatbot API failed:", err);
+            removeTypingIndicator(typingId);
+            appendMessage('bot', "⚠️ Network error. Please check if server is running.");
+        }
+        
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    });
+
+    function appendMessage(sender, messageText) {
+        const bubble = document.createElement('div');
+        
+        if (sender === 'user') {
+            bubble.className = 'flex items-start gap-2.5 max-w-[85%] ml-auto justify-end';
+            bubble.innerHTML = `
+                <div class="rounded-2xl px-4 py-2.5 bg-primary text-[13px] leading-relaxed text-background font-semibold shadow-md">
+                    ${escapeHTML(messageText)}
+                </div>
+            `;
+        } else {
+            bubble.className = 'flex items-start gap-2.5 max-w-[85%]';
+            
+            // Format simple markdown (bold text, bullet points)
+            const formatted = formatMarkdown(messageText);
+            
+            bubble.innerHTML = `
+                <div class="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-[12px] shrink-0 text-center">🤖</div>
+                <div class="rounded-2xl px-4 py-2.5 bg-surface-container-high text-[13px] leading-relaxed text-on-surface shadow-md">
+                    ${formatted}
+                </div>
+            `;
+        }
+        
+        chatMessages.appendChild(bubble);
+    }
+
+    function appendTypingIndicator() {
+        const id = 'typing_' + Date.now();
+        const indicator = document.createElement('div');
+        indicator.id = id;
+        indicator.className = 'flex items-start gap-2.5 max-w-[85%]';
+        indicator.innerHTML = `
+            <div class="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-[12px] shrink-0 text-center">🤖</div>
+            <div class="rounded-2xl px-4 py-2.5 bg-surface-container-high text-[13px] text-on-surface-variant shadow-md flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-on-surface-variant/60 animate-bounce" style="animation-delay: 0ms"></span>
+                <span class="w-1.5 h-1.5 rounded-full bg-on-surface-variant/60 animate-bounce" style="animation-delay: 150ms"></span>
+                <span class="w-1.5 h-1.5 rounded-full bg-on-surface-variant/60 animate-bounce" style="animation-delay: 300ms"></span>
+            </div>
+        `;
+        chatMessages.appendChild(indicator);
+        return id;
+    }
+
+    function removeTypingIndicator(id) {
+        const indicator = document.getElementById(id);
+        if (indicator) {
+            indicator.remove();
+        }
+    }
+
+    function escapeHTML(text) {
+        return text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    function formatMarkdown(text) {
+        // Escape HTML tags to prevent XSS
+        let clean = escapeHTML(text);
+        
+        // Bold formatting **text** -> <strong>text</strong>
+        clean = clean.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        clean = clean.replace(/\*(.*?)\*/g, '<strong>$1</strong>');
+        
+        // Inline code formatting `code` -> <code>code</code>
+        clean = clean.replace(/`(.*?)`/g, '<code class="bg-[#11131c] px-1 py-0.5 rounded text-[11px] font-mono border border-outline-variant">$1</code>');
+        
+        // Bullet lists
+        const lines = clean.split('\n');
+        let inList = false;
+        let formattedLines = [];
+        
+        lines.forEach(line => {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('•') || trimmed.startsWith('-') || trimmed.startsWith('*')) {
+                const content = trimmed.substring(1).trim();
+                if (!inList) {
+                    formattedLines.push('<ul class="list-disc pl-5 space-y-1 mt-1 mb-1">');
+                    inList = true;
+                }
+                formattedLines.push(`<li>${content}</li>`);
+            } else {
+                if (inList) {
+                    formattedLines.push('</ul>');
+                    inList = false;
+                }
+                formattedLines.push(line);
+            }
+        });
+        if (inList) {
+            formattedLines.push('</ul>');
+        }
+        
+        return formattedLines.join('<br>');
+    }
+});
+

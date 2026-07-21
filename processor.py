@@ -114,24 +114,95 @@ def validate_gstin(gstin: Optional[str]) -> bool:
     return bool(re.match(gstin_regex, gstin.upper()))
 
 
-def evaluate_itc_eligibility(category: str, is_recipient_registered: bool) -> tuple[bool, Optional[str]]:
+class ITCAuditResult(BaseModel):
+    is_itc_eligible: bool = Field(description="True if the expense is eligible for Input Tax Credit (ITC), False if blocked/ineligible under GST laws.")
+    reason: Optional[str] = Field(None, description="Clear and detailed explanation referencing the specific Section of the Act (e.g. Section 17(5)) if blocked, or null if eligible.")
+
+
+async def evaluate_itc_eligibility(
+    category: str, 
+    is_recipient_registered: bool, 
+    line_items_summary: str = ""
+) -> tuple[bool, Optional[str]]:
     """
     Evaluate Input Tax Credit (ITC) eligibility under Sec 17(5) CGST rules.
-    Blocked credits include Food & Beverages, Cab/Motor Vehicle Hire, Club memberships, etc.
+    Utilizes RAG to search official GST documentation and prompts Gemini to decide.
     """
     if not is_recipient_registered:
         return False, "Recipient is not a registered GST holder (B2C transactions are not eligible for ITC)."
 
-    blocked_categories = {
-        "Food & Beverages": "Blocked under Section 17(5)(b)(i) of CGST Act (Food, beverages, outdoor catering).",
-        "Motor Vehicle & Cab Bookings": "Blocked under Section 17(5)(a) of CGST Act (Motor vehicles for passenger transport unless used for specific business purposes).",
-        "Travel & Lodging": "Subject to Section 17(5) restriction depending on whether it is personal or employee vacation benefits.",
-    }
+    import rag
+    from google.genai import types
 
-    if category in blocked_categories:
-        return False, blocked_categories[category]
-    
-    return True, None
+    # RAG search query
+    query = f"ITC eligibility for category '{category}' with items: {line_items_summary}"
+    try:
+        matches = await rag.search_knowledge_base(query, limit=3)
+    except Exception as e:
+        logger.warning("RAG vector search failed, using local rule fallback: %s", e)
+        matches = []
+
+    # Filter matches with a reasonable similarity score
+    contexts = []
+    for m in matches:
+        if m["similarity"] > 0.40:
+            contexts.append(f"--- Document: {m['title']} ---\n{m['content']}")
+
+    if not contexts:
+        # Fallback to local hardcoded rules if RAG doesn't find relevant context
+        logger.info("No matching RAG context found for '%s'. Using local fallback.", category)
+        blocked_categories = {
+            "Food & Beverages": "Blocked under Section 17(5)(b)(i) of CGST Act (Food, beverages, outdoor catering).",
+            "Motor Vehicle & Cab Bookings": "Blocked under Section 17(5)(a) of CGST Act (Motor vehicles for passenger transport unless used for specific business purposes).",
+            "Travel & Lodging": "Subject to Section 17(5) restriction depending on whether it is personal or employee vacation benefits.",
+        }
+        if category in blocked_categories:
+            return False, blocked_categories[category]
+        return True, None
+
+    context_str = "\n\n".join(contexts)
+
+    prompt = f"""You are a strict GST compliance auditing engine. Your job is to determine if an invoice expense is eligible for Input Tax Credit (ITC) under Indian GST laws.
+
+Use the following official reference context from GST documentation to make your decision:
+
+--- REFERENCE CONTEXT ---
+{context_str}
+------------------------
+
+EXPENSE CATEGORY: {category}
+LINE ITEMS SUMMARY: {line_items_summary}
+
+Analyze the category and line items against the rules:
+1. Under Section 17(5), certain categories like food/beverages, outdoor catering, passenger motor vehicles (seating capacity <= 13), and personal consumption are BLOCKED.
+2. If blocked, output is_itc_eligible = false, and explain the reason citing the specific section (e.g. Section 17(5)(a) or 17(5)(b)(i)).
+3. If not blocked (e.g., software, SaaS, professional services, office supplies, utilities), output is_itc_eligible = true, and reason = null.
+
+Respond in strict JSON matching the schema.
+"""
+
+    try:
+        response = client.models.generate_content(
+            model=rag.GENERATION_MODEL,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=ITCAuditResult,
+                temperature=0.1,
+            )
+        )
+        result = ITCAuditResult.model_validate_json(response.text)
+        return result.is_itc_eligible, result.reason
+    except Exception as e:
+        logger.exception("Gemini RAG ITC evaluation failed, using local fallback:")
+        blocked_categories = {
+            "Food & Beverages": "Blocked under Section 17(5)(b)(i) of CGST Act (Food, beverages, outdoor catering).",
+            "Motor Vehicle & Cab Bookings": "Blocked under Section 17(5)(a) of CGST Act (Motor vehicles for passenger transport unless used for specific business purposes).",
+            "Travel & Lodging": "Subject to Section 17(5) restriction depending on whether it is personal or employee vacation benefits.",
+        }
+        if category in blocked_categories:
+            return False, blocked_categories[category]
+        return True, None
 
 
 def verify_taxes_and_supply(ext: InvoiceExtraction) -> tuple[str, bool, List[str]]:
@@ -238,9 +309,9 @@ async def process_invoice(file_path: str) -> ProcessingResult:
         b64_str, mime_type = _get_image_base64(file_path)
         schema_json = json.dumps(InvoiceExtraction.model_json_schema())
 
-        logger.info("Calling Groq API (meta-llama/llama-4-scout-17b-16e-instruct) to parse invoice image...")
+        logger.info("Calling Groq API (qwen/qwen3.6-27b) to parse invoice image...")
         response = groq_client.chat.completions.create(
-            model="meta-llama/llama-4-scout-17b-16e-instruct",
+            model="qwen/qwen3.6-27b",
             messages=[
                 {
                     "role": "user",
@@ -318,9 +389,12 @@ async def process_invoice(file_path: str) -> ProcessingResult:
     
     supply_type, is_calc_correct, calc_errors = verify_taxes_and_supply(extraction)
     
-    is_itc_eligible, itc_reason = evaluate_itc_eligibility(
+    # Construct line items summary for RAG check
+    line_items_summary = ", ".join([f"{item.description} (sac/hsn: {item.hsn_or_sac or 'N/A'})" for item in extraction.line_items])
+    is_itc_eligible, itc_reason = await evaluate_itc_eligibility(
         extraction.business_category, 
-        is_recipient_registered=is_valid_recipient
+        is_recipient_registered=is_valid_recipient,
+        line_items_summary=line_items_summary
     )
 
     return ProcessingResult(

@@ -3,81 +3,159 @@
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>GST Review Portal — CA Admin Dashboard</title>
+    <title>Audit Pro Workspace | GST Compliance</title>
     <meta name="description" content="CA Admin portal for GST invoice review, audit, and GSTR filing compilation."/>
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com" rel="preconnect"/>
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet"/>
     <!-- Material Symbols -->
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet"/>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <!-- Chart.js for real ITC sparkline -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
     <script id="tailwind-config">
         tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    colors: {
-                        "primary":           "#6366f1",
-                        "primary-dim":       "#818cf8",
-                        "background":        "#0f1117",
-                        "surface":           "#161b22",
-                        "surface-alt":       "#1c2128",
-                        "outline":           "#30363d",
-                        "on-surface":        "#e6edf3",
-                        "on-surface-variant":"#8b949e",
-                        "success":           "#238636",
-                        "success-dim":       "#3fb950",
-                        "warning":           "#d29922",
-                        "warning-dim":       "#e3b341",
-                        "error":             "#f85149",
-                        "error-dim":         "#ffa198"
-                    },
-                    borderRadius: {
-                        "DEFAULT": "0.375rem",
-                        "lg":      "0.5rem",
-                        "xl":      "0.75rem",
-                        "2xl":     "1rem",
-                        "full":    "9999px"
-                    },
-                    spacing: {
-                        "margin-mobile": "16px",
-                        "gutter":        "24px",
-                        "container-max": "1280px",
-                        "stack-gap":     "24px"
-                    },
-                    fontFamily: {
-                        "body":     ["Plus Jakarta Sans", "sans-serif"],
-                        "headline": ["Plus Jakarta Sans", "sans-serif"]
-                    }
-                }
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-container": "#1d1f29",
+                      "on-secondary-fixed-variant": "#005236",
+                      "secondary-fixed-dim": "#4edea3",
+                      "background": "#11131c",
+                      "secondary-fixed": "#6ffbbe",
+                      "outline": "#958ea0",
+                      "on-tertiary-fixed": "#2a1700",
+                      "surface": "#11131c",
+                      "surface-container-high": "#282933",
+                      "surface-tint": "#d0bcff",
+                      "secondary": "#4edea3",
+                      "on-surface": "#e1e1ef",
+                      "on-background": "#e1e1ef",
+                      "on-primary-container": "#340080",
+                      "on-secondary-fixed": "#002113",
+                      "on-tertiary": "#472a00",
+                      "error-container": "#93000a",
+                      "tertiary": "#ffb95f",
+                      "primary-fixed": "#e9ddff",
+                      "primary-fixed-dim": "#d0bcff",
+                      "on-primary-fixed": "#23005c",
+                      "on-tertiary-container": "#3e2400",
+                      "on-surface-variant": "#cbc3d7",
+                      "secondary-container": "#00a572",
+                      "surface-bright": "#373943",
+                      "primary": "#d0bcff",
+                      "surface-container-low": "#191b24",
+                      "on-secondary-container": "#00311f",
+                      "on-primary": "#3c0091",
+                      "on-error": "#690005",
+                      "primary-container": "#a078ff",
+                      "inverse-surface": "#e1e1ef",
+                      "on-error-container": "#ffdad6",
+                      "tertiary-fixed-dim": "#ffb95f",
+                      "on-secondary": "#003824",
+                      "surface-container-highest": "#32343e",
+                      "surface-dim": "#11131c",
+                      "error": "#ffb4ab",
+                      "tertiary-fixed": "#ffddb8",
+                      "surface-container-lowest": "#0c0e17",
+                      "inverse-on-surface": "#2e303a",
+                      "outline-variant": "#494454",
+                      "surface-variant": "#32343e",
+                      "on-tertiary-fixed-variant": "#653e00",
+                      "on-primary-fixed-variant": "#5516be",
+                      "inverse-primary": "#6d3bd7"
+              },
+              "spacing": {
+                      "container-max": "1440px",
+                      "unit": "4px",
+                      "gutter": "24px",
+                      "margin-desktop": "40px",
+                      "margin-mobile": "16px"
+              },
+              "fontFamily": {
+                      "label-sm": ["JetBrains Mono"],
+                      "label-md": ["JetBrains Mono"],
+                      "display-lg": ["Plus Jakarta Sans"],
+                      "headline-md": ["Plus Jakarta Sans"],
+                      "headline-lg": ["Plus Jakarta Sans"],
+                      "body-md": ["Plus Jakarta Sans"],
+                      "body-lg": ["Plus Jakarta Sans"]
+              }
             }
+          }
         }
-    </script>
+      </script>
     <style>
-        /* ── Fonts & base ── */
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #0f1117; color: #e6edf3; }
+        body {
+            background-color: #0F111A;
+            color: #e1e1ef;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(51, 65, 85, 0.5);
+        }
+
+        .neon-glow-primary {
+            box-shadow: 0 0 12px rgba(139, 92, 246, 0.3);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 10px;
+        }
+
+        .chart-gradient-violet {
+            background: linear-gradient(180deg, rgba(139, 92, 246, 0.1) 0%, rgba(139, 92, 246, 0) 100%);
+        }
+        
+        .chart-gradient-emerald {
+            background: linear-gradient(180deg, rgba(78, 222, 163, 0.1) 0%, rgba(78, 222, 163, 0) 100%);
+        }
+
+        @keyframes pulse-subtle {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .animate-pulse-subtle {
+            animation: pulse-subtle 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
 
         /* ── Scrollbar ── */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #0f1117; }
-        ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #6366f1; }
+        ::-webkit-scrollbar-track { background: #0F111A; }
+        ::-webkit-scrollbar-thumb { background: #494454; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #d0bcff; }
 
         /* ── Glassmorphic header ── */
         .glass-header {
-            background: rgba(15, 17, 23, 0.85);
+            background: rgba(15, 17, 26, 0.85);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
         }
 
         /* ── Audit Drawer ── */
         #audit-drawer {
-            position: fixed; top: 0; right: -100%; width: 800px; max-width: 96vw;
+            position: fixed; top: 0; right: -100%; width: 840px; max-width: 96vw;
             height: 100vh; z-index: 200;
-            background: #161b22;
-            border-left: 1px solid #30363d;
+            background: #1d1f29;
+            border-left: 1px solid #494454;
             transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex; flex-direction: column; overflow: hidden;
         }
@@ -105,9 +183,9 @@
         #gstr-modal {
             position: fixed; top: 50%; left: 50%;
             transform: translate(-50%, -58%) scale(0.96);
-            z-index: 310; width: 540px; max-width: 96vw;
-            background: #161b22;
-            border: 1px solid #30363d;
+            z-index: 310; width: 560px; max-width: 96vw;
+            background: #1d1f29;
+            border: 1px solid #494454;
             border-radius: 12px; overflow: hidden;
             opacity: 0; pointer-events: none;
             transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -118,9 +196,9 @@
         #toast {
             position: fixed; bottom: 24px; right: 24px; z-index: 400;
             padding: 12px 20px; border-radius: 8px;
-            font-size: 13px; font-weight: 700; color: #fff;
-            background: #6366f1;
-            box-shadow: 0 8px 32px rgba(99, 102, 241, 0.4);
+            font-size: 13px; font-weight: 700; color: #11131c;
+            background: #d0bcff;
+            box-shadow: 0 8px 32px rgba(208, 188, 255, 0.3);
             transform: translateY(80px); opacity: 0;
             transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
             pointer-events: none;
@@ -129,67 +207,67 @@
 
         /* ── Table rows ── */
         #invoice-rows-body tr { cursor: pointer; }
-        #invoice-rows-body tr:hover { background: rgba(28, 33, 40, 0.6); }
+        #invoice-rows-body tr:hover { background: rgba(40, 41, 51, 0.6); }
 
         /* ── Status Badges ── */
         .badge-approved {
             display: inline-flex; align-items: center; gap: 4px;
             padding: 3px 10px; border-radius: 99px; font-size: 10px; font-weight: 700;
             letter-spacing: 0.05em; text-transform: uppercase;
-            background: rgba(35, 134, 54, 0.12); color: #3fb950; border: 1px solid rgba(35,134,54,0.3);
+            background: rgba(78, 222, 163, 0.12); color: #4edea3; border: 1px solid rgba(78, 222, 163, 0.3);
         }
         .badge-flagged {
             display: inline-flex; align-items: center; gap: 4px;
             padding: 3px 10px; border-radius: 99px; font-size: 10px; font-weight: 700;
             letter-spacing: 0.05em; text-transform: uppercase;
-            background: rgba(248, 81, 73, 0.12); color: #ffa198; border: 1px solid rgba(248,81,73,0.3);
+            background: rgba(255, 180, 171, 0.12); color: #ffb4ab; border: 1px solid rgba(255, 180, 171, 0.3);
         }
         .badge-pending {
             display: inline-flex; align-items: center; gap: 4px;
             padding: 3px 10px; border-radius: 99px; font-size: 10px; font-weight: 700;
             letter-spacing: 0.05em; text-transform: uppercase;
-            background: rgba(210, 153, 34, 0.12); color: #e3b341; border: 1px solid rgba(210,153,34,0.3);
+            background: rgba(255, 185, 95, 0.12); color: #ffb95f; border: 1px solid rgba(255, 185, 95, 0.3);
         }
 
         /* ── Drawer form styles ── */
         .audit-form label {
-            display: block; font-size: 11px; font-weight: 700; color: #8b949e;
+            display: block; font-size: 11px; font-weight: 700; color: #cbc3d7;
             margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.06em;
         }
         .audit-form input,
         .audit-form select,
         .audit-form textarea {
-            width: 100%; background: #0f1117;
-            border: 1px solid #30363d; border-radius: 6px;
-            padding: 8px 12px; font-size: 13px; color: #e6edf3;
+            width: 100%; background: #11131c;
+            border: 1px solid #494454; border-radius: 6px;
+            padding: 8px 12px; font-size: 13px; color: #e1e1ef;
             font-family: 'Plus Jakarta Sans', sans-serif;
             transition: border-color 0.15s, box-shadow 0.15s; outline: none;
         }
         .audit-form input:focus,
         .audit-form select:focus,
         .audit-form textarea:focus {
-            border-color: #6366f1;
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+            border-color: #d0bcff;
+            box-shadow: 0 0 0 3px rgba(208, 188, 255, 0.15);
         }
-        .audit-form select option { background: #161b22; }
+        .audit-form select option { background: #1d1f29; }
         .audit-form input[type="date"] { color-scheme: dark; }
         .audit-form input[type="number"] { font-variant-numeric: tabular-nums; }
 
-        .gstin-input.valid   { border-color: #238636 !important; }
-        .gstin-input.invalid { border-color: #f85149 !important; }
+        .gstin-input.valid   { border-color: #4edea3 !important; }
+        .gstin-input.invalid { border-color: #ffb4ab !important; }
         .validation-label { font-size: 11px; margin-top: 3px; display: block; }
 
         /* ── Timeline ── */
         .timeline-item {
             display: flex; flex-direction: column; gap: 3px;
-            padding: 10px 0; border-bottom: 1px solid #1c2128;
+            padding: 10px 0; border-bottom: 1px solid #282933;
         }
         .timeline-item:last-child { border-bottom: none; }
-        .timeline-user  { font-size: 12px; font-weight: 700; color: #818cf8; }
-        .timeline-time  { font-size: 11px; color: #8b949e; }
-        .timeline-change { font-size: 13px; color: #e6edf3; margin-top: 2px; }
-        .timeline-change code { background: #0f1117; padding: 1px 6px; border-radius: 4px; font-family: monospace; font-size: 11px; border: 1px solid #30363d; }
-        .timeline-empty { font-size: 13px; color: #8b949e; font-style: italic; }
+        .timeline-user  { font-size: 12px; font-weight: 700; color: #d0bcff; }
+        .timeline-time  { font-size: 11px; color: #cbc3d7; }
+        .timeline-change { font-size: 13px; color: #e1e1ef; margin-top: 2px; }
+        .timeline-change code { background: #11131c; padding: 1px 6px; border-radius: 4px; font-family: monospace; font-size: 11px; border: 1px solid #494454; }
+        .timeline-empty { font-size: 13px; color: #cbc3d7; font-style: italic; }
 
         /* ── Image viewport ── */
         .invoice-preview-image { max-width: 100%; max-height: 100%; object-fit: contain; transition: transform 0.25s ease; }
@@ -197,29 +275,29 @@
 
         /* ── GSTR modal aggregates ── */
         .preview-metrics-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px; }
-        .preview-metric { background: #0f1117; border: 1px solid #30363d; border-radius: 8px; padding: 14px; text-align: center; }
-        .preview-metric .label { display: block; font-size: 10px; font-weight: 700; color: #8b949e; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
-        .preview-metric .val { font-size: 18px; font-weight: 800; color: #818cf8; }
+        .preview-metric { background: #11131c; border: 1px solid #494454; border-radius: 8px; padding: 14px; text-align: center; }
+        .preview-metric .label { display: block; font-size: 10px; font-weight: 700; color: #cbc3d7; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+        .preview-metric .val { font-size: 18px; font-weight: 800; color: #d0bcff; }
 
         /* ── Sync button loading ── */
         #sync-btn.loading .sync-icon { animation: spin 0.8s linear infinite; display: inline-block; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
         /* ── Tab buttons ── */
-        .tab-btn { padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 700; color: #8b949e; transition: all 0.15s; background: transparent; border: none; cursor: pointer; }
-        .tab-btn:hover { color: #e6edf3; background: rgba(255,255,255,0.05); }
-        .tab-btn.active { background: rgba(99,102,241,0.15); color: #818cf8; border: 1px solid rgba(99,102,241,0.25); }
+        .tab-btn { padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 700; color: #cbc3d7; transition: all 0.15s; background: transparent; border: none; cursor: pointer; }
+        .tab-btn:hover { color: #e1e1ef; background: rgba(255,255,255,0.05); }
+        .tab-btn.active { background: rgba(208, 188, 255, 0.15); color: #d0bcff; border: 1px solid rgba(208, 188, 255, 0.25); }
 
         /* ── Progress bars ── */
         .progress-bar-container { height: 5px; background: rgba(255,255,255,0.07); border-radius: 4px; overflow: hidden; margin-top: 6px; }
         .progress-bar { height: 100%; border-radius: 4px; transition: width 0.7s ease; }
-        .bg-green  { background: #3fb950; }
-        .bg-orange { background: #e3b341; }
-        .bg-purple { background: #818cf8; }
-        .bg-red    { background: #ffa198; }
+        .bg-green  { background: #4edea3; }
+        .bg-orange { background: #ffb95f; }
+        .bg-purple { background: #d0bcff; }
+        .bg-red    { background: #ffb4ab; }
 
         /* ── Empty / loading ── */
-        .empty-state { text-align: center; padding: 56px 24px; color: #8b949e; }
+        .empty-state { text-align: center; padding: 56px 24px; color: #cbc3d7; }
         .loading-icon { font-size: 36px; margin-bottom: 12px; display: block; }
         @keyframes fadePulse { 0%,100%{opacity:.4} 50%{opacity:1} }
         .loading-pulse { animation: fadePulse 1.5s ease infinite; }
@@ -232,85 +310,85 @@
 <!-- ══════════════════════════════════════════════
      SIDEBAR
 ══════════════════════════════════════════════ -->
-<aside class="fixed left-0 top-0 h-full w-64 flex flex-col z-50 border-r border-outline" style="background:#161b22;">
-    <!-- Brand -->
-    <div class="h-16 flex items-center gap-3 px-6 border-b border-outline shrink-0">
-        <div class="w-9 h-9 rounded-lg bg-primary flex items-center justify-center shrink-0 shadow-lg shadow-primary/30">
-            <span class="material-symbols-outlined text-white text-[20px]" style="font-variation-settings:'FILL' 1;">assured_workload</span>
-        </div>
-        <div>
-            <h1 class="font-bold text-[15px] text-white tracking-tight">GST Admin</h1>
-            <p class="text-[10px] text-on-surface-variant uppercase font-bold tracking-widest">Enterprise Portal</p>
+<aside class="w-[280px] h-screen fixed left-0 top-0 bg-surface-container border-r border-outline-variant flex flex-col p-6 z-50">
+    <div class="mb-8">
+        <!-- FinTrack GST Logo -->
+        <div class="flex items-center justify-center">
+            <img
+                src="/static/logo.jpeg"
+                alt="FinTrack GST — AI GST Automation"
+                class="w-44 h-auto object-contain rounded-xl"
+                style="filter: drop-shadow(0 0 10px rgba(78,222,163,0.15));"
+            />
         </div>
     </div>
-
-    <!-- Navigation -->
-    <nav class="flex-1 overflow-y-auto p-3 space-y-0.5">
-        <a href="#" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-on-surface-variant hover:text-white hover:bg-surface-alt transition-all text-[13px] font-medium">
-            <span class="material-symbols-outlined text-[20px]">dashboard</span>
-            <span>Overview</span>
+    <nav class="flex-1 space-y-2">
+        <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-secondary-fixed-dim bg-secondary-container bg-opacity-10 shadow-[0_0_12px_rgba(78,222,163,0.3)] transition-all" href="#">
+            <span class="material-symbols-outlined">dashboard</span>
+            <span class="font-body-md">Dashboard</span>
         </a>
-        <a href="#" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-primary bg-primary/10 border border-primary/20 transition-all text-[13px] font-bold">
-            <span class="material-symbols-outlined text-[20px]" style="font-variation-settings:'FILL' 1;">description</span>
-            <span>Invoices</span>
+        <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" href="#">
+            <span class="material-symbols-outlined">fact_check</span>
+            <span class="font-body-md">Audit</span>
         </a>
-        <a href="#" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-on-surface-variant hover:text-white hover:bg-surface-alt transition-all text-[13px] font-medium">
-            <span class="material-symbols-outlined text-[20px]">group</span>
-            <span>Clients</span>
+        <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" href="#">
+            <span class="material-symbols-outlined">group</span>
+            <span class="font-body-md">Clients</span>
         </a>
-        <a href="#" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-on-surface-variant hover:text-white hover:bg-surface-alt transition-all text-[13px] font-medium" id="nav-gstr-btn">
-            <span class="material-symbols-outlined text-[20px]">account_balance_wallet</span>
-            <span>GSTR Filing</span>
+        <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" href="#" id="nav-gstr-btn">
+            <span class="material-symbols-outlined">account_balance_wallet</span>
+            <span class="font-body-md">GSTR Filing</span>
         </a>
-
-        <div class="pt-5 pb-1.5 px-4">
-            <span class="text-[9px] font-bold text-on-surface-variant uppercase tracking-[0.12em]">Management</span>
-        </div>
-
-        <a href="#" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-on-surface-variant hover:text-white hover:bg-surface-alt transition-all text-[13px] font-medium">
-            <span class="material-symbols-outlined text-[20px]">settings</span>
-            <span>Settings</span>
+        <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" href="/simulator">
+            <span class="material-symbols-outlined">science</span>
+            <span class="font-body-md">WA Simulator</span>
+        </a>
+        <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" href="#">
+            <span class="material-symbols-outlined">settings</span>
+            <span class="font-body-md">Settings</span>
         </a>
     </nav>
-
-    <!-- Profile -->
-    <div class="p-3 border-t border-outline shrink-0">
-        <div class="flex items-center gap-3 p-2.5 rounded-lg bg-surface-alt border border-outline">
-            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-primary-dim flex items-center justify-center text-white font-bold text-[13px] shrink-0 ring-2 ring-primary/20">
-                CA
-            </div>
-            <div class="min-w-0">
-                <p class="text-[13px] font-bold text-white truncate">CA Admin Profile</p>
-                <p class="text-[11px] text-on-surface-variant truncate">admin@firm.com</p>
-            </div>
-        </div>
+    <div class="pt-6 border-t border-outline-variant space-y-2">
+        <button class="w-full flex items-center justify-center gap-2 py-3 bg-primary text-on-primary font-semibold rounded-lg active:scale-[0.98] transition-transform">
+            <span class="material-symbols-outlined">add</span>
+            New Audit
+        </button>
+        <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" href="#">
+            <span class="material-symbols-outlined">help</span>
+            <span class="font-body-md">Support</span>
+        </a>
+        <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" href="#">
+            <span class="material-symbols-outlined">logout</span>
+            <span class="font-body-md">Sign Out</span>
+        </a>
     </div>
 </aside>
 
 <!-- ══════════════════════════════════════════════
      TOP HEADER
 ══════════════════════════════════════════════ -->
-<header class="fixed top-0 right-0 h-16 flex items-center justify-between px-8 z-40 glass-header border-b border-outline"
-        style="left: 256px;">
-    <div class="flex items-center gap-6 flex-1">
-        <h2 class="font-bold text-[17px] text-white whitespace-nowrap">GST Review Portal</h2>
+<header class="h-16 fixed top-0 right-0 left-[280px] bg-surface bg-opacity-80 backdrop-blur-md border-b border-outline-variant flex items-center justify-between px-10 z-40">
+    <div class="flex items-center gap-4 flex-1">
+        <h2 class="font-label-md text-label-md text-primary tracking-wider uppercase whitespace-nowrap">FinTrack GST Workspace</h2>
+        <div class="h-4 w-px bg-outline-variant"></div>
+        
         <!-- Context selectors -->
         <div class="flex items-center gap-2">
             <!-- Client dropdown -->
             <div class="relative">
                 <select id="client-select"
-                    class="appearance-none bg-surface-alt border border-outline rounded-md pl-3 pr-8 py-1.5 text-[13px] font-semibold text-on-surface focus:outline-none focus:border-primary/60 hover:border-primary/40 transition-colors cursor-pointer min-w-[180px]"
-                    style="color:#e6edf3;">
+                    class="appearance-none bg-surface-container-low border border-outline-variant rounded-md pl-3 pr-8 py-1.5 text-[13px] font-semibold text-on-surface focus:outline-none focus:border-primary/60 hover:border-primary/40 transition-colors cursor-pointer min-w-[180px]"
+                    style="color:#e1e1ef;">
                     <option value="">Loading Clients…</option>
                 </select>
                 <span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant pointer-events-none">expand_more</span>
             </div>
             <!-- Month picker -->
-            <div class="relative flex items-center gap-2 bg-surface-alt border border-outline rounded-md px-3 py-1.5 hover:border-primary/40 transition-colors">
+            <div class="relative flex items-center gap-2 bg-surface-container-low border border-outline-variant rounded-md px-3 py-1.5 hover:border-primary/40 transition-colors">
                 <span class="material-symbols-outlined text-[16px] text-primary">calendar_today</span>
                 <input type="month" id="month-picker"
                     class="bg-transparent text-[13px] font-semibold text-on-surface focus:outline-none cursor-pointer"
-                    style="color-scheme: dark;"/>
+                    style="color-scheme: dark; color:#e1e1ef;"/>
             </div>
         </div>
     </div>
@@ -320,23 +398,23 @@
         <!-- Search -->
         <div class="relative">
             <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant">search</span>
-            <input id="global-search" type="text" placeholder="Search invoices, GSTINs…"
-                class="bg-surface-alt border border-outline rounded-full pl-10 pr-4 py-1.5 text-[13px] focus:ring-1 focus:ring-primary focus:border-primary w-56 transition-all outline-none placeholder:text-on-surface-variant/50"
-                style="color:#e6edf3;"/>
+            <input id="global-search" type="text" placeholder="Search invoices, GSTINs..."
+                class="bg-surface-container-low border border-outline-variant rounded-full pl-10 pr-4 py-1.5 text-[13px] focus:ring-1 focus:ring-primary focus:border-primary w-56 transition-all outline-none placeholder:text-on-surface-variant/50"
+                style="color:#e1e1ef;"/>
         </div>
         <!-- Sync button -->
-        <button id="sync-btn" class="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md text-[13px] font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 focus:outline-none">
+        <button id="sync-btn" class="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-md text-[13px] font-bold hover:bg-primary/95 transition-all shadow-lg shadow-primary/20 focus:outline-none">
             <span class="material-symbols-outlined text-[16px] sync-icon">sync</span>
             <span>Sync Portal</span>
         </button>
-        <div class="h-8 w-px bg-outline mx-1"></div>
+        <div class="h-8 w-px bg-outline-variant mx-1"></div>
         <!-- Notifications -->
         <button class="p-2 text-on-surface-variant hover:text-white transition-colors relative">
             <span class="material-symbols-outlined text-[22px]">notifications</span>
             <span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
         </button>
         <!-- Avatar -->
-        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary-dim flex items-center justify-center text-white font-bold text-[11px] cursor-pointer ring-2 ring-outline hover:ring-primary/50 transition-all">
+        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary-fixed-dim flex items-center justify-center text-on-primary font-bold text-[11px] cursor-pointer ring-2 ring-outline-variant hover:ring-primary/50 transition-all">
             CA
         </div>
     </div>
@@ -345,8 +423,8 @@
 <!-- ══════════════════════════════════════════════
      MAIN CONTENT
 ══════════════════════════════════════════════ -->
-<main class="pt-16 min-h-screen" style="margin-left: 256px;">
-    <div class="p-8 space-y-stack-gap max-w-container-max mx-auto">
+<main class="pt-16 min-h-screen" style="margin-left: 280px;">
+    <div class="p-8 space-y-gutter max-w-container-max mx-auto">
 
         <!-- ── Page Header ── -->
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-2 fade-up">
@@ -359,26 +437,26 @@
                 </nav>
                 <h2 class="text-[28px] font-extrabold text-white tracking-tight">Invoice Review</h2>
                 <p class="text-[14px] text-on-surface-variant mt-1">
-                    Found <span class="text-warning-dim font-bold" id="record-count-txt">— pending</span> invoices requiring audit for GSTR-2B reconciliation.
+                    Found <span class="text-secondary font-bold" id="record-count-txt">— pending</span> invoices requiring audit for GSTR-2B reconciliation.
                 </p>
             </div>
             <div class="flex items-center gap-3">
-                <button class="flex items-center gap-2 px-4 py-2 border border-outline rounded-md text-[13px] font-bold text-on-surface hover:bg-surface-alt hover:border-primary/40 transition-colors">
+                <button class="flex items-center gap-2 px-4 py-2 border border-outline-variant rounded-md text-[13px] font-bold text-on-surface hover:bg-surface-container hover:border-primary/40 transition-colors">
                     <span class="material-symbols-outlined text-[18px]">file_download</span>
                     Export CSV
                 </button>
-                <div class="h-9 w-px bg-outline"></div>
+                <div class="h-9 w-px bg-outline-variant"></div>
                 <!-- Filing Status Badges -->
                 <div class="flex items-center gap-2">
-                    <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-success/10 border border-success/20">
-                        <span class="material-symbols-outlined text-success-dim text-[14px]" style="font-variation-settings:'FILL' 1;">check_circle</span>
-                        <span class="text-[11px] font-bold text-success-dim uppercase tracking-wider">GSTR-1</span>
-                        <span id="status-gstr1-val" class="text-[11px] font-semibold text-success-dim">Filed</span>
+                    <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-secondary/10 border border-secondary/20">
+                        <span class="material-symbols-outlined text-secondary text-[14px]" style="font-variation-settings:'FILL' 1;">check_circle</span>
+                        <span class="text-[11px] font-bold text-secondary uppercase tracking-wider">GSTR-1</span>
+                        <span id="status-gstr1-val" class="text-[11px] font-semibold text-secondary">Filed</span>
                     </div>
-                    <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-warning/10 border border-warning/20">
-                        <span class="material-symbols-outlined text-warning-dim text-[14px]">pending</span>
-                        <span class="text-[11px] font-bold text-warning-dim uppercase tracking-wider">GSTR-3B</span>
-                        <span id="status-gstr3b-val" class="text-[11px] font-semibold text-warning-dim">Pending</span>
+                    <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-tertiary/10 border border-tertiary/20">
+                        <span class="material-symbols-outlined text-tertiary text-[14px]">pending</span>
+                        <span class="text-[11px] font-bold text-tertiary uppercase tracking-wider">GSTR-3B</span>
+                        <span id="status-gstr3b-val" class="text-[11px] font-semibold text-tertiary">Pending</span>
                     </div>
                 </div>
             </div>
@@ -388,9 +466,9 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 fade-up">
 
             <!-- Pending -->
-            <div class="bg-surface border border-outline rounded-xl p-5 hover:border-primary/40 hover:-translate-y-0.5 transition-all group shadow-lg shadow-black/20">
+            <div class="bg-surface border border-outline-variant rounded-xl p-5 hover:border-primary/40 hover:-translate-y-0.5 transition-all group shadow-lg shadow-black/20">
                 <div class="flex items-center justify-between mb-4">
-                    <span class="p-2 rounded-lg bg-warning/10 text-warning-dim">
+                    <span class="p-2 rounded-lg bg-tertiary/10 text-tertiary">
                         <span class="material-symbols-outlined text-[22px]">assignment_late</span>
                     </span>
                     <span class="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">Pending</span>
@@ -398,31 +476,31 @@
                 <div class="text-[26px] font-extrabold text-white" id="kpi-pending-count">—</div>
                 <div class="text-[12px] text-on-surface-variant mt-1 italic" id="kpi-pending-subtext">Audit required</div>
                 <div class="mt-2">
-                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-warning/10 text-warning-dim border border-warning/20" id="kpi-pending-trend">+0 total</span>
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-tertiary/10 text-tertiary border border-tertiary/20" id="kpi-pending-trend">+0 total</span>
                 </div>
             </div>
 
             <!-- Total Taxable -->
-            <div class="bg-surface border border-outline rounded-xl p-5 hover:border-primary/40 hover:-translate-y-0.5 transition-all group shadow-lg shadow-black/20">
+            <div class="bg-surface border border-outline-variant rounded-xl p-5 hover:border-primary/40 hover:-translate-y-0.5 transition-all group shadow-lg shadow-black/20">
                 <div class="flex items-center justify-between mb-4">
-                    <span class="p-2 rounded-lg bg-primary/10 text-primary-dim">
+                    <span class="p-2 rounded-lg bg-primary/10 text-primary">
                         <span class="material-symbols-outlined text-[22px]">receipt_long</span>
                     </span>
                     <span class="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">Total Taxable</span>
                 </div>
                 <div class="text-[26px] font-extrabold text-white" id="kpi-sales-total">₹0</div>
-                <div class="text-[12px] text-success-dim mt-1 flex items-center gap-1 font-semibold" id="kpi-sales-subtext">
+                <div class="text-[12px] text-secondary mt-1 flex items-center gap-1 font-semibold" id="kpi-sales-subtext">
                     <span class="material-symbols-outlined text-[14px]">trending_up</span> this period
                 </div>
                 <div class="mt-2">
-                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary-dim border border-primary/20">+12% vs last month</span>
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">+12% vs last month</span>
                 </div>
             </div>
 
             <!-- ITC Claimable -->
-            <div class="bg-surface border border-outline rounded-xl p-5 hover:border-primary/40 hover:-translate-y-0.5 transition-all group shadow-lg shadow-black/20">
+            <div class="bg-surface border border-outline-variant rounded-xl p-5 hover:border-primary/40 hover:-translate-y-0.5 transition-all group shadow-lg shadow-black/20">
                 <div class="flex items-center justify-between mb-4">
-                    <span class="p-2 rounded-lg bg-success/10 text-success-dim">
+                    <span class="p-2 rounded-lg bg-secondary/10 text-secondary">
                         <span class="material-symbols-outlined text-[22px]">verified_user</span>
                     </span>
                     <span class="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">ITC Claimable</span>
@@ -430,87 +508,116 @@
                 <div class="text-[26px] font-extrabold text-white" id="kpi-itc-total">₹0</div>
                 <div class="text-[12px] text-on-surface-variant mt-1 italic" id="kpi-itc-subtext">Provisional calculation</div>
                 <div class="mt-2">
-                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-success/10 text-success-dim border border-success/20">94.1% matched</span>
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-secondary/10 text-secondary border border-secondary/20">94.1% matched</span>
                 </div>
             </div>
 
-            <!-- Mismatch -->
-            <div class="bg-surface border border-outline rounded-xl p-5 hover:border-error/30 hover:-translate-y-0.5 transition-all group shadow-lg shadow-black/20">
+            <!-- Mismatch / Flagged -->
+            <div class="bg-surface border border-outline-variant rounded-xl p-5 hover:border-error/30 hover:-translate-y-0.5 transition-all group shadow-lg shadow-black/20">
                 <div class="flex items-center justify-between mb-4">
-                    <span class="p-2 rounded-lg bg-error/10 text-error-dim">
+                    <span class="p-2 rounded-lg bg-error/10 text-error">
                         <span class="material-symbols-outlined text-[22px]">report</span>
                     </span>
-                    <span class="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">Mismatch</span>
+                    <span class="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">Flagged</span>
                 </div>
-                <div class="text-[26px] font-extrabold text-white">12</div>
-                <div class="text-[12px] text-error-dim mt-1 font-semibold italic">Requires GSTR-2B sync</div>
+                <div class="text-[26px] font-extrabold text-white" id="kpi-flagged-count">—</div>
+                <div class="text-[12px] text-error mt-1 font-semibold italic">Calculation errors detected</div>
                 <div class="mt-2">
-                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-error/10 text-error-dim border border-error/20">Critical</span>
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-error/10 text-error border border-error/20">Needs CA Review</span>
                 </div>
             </div>
         </div>
 
-        <!-- ── ITC Trend Sparkline ── -->
-        <div class="bg-surface border border-outline rounded-xl p-5 fade-up shadow-lg shadow-black/20">
+        <!-- ── Net GST Payable Summary Row ── -->
+        <div class="bg-surface border border-outline-variant rounded-xl p-5 fade-up shadow-lg shadow-black/20" id="net-gst-row">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div class="flex items-center gap-4">
+                    <span class="p-2.5 rounded-xl bg-primary/10 text-primary">
+                        <span class="material-symbols-outlined text-[24px]" style="font-variation-settings:'FILL' 1;">account_balance</span>
+                    </span>
+                    <div>
+                        <div class="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-0.5">Net GST Payable this period</div>
+                        <div class="text-[11px] text-on-surface-variant italic">= Tax Liability on Sales &minus; Eligible ITC</div>
+                    </div>
+                </div>
+                <!-- Equation display -->
+                <div class="flex items-center gap-3 flex-wrap">
+                    <div class="text-center">
+                        <div class="text-[11px] text-on-surface-variant mb-0.5">GST Liability</div>
+                        <div class="text-[16px] font-extrabold text-error" id="net-sales-gst">₹0</div>
+                    </div>
+                    <span class="text-[20px] font-bold text-on-surface-variant">−</span>
+                    <div class="text-center">
+                        <div class="text-[11px] text-on-surface-variant mb-0.5">Eligible ITC</div>
+                        <div class="text-[16px] font-extrabold text-secondary" id="net-itc-amount">₹0</div>
+                    </div>
+                    <span class="text-[20px] font-bold text-on-surface-variant">=</span>
+                    <div class="text-center">
+                        <div class="text-[11px] text-on-surface-variant mb-0.5">Net Payable</div>
+                        <div class="text-[20px] font-extrabold text-primary" id="net-gst-payable">₹0</div>
+                    </div>
+                </div>
+                <!-- Blocked ITC pill -->
+                <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-error/8 border border-error/20">
+                    <span class="material-symbols-outlined text-error text-[16px]">block</span>
+                    <div>
+                        <div class="text-[10px] font-bold text-error uppercase tracking-wider">Blocked ITC</div>
+                        <div class="text-[14px] font-extrabold text-error" id="net-itc-blocked">₹0</div>
+                    </div>
+                </div>
+            </div>
+            <!-- ITC utilisation bar -->
+            <div class="mt-4">
+                <div class="flex justify-between text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">
+                    <span>ITC Utilisation</span>
+                    <span id="itc-utilisation-pct">0%</span>
+                </div>
+                <div class="progress-bar-container" style="height:6px;">
+                    <div class="progress-bar bg-green" id="itc-utilisation-bar" style="width:0%;"></div>
+                </div>
+                <div class="flex items-center gap-4 mt-2 text-[10px] text-on-surface-variant">
+                    <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-secondary inline-block"></span>CGST: <span id="net-itc-cgst" class="font-bold text-secondary">₹0</span></span>
+                    <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-primary inline-block"></span>SGST: <span id="net-itc-sgst" class="font-bold text-primary">₹0</span></span>
+                    <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-tertiary inline-block"></span>IGST: <span id="net-itc-igst" class="font-bold text-tertiary">₹0</span></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── ITC Trend Sparkline (real Chart.js) ── -->
+        <div class="bg-surface border border-outline-variant rounded-xl p-5 fade-up shadow-lg shadow-black/20">
             <div class="flex items-center justify-between mb-4">
                 <div>
                     <h3 class="font-bold text-[14px] text-white">ITC Trend — Last 12 Months</h3>
                     <div class="flex items-baseline gap-2 mt-1">
-                        <span class="text-[22px] font-extrabold text-primary-dim">₹38.4L</span>
-                        <span class="text-[12px] font-bold text-success-dim flex items-center gap-0.5">
-                            <span class="material-symbols-outlined text-[14px]">trending_up</span> 22.3% YoY
+                        <span class="text-[22px] font-extrabold text-primary" id="sparkline-total-label">₹0</span>
+                        <span class="text-[12px] font-bold text-secondary flex items-center gap-0.5" id="sparkline-trend-label">
+                            <span class="material-symbols-outlined text-[14px]">trending_up</span> Loading…
                         </span>
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
                     <div class="hidden md:flex items-center gap-4 text-[11px] text-on-surface-variant mr-4">
-                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-primary inline-block"></span>ITC Claimed</span>
-                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-success inline-block"></span>Eligible</span>
+                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-primary inline-block"></span>ITC Eligible</span>
+                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-error inline-block"></span>Blocked</span>
+                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-secondary inline-block"></span>Sales GST</span>
                     </div>
-                    <button class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-bold text-on-surface-variant hover:text-white hover:bg-surface-alt border border-outline transition-colors">
-                        <span class="material-symbols-outlined text-[16px]">download</span> Export
-                    </button>
                     <p class="text-[11px] font-bold text-on-surface-variant" id="filing-status-title">Filing Status</p>
                 </div>
             </div>
-            <!-- SVG Sparkline -->
-            <div class="h-20 relative">
-                <svg class="w-full h-full" viewBox="0 0 700 80" preserveAspectRatio="none">
-                    <defs>
-                        <linearGradient id="grad1" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stop-color="#6366f1" stop-opacity="0.3"/>
-                            <stop offset="100%" stop-color="#6366f1" stop-opacity="0"/>
-                        </linearGradient>
-                        <linearGradient id="grad2" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stop-color="#238636" stop-opacity="0.2"/>
-                            <stop offset="100%" stop-color="#238636" stop-opacity="0"/>
-                        </linearGradient>
-                    </defs>
-                    <!-- ITC area -->
-                    <path d="M0 70 C80 65 140 60 200 55 S320 42 380 36 S500 28 560 22 S640 14 700 10 L700 80 L0 80 Z" fill="url(#grad1)"/>
-                    <path d="M0 70 C80 65 140 60 200 55 S320 42 380 36 S500 28 560 22 S640 14 700 10" fill="none" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round"/>
-                    <!-- Eligible area -->
-                    <path d="M0 75 C80 70 140 68 200 64 S320 55 380 50 S500 44 560 40 S640 35 700 32 L700 80 L0 80 Z" fill="url(#grad2)"/>
-                    <path d="M0 75 C80 70 140 68 200 64 S320 55 380 50 S500 44 560 40 S640 35 700 32" fill="none" stroke="#238636" stroke-width="2" stroke-linecap="round" stroke-dasharray="4 2"/>
-                    <!-- Month labels -->
-                    <text x="0"   y="80" font-size="8" fill="#8b949e" font-family="Plus Jakarta Sans">Jul</text>
-                    <text x="116" y="80" font-size="8" fill="#8b949e" font-family="Plus Jakarta Sans">Sep</text>
-                    <text x="233" y="80" font-size="8" fill="#8b949e" font-family="Plus Jakarta Sans">Nov</text>
-                    <text x="350" y="80" font-size="8" fill="#8b949e" font-family="Plus Jakarta Sans">Jan</text>
-                    <text x="466" y="80" font-size="8" fill="#8b949e" font-family="Plus Jakarta Sans">Mar</text>
-                    <text x="650" y="80" font-size="8" fill="#8b949e" font-family="Plus Jakarta Sans">Jun</text>
-                </svg>
+            <!-- Real Chart.js canvas -->
+            <div class="relative" style="height:110px;">
+                <canvas id="itc-sparkline-chart"></canvas>
             </div>
         </div>
 
         <!-- ── Invoice Table ── -->
-        <div class="bg-surface border border-outline rounded-xl overflow-hidden shadow-2xl shadow-black/30 fade-up">
+        <div class="bg-surface border border-outline-variant rounded-xl overflow-hidden shadow-2xl shadow-black/30 fade-up">
 
             <!-- Table Toolbar -->
-            <div class="p-4 border-b border-outline flex flex-col md:flex-row md:items-center justify-between gap-4" style="background:rgba(28,33,40,0.5);">
+            <div class="p-4 border-b border-outline-variant flex flex-col md:flex-row md:items-center justify-between gap-4" style="background:rgba(29,31,41,0.5);">
                 <div class="flex items-center gap-3">
                     <!-- Tab filters -->
-                    <div class="flex items-center gap-0.5 p-1 rounded-lg bg-background border border-outline">
+                    <div class="flex items-center gap-0.5 p-1 rounded-lg bg-background border border-outline-variant">
                         <button class="tab-btn active" data-filter="all">All</button>
                         <button class="tab-btn" data-filter="approved">Approved</button>
                         <button class="tab-btn" data-filter="flagged">Flagged</button>
@@ -519,21 +626,30 @@
                     <!-- Category filter -->
                     <div class="relative">
                         <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[16px] text-on-surface-variant">filter_alt</span>
-                        <select class="bg-surface border border-outline rounded-md pl-8 pr-8 py-1.5 text-[12px] font-semibold text-on-surface appearance-none focus:ring-1 focus:ring-primary focus:border-primary outline-none min-w-[130px] filter-toggle-btn"
-                                style="color:#8b949e;">
+                        <select class="bg-surface border border-outline-variant rounded-md pl-8 pr-8 py-1.5 text-[12px] font-semibold text-on-surface appearance-none focus:ring-1 focus:ring-primary focus:border-primary outline-none min-w-[130px] filter-toggle-btn"
+                                style="color:#cbc3d7;">
                             <option>All Categories</option>
-                            <option>IT Services</option>
-                            <option>Rent</option>
-                            <option>Marketing</option>
-                            <option>Consumables</option>
+                            <option>Office Supplies</option>
+                            <option>Electronics & Hardware</option>
+                            <option>Software & SaaS</option>
+                            <option>Professional & Consulting Services</option>
+                            <option>Rent & Infrastructure</option>
+                            <option>Food & Beverages</option>
+                            <option>Motor Vehicle & Cab Bookings</option>
+                            <option>Travel & Lodging</option>
+                            <option>Logistics & Freight</option>
+                            <option>Raw Materials</option>
+                            <option>Marketing & Advertising</option>
+                            <option>Utilities (Electricity/Water/Internet)</option>
+                            <option>Other</option>
                         </select>
                         <span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-[16px] text-on-surface-variant pointer-events-none">expand_more</span>
                     </div>
                 </div>
                 <div class="flex items-center gap-3">
                     <span class="text-[12px] text-on-surface-variant">Showing from database</span>
-                    <div class="flex items-center border border-outline rounded-md overflow-hidden bg-background">
-                        <button class="p-1.5 hover:bg-surface transition-colors disabled:opacity-30 border-r border-outline" disabled>
+                    <div class="flex items-center border border-outline-variant rounded-md overflow-hidden bg-background">
+                        <button class="p-1.5 hover:bg-surface transition-colors disabled:opacity-30 border-r border-outline-variant" disabled>
                             <span class="material-symbols-outlined text-[18px] text-on-surface-variant">chevron_left</span>
                         </button>
                         <button class="p-1.5 hover:bg-surface transition-colors">
@@ -547,7 +663,7 @@
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
                     <thead>
-                        <tr class="border-b border-outline" style="background:rgba(28,33,40,0.8);">
+                        <tr class="border-b border-outline-variant" style="background:rgba(29,31,41,0.8);">
                             <th class="py-4 px-6 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest whitespace-nowrap">Invoice #</th>
                             <th class="py-4 px-6 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Supplier / GSTIN</th>
                             <th class="py-4 px-6 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Date</th>
@@ -558,7 +674,7 @@
                             <th class="py-4 px-6 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest text-right">Action</th>
                         </tr>
                     </thead>
-                    <tbody id="invoice-rows-body" class="divide-y divide-outline/60 text-sm">
+                    <tbody id="invoice-rows-body" class="divide-y divide-outline-variant/60 text-sm">
                         <tr>
                             <td colspan="8" class="empty-state loading-pulse">
                                 <span class="material-symbols-outlined loading-icon" style="font-size:32px;">sync</span>
@@ -570,13 +686,13 @@
             </div>
 
             <!-- Table Footer -->
-            <div class="p-4 border-t border-outline flex items-center justify-between" style="background:rgba(28,33,40,0.5);">
+            <div class="p-4 border-t border-outline-variant flex items-center justify-between" style="background:rgba(29,31,41,0.5);">
                 <button class="flex items-center gap-2 text-[13px] font-bold text-on-surface-variant hover:text-white transition-colors">
                     <span class="material-symbols-outlined text-[18px]">history</span>
                     Audit Log
                 </button>
                 <div class="flex items-center gap-1">
-                    <button class="w-8 h-8 rounded flex items-center justify-center bg-primary text-white text-[12px] font-bold shadow-lg shadow-primary/20">1</button>
+                    <button class="w-8 h-8 rounded flex items-center justify-center bg-primary text-on-primary text-[12px] font-bold shadow-lg shadow-primary/20">1</button>
                     <button class="w-8 h-8 rounded flex items-center justify-center text-on-surface-variant hover:bg-background text-[12px] font-bold transition-colors">2</button>
                     <button class="w-8 h-8 rounded flex items-center justify-center text-on-surface-variant hover:bg-background text-[12px] font-bold transition-colors">3</button>
                     <span class="px-1 text-on-surface-variant text-[12px]">…</span>
@@ -593,12 +709,12 @@
 <div id="audit-drawer-overlay"></div>
 <aside id="audit-drawer">
     <!-- Header -->
-    <div class="flex items-center justify-between px-6 py-4 border-b border-outline shrink-0" style="background:#161b22;">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-outline-variant shrink-0" style="background:#1d1f29;">
         <div>
             <h3 class="font-bold text-[16px] text-white" id="drawer-invoice-num">Audit Invoice #—</h3>
             <span class="text-[12px] text-on-surface-variant" id="drawer-invoice-id">DB ID: —</span>
         </div>
-        <button id="close-drawer-btn" class="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant hover:text-white hover:bg-surface-alt border border-transparent hover:border-outline transition-all">
+        <button id="close-drawer-btn" class="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant hover:text-white hover:bg-surface-container-high border border-transparent hover:border-outline-variant transition-all">
             <span class="material-symbols-outlined text-[20px]">close</span>
         </button>
     </div>
@@ -608,13 +724,13 @@
         <div class="grid grid-cols-1 md:grid-cols-2 h-full">
 
             <!-- Document Viewer -->
-            <div class="flex flex-col border-r border-outline" style="background:#0f1117; min-height: 400px;">
-                <div class="flex items-center justify-between px-4 py-3 border-b border-outline shrink-0">
+            <div class="flex flex-col border-r border-outline-variant" style="background:#11131c; min-height: 400px;">
+                <div class="flex items-center justify-between px-4 py-3 border-b border-outline-variant shrink-0">
                     <span class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Original Document</span>
                     <div class="flex items-center gap-1">
-                        <button id="zoom-in-btn"  title="Zoom In"  class="w-7 h-7 rounded flex items-center justify-center text-on-surface-variant hover:text-white hover:bg-surface-alt transition-colors"><span class="material-symbols-outlined text-[16px]">add</span></button>
-                        <button id="zoom-out-btn" title="Zoom Out" class="w-7 h-7 rounded flex items-center justify-center text-on-surface-variant hover:text-white hover:bg-surface-alt transition-colors"><span class="material-symbols-outlined text-[16px]">remove</span></button>
-                        <button id="rotate-btn"   title="Rotate"   class="w-7 h-7 rounded flex items-center justify-center text-on-surface-variant hover:text-white hover:bg-surface-alt transition-colors"><span class="material-symbols-outlined text-[16px]">rotate_right</span></button>
+                        <button id="zoom-in-btn"  title="Zoom In"  class="w-7 h-7 rounded flex items-center justify-center text-on-surface-variant hover:text-white hover:bg-surface-container-high transition-colors"><span class="material-symbols-outlined text-[16px]">add</span></button>
+                        <button id="zoom-out-btn" title="Zoom Out" class="w-7 h-7 rounded flex items-center justify-center text-on-surface-variant hover:text-white hover:bg-surface-container-high transition-colors"><span class="material-symbols-outlined text-[16px]">remove</span></button>
+                        <button id="rotate-btn"   title="Rotate"   class="w-7 h-7 rounded flex items-center justify-center text-on-surface-variant hover:text-white hover:bg-surface-container-high transition-colors"><span class="material-symbols-outlined text-[16px]">rotate_right</span></button>
                     </div>
                 </div>
                 <div class="flex-1 flex items-center justify-center p-4 overflow-hidden">
@@ -623,20 +739,20 @@
             </div>
 
             <!-- Audit Forms -->
-            <div class="flex flex-col overflow-y-auto p-4 gap-4 bg-surface">
+            <div class="flex flex-col overflow-y-auto p-4 gap-4 bg-surface-container">
 
                 <!-- System Alerts -->
-                <div id="audit-alerts-card" class="rounded-lg border border-error/30 p-4" style="display:none; background:rgba(248,81,73,0.06);">
-                    <h4 class="text-[11px] font-bold text-error-dim uppercase tracking-wider flex items-center gap-2 mb-3">
+                <div id="audit-alerts-card" class="rounded-lg border border-error/30 p-4" style="display:none; background:rgba(255,180,171,0.06);">
+                    <h4 class="text-[11px] font-bold text-error uppercase tracking-wider flex items-center gap-2 mb-3">
                         <span class="material-symbols-outlined text-[16px]">warning</span> System Validation Checks
                     </h4>
-                    <ul id="audit-alerts-list" class="space-y-1.5 text-[13px] text-error-dim list-disc list-inside"></ul>
+                    <ul id="audit-alerts-list" class="space-y-1.5 text-[13px] text-error list-disc list-inside"></ul>
                 </div>
 
                 <form id="audit-form" class="audit-form flex flex-col gap-3">
                     <!-- Invoice Details -->
-                    <div class="rounded-lg border border-outline p-4" style="background:#0f1117;">
-                        <h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-3 pb-2 border-b border-outline">Invoice Details</h4>
+                    <div class="rounded-lg border border-outline-variant p-4" style="background:#11131c;">
+                        <h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-3 pb-2 border-b border-outline-variant">Invoice Details</h4>
                         <div class="grid grid-cols-2 gap-3">
                             <div><label for="f-inv-num">Invoice Number</label><input type="text" id="f-inv-num"/></div>
                             <div><label for="f-inv-date">Invoice Date</label><input type="date" id="f-inv-date"/></div>
@@ -644,8 +760,8 @@
                     </div>
 
                     <!-- Supplier -->
-                    <div class="rounded-lg border border-outline p-4" style="background:#0f1117;">
-                        <h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-3 pb-2 border-b border-outline">Supplier Details</h4>
+                    <div class="rounded-lg border border-outline-variant p-4" style="background:#11131c;">
+                        <h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-3 pb-2 border-b border-outline-variant">Supplier Details</h4>
                         <div class="flex flex-col gap-3">
                             <div><label for="f-sup-name">Supplier Legal Name</label><input type="text" id="f-sup-name"/></div>
                             <div>
@@ -657,8 +773,8 @@
                     </div>
 
                     <!-- Recipient -->
-                    <div class="rounded-lg border border-outline p-4" style="background:#0f1117;">
-                        <h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-3 pb-2 border-b border-outline">Recipient Details</h4>
+                    <div class="rounded-lg border border-outline-variant p-4" style="background:#11131c;">
+                        <h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-3 pb-2 border-b border-outline-variant">Recipient Details</h4>
                         <div class="flex flex-col gap-3">
                             <div><label for="f-rec-name">Recipient Name</label><input type="text" id="f-rec-name"/></div>
                             <div>
@@ -670,8 +786,8 @@
                     </div>
 
                     <!-- Categorisation -->
-                    <div class="rounded-lg border border-outline p-4" style="background:#0f1117;">
-                        <h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-3 pb-2 border-b border-outline">Categorisation & Supply</h4>
+                    <div class="rounded-lg border border-outline-variant p-4" style="background:#11131c;">
+                        <h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-3 pb-2 border-b border-outline-variant">Categorisation & Supply</h4>
                         <div class="grid grid-cols-2 gap-3 mb-3">
                             <div>
                                 <label for="f-category">Business Category</label>
@@ -717,8 +833,8 @@
                     </div>
 
                     <!-- Amounts -->
-                    <div class="rounded-lg border border-outline p-4" style="background:#0f1117;">
-                        <h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-3 pb-2 border-b border-outline">Amounts Breakdown</h4>
+                    <div class="rounded-lg border border-outline-variant p-4" style="background:#11131c;">
+                        <h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-3 pb-2 border-b border-outline-variant">Amounts Breakdown</h4>
                         <div class="grid grid-cols-2 gap-3 mb-3">
                             <div><label for="f-taxable">Taxable Value (₹)</label><input type="number" step="0.01" id="f-taxable"/></div>
                             <div><label for="f-grand">Grand Total (₹)</label><input type="number" step="0.01" id="f-grand"/></div>
@@ -732,7 +848,7 @@
                 </form>
 
                 <!-- CA Modification History -->
-                <div class="rounded-lg border border-outline p-4" style="background:#0f1117;">
+                <div class="rounded-lg border border-outline-variant p-4" style="background:#11131c;">
                     <h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-3 flex items-center gap-2">
                         <span class="material-symbols-outlined text-[14px]">history</span> CA Modification History
                     </h4>
@@ -745,15 +861,15 @@
     </div>
 
     <!-- Footer -->
-    <div class="shrink-0 flex items-center justify-between px-6 py-3 border-t border-outline" style="background:#161b22;">
-        <button id="drawer-cancel-btn" class="px-4 py-2 rounded-md text-[13px] font-bold text-on-surface-variant hover:text-white hover:bg-surface-alt border border-outline transition-colors">
+    <div class="shrink-0 flex items-center justify-between px-6 py-3 border-t border-outline-variant" style="background:#1d1f29;">
+        <button id="drawer-cancel-btn" class="px-4 py-2 rounded-md text-[13px] font-bold text-on-surface-variant hover:text-white hover:bg-surface-container-high border border-outline-variant transition-colors">
             Cancel
         </button>
         <div class="flex items-center gap-2">
             <button id="drawer-save-btn" class="flex items-center gap-2 px-4 py-2 rounded-md text-[13px] font-bold text-white bg-primary/80 hover:bg-primary transition-all">
                 <span class="material-symbols-outlined text-[16px]">save</span> Save Progress
             </button>
-            <button id="drawer-approve-btn" class="flex items-center gap-2 px-4 py-2 rounded-md text-[13px] font-bold text-white transition-all" style="background:#238636;">
+            <button id="drawer-approve-btn" class="flex items-center gap-2 px-4 py-2 rounded-md text-[13px] font-bold text-white transition-all bg-secondary-container hover:bg-secondary-container/90">
                 <span class="material-symbols-outlined text-[16px]" style="font-variation-settings:'FILL' 1;">task_alt</span> Verify & Approve
             </button>
         </div>
@@ -765,12 +881,12 @@
 ══════════════════════════════════════════════ -->
 <div id="gstr-modal-overlay"></div>
 <div id="gstr-modal">
-    <div class="flex items-center justify-between px-6 py-4 border-b border-outline" style="background:#1c2128;">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-outline-variant" style="background:#282933;">
         <h3 class="font-bold text-[16px] text-white flex items-center gap-2">
             <span class="material-symbols-outlined text-primary text-[20px]">file_export</span>
             GSTR Filing Offline Toolkit
         </h3>
-        <button id="close-gstr-modal-btn" class="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant hover:text-white hover:bg-surface-alt border border-transparent hover:border-outline transition-all">
+        <button id="close-gstr-modal-btn" class="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant hover:text-white hover:bg-surface-container-high border border-transparent hover:border-outline-variant transition-all">
             <span class="material-symbols-outlined text-[20px]">close</span>
         </button>
     </div>
@@ -780,36 +896,101 @@
             <div>
                 <label class="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Filing Period</label>
                 <input type="month" id="modal-gstr-month" value="2026-05"
-                    class="w-full px-3 py-2 rounded-md text-[13px] font-semibold border border-outline focus:outline-none focus:border-primary transition-colors"
-                    style="background:#0f1117; color:#e6edf3; color-scheme:dark;"/>
+                    class="w-full px-3 py-2 rounded-md text-[13px] font-semibold border border-outline-variant focus:outline-none focus:border-primary transition-colors"
+                    style="background:#11131c; color:#e1e1ef; color-scheme:dark;"/>
             </div>
             <div>
                 <label class="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Export Schema</label>
                 <select id="modal-gstr-type"
-                    class="w-full px-3 py-2 rounded-md text-[13px] font-semibold border border-outline focus:outline-none focus:border-primary transition-colors appearance-none"
-                    style="background:#0f1117; color:#e6edf3;">
+                    class="w-full px-3 py-2 rounded-md text-[13px] font-semibold border border-outline-variant focus:outline-none focus:border-primary transition-colors appearance-none"
+                    style="background:#11131c; color:#e1e1ef;">
                     <option value="GSTR1">GSTR-1 (Sales Invoices & HSN Summary)</option>
                     <option value="GSTR3B">GSTR-3B (Consolidated Tax Liabilities & ITC)</option>
                 </select>
             </div>
         </div>
         <!-- Preview Aggregates -->
-        <div class="rounded-lg border border-outline p-4" style="background:#0f1117;">
+        <div class="rounded-lg border border-outline-variant p-4" style="background:#11131c;">
             <h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-3">Preview Aggregates</h4>
             <div class="preview-metrics-row">
                 <div class="preview-metric"><span class="label">Taxable Sales</span><span class="val" id="prev-sales">₹0.00</span></div>
                 <div class="preview-metric"><span class="label">Tax Liability</span><span class="val" id="prev-tax">₹0.00</span></div>
                 <div class="preview-metric"><span class="label">Eligible ITC</span><span class="val" id="prev-itc">₹0.00</span></div>
             </div>
+            <!-- Extra row: blocked ITC + net payable -->
+            <div class="grid grid-cols-2 gap-3 mt-3">
+                <div class="preview-metric" style="border-color:rgba(255,180,171,0.25);">
+                    <span class="label" style="color:#ffb4ab;">Blocked ITC (Sec 17(5))</span>
+                    <span class="val" id="prev-itc-blocked" style="color:#ffb4ab;">₹0.00</span>
+                </div>
+                <div class="preview-metric" style="border-color:rgba(208,188,255,0.3);">
+                    <span class="label" style="color:#d0bcff;">Net GST Payable</span>
+                    <span class="val" id="prev-net-gst" style="color:#d0bcff;">₹0.00</span>
+                </div>
+            </div>
         </div>
     </div>
-    <div class="flex items-center justify-between px-6 py-4 border-t border-outline" style="background:#1c2128;">
-        <button id="cancel-gstr-modal-btn" class="px-4 py-2 rounded-md text-[13px] font-bold text-on-surface-variant hover:text-white hover:bg-surface-alt border border-outline transition-colors">
+    <div class="flex items-center justify-between px-6 py-4 border-t border-outline-variant" style="background:#282933;">
+        <button id="cancel-gstr-modal-btn" class="px-4 py-2 rounded-md text-[13px] font-bold text-on-surface-variant hover:text-white hover:bg-surface-container-high border border-outline-variant transition-colors">
             Cancel
         </button>
-        <button id="export-gstr-json-btn" class="flex items-center gap-2 px-5 py-2 rounded-md text-[13px] font-bold text-white bg-primary hover:bg-primary/90 transition-all shadow-lg shadow-primary/20">
+        <button id="export-gstr-json-btn" class="flex items-center gap-2 px-5 py-2 rounded-md text-[13px] font-bold text-on-primary bg-primary hover:bg-primary/90 transition-all shadow-lg shadow-primary/20">
             <span class="material-symbols-outlined text-[16px]">file_export</span> Compile & Download JSON
         </button>
+    </div>
+</div>
+
+<!-- AI Chatbot Floating Trigger -->
+<button id="chatbot-trigger-btn" class="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-lg shadow-primary/30 hover:scale-105 active:scale-95 transition-all z-50 focus:outline-none">
+    <span class="material-symbols-outlined text-[28px]">smart_toy</span>
+</button>
+
+<!-- AI Chatbot Panel -->
+<div id="chatbot-panel" class="fixed bottom-24 right-6 w-[400px] h-[550px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-120px)] rounded-2xl glass-panel flex flex-col shadow-2xl z-50 opacity-0 pointer-events-none translate-y-4 transition-all duration-300 overflow-hidden">
+    <!-- Header -->
+    <div class="px-5 py-4 border-b border-outline-variant flex items-center justify-between shrink-0" style="background: rgba(29, 31, 41, 0.85);">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-full bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-background text-sm font-bold shadow-md shadow-primary/20">
+                🤖
+            </div>
+            <div>
+                <h3 class="font-bold text-[14px] text-white">GST Compliance Copilot</h3>
+                <div class="flex items-center gap-1.5 mt-0.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-secondary inline-block animate-pulse"></span>
+                    <span class="text-[10px] text-on-surface-variant font-medium">Ready to assist</span>
+                </div>
+            </div>
+        </div>
+        <button id="close-chatbot-btn" class="text-on-surface-variant hover:text-white transition-colors">
+            <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+    </div>
+
+    <!-- Messages Area -->
+    <div id="chatbot-messages" class="flex-1 overflow-y-auto p-5 space-y-4 custom-scrollbar" style="background: rgba(15, 17, 26, 0.4);">
+        <!-- Welcome Message -->
+        <div class="flex items-start gap-2.5 max-w-[85%]">
+            <div class="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-[12px] shrink-0">🤖</div>
+            <div class="rounded-2xl px-4 py-3 bg-surface-container-high text-[13px] leading-relaxed text-on-surface shadow-md">
+                <p>Hello! I am your AI GST Compliance Copilot. I can search through official GST rules (Section 17(5) blocked credits, registration thresholds, state codes, etc.) to answer your compliance questions.</p>
+                <p class="mt-2 text-on-surface-variant">Here are some things you can ask me:</p>
+                <div class="mt-3 flex flex-col gap-2">
+                    <button class="chat-chip text-[11px] font-semibold px-3 py-1.5 rounded-full bg-primary/10 border border-primary/25 text-primary hover:bg-primary/20 transition-all text-left">Is food & beverage eligible for ITC?</button>
+                    <button class="chat-chip text-[11px] font-semibold px-3 py-1.5 rounded-full bg-primary/10 border border-primary/25 text-primary hover:bg-primary/20 transition-all text-left">What are the rules for motor vehicle ITC?</button>
+                    <button class="chat-chip text-[11px] font-semibold px-3 py-1.5 rounded-full bg-primary/10 border border-primary/25 text-primary hover:bg-primary/20 transition-all text-left">GSTIN State Code list</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="p-4 border-t border-outline-variant shrink-0" style="background: rgba(29, 31, 41, 0.85);">
+        <form id="chatbot-form" class="flex items-center gap-2">
+            <input id="chatbot-input" type="text" placeholder="Ask a GST question..." class="flex-1 bg-background border border-outline-variant rounded-xl px-4 py-2.5 text-[13px] focus:ring-1 focus:ring-primary focus:border-primary outline-none text-on-surface placeholder:text-on-surface-variant/40" style="color: #e1e1ef;"/>
+            <button type="submit" class="w-10 h-10 rounded-xl bg-primary text-on-primary flex items-center justify-center hover:bg-primary/90 transition-all shadow-md shadow-primary/20 shrink-0">
+                <span class="material-symbols-outlined text-[18px]">send</span>
+            </button>
+        </form>
     </div>
 </div>
 

@@ -16,8 +16,8 @@ import logging
 from datetime import datetime
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request, Response, Query, HTTPException, BackgroundTasks
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi import FastAPI, Request, Response, Query, HTTPException, BackgroundTasks, UploadFile, File, Form
+from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 
@@ -25,7 +25,8 @@ import whatsapp
 import storage
 import db
 import gstr
-from processor import process_invoice
+import rag
+from processor import process_invoice, evaluate_itc_eligibility, validate_gstin
 
 # ── Load config ───────────────────────────────────────────────────────────────
 load_dotenv()
@@ -57,6 +58,27 @@ async def lifespan(app: FastAPI):
     # Initialize the database schema on start
     await db.init_db()
     
+    # Check if knowledge base is empty and trigger startup seed
+    try:
+        chunks = await db.get_all_kb_chunks()
+        if not chunks:
+            logger.info("Knowledge base is empty. Auto-indexing reference docs on startup...")
+            ref_dir = os.path.join(os.getcwd(), "reference_docs")
+            if os.path.exists(ref_dir):
+                files = [f for f in os.listdir(ref_dir) if f.endswith(".md") or f.endswith(".txt")]
+                for filename in files:
+                    filepath = os.path.join(ref_dir, filename)
+                    with open(filepath, "r", encoding="utf-8") as f:
+                        content = f.read()
+                    title = filename
+                    first_line = content.splitlines()[0] if content.splitlines() else ""
+                    if first_line.startswith("# "):
+                        title = first_line.replace("# ", "").strip()
+                    await rag.index_document(title=title, text=content)
+                logger.info("Startup seed indexing completed successfully.")
+    except Exception as e:
+        logger.warning("Startup seed indexing failed: %s", e)
+        
     yield
     logger.info("👋 Webhook server shutting down")
 
@@ -372,6 +394,19 @@ async def _handle_text_message(msg: dict, sender: str, message_id: str) -> None:
         await whatsapp.send_reply(to=sender, message_id=message_id, body=status_msg)
 
     else:
+        # Search the knowledge base for matching chunks
+        try:
+            matches = await rag.search_knowledge_base(text_body, limit=1)
+            if matches and matches[0]["similarity"] > 0.4:
+                # Highly relevant query; generate and return RAG answer
+                answer = await rag.answer_query(text_body)
+                reply_body = f"{answer}\n\n🤖 _GST AI Compliance Assistant_"
+                await whatsapp.send_reply(to=sender, message_id=message_id, body=reply_body)
+                return
+        except Exception as e:
+            logger.error("RAG search failed in WhatsApp webhook: %s", e)
+
+        # Fallback welcome / guide response
         await whatsapp.send_reply(
             to=sender,
             message_id=message_id,
@@ -382,7 +417,8 @@ async def _handle_text_message(msg: dict, sender: str, message_id: str) -> None:
                 "🏦 *Bank statements*\n\n"
                 "Or use these commands:\n"
                 "📊 *'summary'* - Get monthly totals & tax estimates\n"
-                "📅 *'status'* - View current filing timeline status"
+                "📅 *'status'* - View current filing timeline status\n\n"
+                "💡 You can also ask me any questions about GST rules (e.g., 'Can I claim ITC on outdoor catering?')"
             ),
         )
 
@@ -592,6 +628,23 @@ async def api_update_invoice(invoice_id: int, request: Request):
         ca_user = body.get("ca_user", "CA Operator")
         fields_to_update = body.get("fields", {})
 
+        # Get existing invoice to check for category change
+        existing_invoice = await db.get_invoice_detail(invoice_id)
+        if not existing_invoice:
+            raise HTTPException(status_code=404, detail="Invoice not found.")
+
+        # ── Auto re-evaluate ITC when category changes ──────────────────────────
+        if "business_category" in fields_to_update:
+            new_category = fields_to_update["business_category"]
+            old_category = existing_invoice.get("business_category")
+            
+            if new_category != old_category:
+                new_rec_gstin = fields_to_update.get("recipient_gstin") or existing_invoice.get("recipient_gstin", "")
+                is_recipient_registered = validate_gstin(new_rec_gstin)
+                is_eligible, reason = await evaluate_itc_eligibility(new_category, is_recipient_registered)
+                fields_to_update["is_itc_eligible"] = is_eligible
+                fields_to_update["itc_ineligibility_reason"] = reason or ""
+
         success = await db.update_invoice(invoice_id, fields_to_update, ca_user)
         if not success:
             raise HTTPException(status_code=404, detail="Invoice not found.")
@@ -648,6 +701,241 @@ async def api_get_metrics(client_phone: str = Query(...), month: str = Query(...
     except Exception as e:
         logger.exception("Failed to fetch dashboard metrics:")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/itc/summary")
+async def api_get_itc_summary(client_phone: str = Query(...), months: int = Query(12)):
+    """Returns month-by-month ITC trend for the last N months — feeds the sparkline chart."""
+    try:
+        trend = await db.get_itc_monthly_trend(client_phone, num_months=min(months, 24))
+        return trend
+    except Exception as e:
+        logger.exception("Failed to fetch ITC trend summary:")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/chat")
+async def api_chat_assistant(request: Request):
+    """
+    RAG Chat assistant endpoint. Answers compliance and general GST queries.
+    """
+    try:
+        body = await request.json()
+        message = body.get("message", "").strip()
+        if not message:
+            raise HTTPException(status_code=400, detail="Message content cannot be empty.")
+            
+        answer = await rag.answer_query(message)
+        return {"response": answer}
+    except Exception as e:
+        logger.exception("Error in chat assistant:")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/rag/reindex")
+async def api_reindex_rag():
+    """
+    Forces clearing and re-indexing of the RAG reference documents.
+    """
+    try:
+        # Clear existing knowledge base
+        await db.clear_knowledge_base()
+        
+        # Seed from reference docs folder
+        ref_dir = os.path.join(os.getcwd(), "reference_docs")
+        if not os.path.exists(ref_dir):
+            raise HTTPException(status_code=404, detail="reference_docs directory not found.")
+            
+        files = [f for f in os.listdir(ref_dir) if f.endswith(".md") or f.endswith(".txt")]
+        total_chunks = 0
+        
+        for filename in files:
+            filepath = os.path.join(ref_dir, filename)
+            with open(filepath, "r", encoding="utf-8") as f:
+                content = f.read()
+                
+            title = filename
+            first_line = content.splitlines()[0] if content.splitlines() else ""
+            if first_line.startswith("# "):
+                title = first_line.replace("# ", "").strip()
+                
+            chunks_indexed = await rag.index_document(title=title, text=content)
+            total_chunks += chunks_indexed
+            
+        return {"status": "success", "chunks_indexed": total_chunks}
+    except Exception as e:
+        logger.exception("Error during manual re-indexing:")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── Simulator Page ───────────────────────────────────────────────────────────
+@app.get("/simulator", response_class=HTMLResponse)
+async def get_simulator():
+    """Serves the interactive WhatsApp Webhook Simulator page."""
+    sim_path = os.path.join("static", "simulator.html")
+    if not os.path.exists(sim_path):
+        raise HTTPException(status_code=404, detail="Simulator page not found.")
+    return FileResponse(sim_path)
+
+
+@app.post("/api/simulator/trigger")
+async def api_simulator_trigger(
+    background_tasks: BackgroundTasks,
+    phone_number: str = Form("919999999999"),
+    message_type: str = Form("image"),
+    text_body: str = Form(None),
+    sample_file: str = Form(None),
+    file: UploadFile = File(None),
+):
+    """
+    Simulate an inbound WhatsApp message by building a signed webhook payload
+    and posting it to /webhook internally. Supports image upload, sample file
+    selection, and text messages.
+    """
+    import httpx as _httpx
+    from datetime import datetime as _dt
+    import uuid
+
+    sim_message_id = f"wamid.sim_{uuid.uuid4().hex[:16]}"
+    ts = str(int(_dt.now().timestamp()))
+
+    saved_relative_path = None
+
+    if message_type in ("image", "document") and (file or sample_file):
+        if file and file.filename:
+            # Save uploaded file
+            file_bytes = await file.read()
+            ext = os.path.splitext(file.filename)[-1] or ".png"
+            fname = f"sim_{uuid.uuid4().hex[:8]}{ext}"
+            rel_path = f"{phone_number}/{fname}"
+            full_path = os.path.join(storage.STORAGE_DIR, rel_path)
+            os.makedirs(os.path.dirname(full_path), exist_ok=True)
+            with open(full_path, "wb") as fh:
+                fh.write(file_bytes)
+            saved_relative_path = rel_path
+            logger.info("Simulator: Saved uploaded file to %s", full_path)
+        elif sample_file:
+            # Use an existing sample file from the workspace
+            workspace_path = sample_file
+            if not os.path.isabs(workspace_path):
+                workspace_path = os.path.join(os.getcwd(), sample_file)
+            if not os.path.exists(workspace_path):
+                raise HTTPException(status_code=400, detail=f"Sample file not found: {sample_file}")
+            # Copy it into storage so media ID resolves correctly
+            fname = f"sim_{uuid.uuid4().hex[:8]}{os.path.splitext(sample_file)[-1] or '.png'}"
+            rel_path = f"{phone_number}/{fname}"
+            full_path = os.path.join(storage.STORAGE_DIR, rel_path)
+            os.makedirs(os.path.dirname(full_path), exist_ok=True)
+            import shutil
+            shutil.copy2(workspace_path, full_path)
+            saved_relative_path = rel_path
+            logger.info("Simulator: Copied sample file to %s", full_path)
+
+        if not saved_relative_path:
+            raise HTTPException(status_code=400, detail="No file provided for image/document simulation.")
+
+        local_media_id = f"local_file:{saved_relative_path}"
+        payload = {
+            "object": "whatsapp_business_account",
+            "entry": [{
+                "id": "sim_entry_12345",
+                "changes": [{
+                    "value": {
+                        "messaging_product": "whatsapp",
+                        "contacts": [{"profile": {"name": "Simulator User"}, "wa_id": phone_number}],
+                        "messages": [{
+                            "from": phone_number,
+                            "id": sim_message_id,
+                            "timestamp": ts,
+                            "type": message_type,
+                            message_type: {
+                                "mime_type": "image/png",
+                                "sha256": "simulated_sha256",
+                                "id": local_media_id
+                            }
+                        }]
+                    },
+                    "field": "messages"
+                }]
+            }]
+        }
+    elif message_type == "text" and text_body:
+        payload = {
+            "object": "whatsapp_business_account",
+            "entry": [{
+                "id": "sim_entry_12345",
+                "changes": [{
+                    "value": {
+                        "messaging_product": "whatsapp",
+                        "contacts": [{"profile": {"name": "Simulator User"}, "wa_id": phone_number}],
+                        "messages": [{
+                            "from": phone_number,
+                            "id": sim_message_id,
+                            "timestamp": ts,
+                            "type": "text",
+                            "text": {"body": text_body}
+                        }]
+                    },
+                    "field": "messages"
+                }]
+            }]
+        }
+    else:
+        raise HTTPException(status_code=400, detail="Invalid simulation parameters.")
+
+    # Compute HMAC signature for the payload
+    body_bytes = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+    sig = hmac.new(APP_SECRET.encode("utf-8"), body_bytes, hashlib.sha256).hexdigest()
+
+    # Clear old messages for this number so poll returns fresh results
+    whatsapp.simulated_outbound_messages[:] = [
+        m for m in whatsapp.simulated_outbound_messages
+        if m.get("to") != phone_number
+    ]
+
+    # Call /webhook internally using httpx
+    try:
+        async with _httpx.AsyncClient(timeout=60.0) as client:
+            resp = await client.post(
+                "http://127.0.0.1:8000/webhook",
+                content=body_bytes,
+                headers={
+                    "Content-Type": "application/json",
+                    "X-Hub-Signature-256": f"sha256={sig}"
+                }
+            )
+        return JSONResponse({
+            "status": "triggered",
+            "message_id": sim_message_id,
+            "webhook_status": resp.status_code,
+            "message_type": message_type,
+            "saved_path": saved_relative_path
+        })
+    except Exception as e:
+        logger.exception("Simulator trigger failed:")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/simulator/messages")
+async def api_simulator_get_messages(phone_number: str = Query("919999999999"), after: str = Query(None)):
+    """Returns all captured simulated outbound messages for a given phone number."""
+    msgs = [
+        m for m in whatsapp.simulated_outbound_messages
+        if m.get("to") == phone_number
+    ]
+    if after:
+        msgs = [m for m in msgs if m.get("timestamp", "") > after]
+    return msgs
+
+
+@app.delete("/api/simulator/messages")
+async def api_simulator_clear_messages(phone_number: str = Query("919999999999")):
+    """Clears simulated outbound messages for a given phone number."""
+    whatsapp.simulated_outbound_messages[:] = [
+        m for m in whatsapp.simulated_outbound_messages
+        if m.get("to") != phone_number
+    ]
+    return {"status": "cleared"}
 
 
 # ── Mount Static Files ────────────────────────────────────────────────────────
