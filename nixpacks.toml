@@ -1,2 +1,5 @@
+[phases.setup]
+nixPkgs = ["python312", "gcc"]
+
 [variables]
 NIXPACKS_PYTHON_VERSION = "3.12"
