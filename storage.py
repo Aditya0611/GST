@@ -25,6 +25,7 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 STORAGE_DIR = Path(os.getenv("STORAGE_DIR", "./storage"))
+STORAGE_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def _ensure_dir(path: Path) -> None:

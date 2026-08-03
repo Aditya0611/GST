@@ -1857,6 +1857,7 @@ async def api_simulator_clear_messages(phone_number: str = Query("919999999999")
 # ── Mount Static Files ────────────────────────────────────────────────────────
 # Check if static directory exists, otherwise create it
 os.makedirs("static", exist_ok=True)
+os.makedirs(storage.STORAGE_DIR, exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
-app.mount("/storage", StaticFiles(directory=storage.STORAGE_DIR), name="storage")
+app.mount("/storage", StaticFiles(directory=str(storage.STORAGE_DIR)), name="storage")
 
