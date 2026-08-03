@@ -1,0 +1,50 @@
+{
+  "return_period": "2026-07",
+  "b2b": [
+    {
+      "ctin": "27AABCS1429B1Z6",
+      "trdnm": "Apex Office Mart Pvt Ltd",
+      "inv": [
+        {
+          "inum": "DUMMY-ITC-20260723-001",
+          "idt": "2026-07-23",
+          "val": 11800.0,
+          "txval": 10000.0,
+          "camt": 900.0,
+          "samt": 900.0,
+          "iamt": 0.0,
+          "pos": "27",
+          "inv_typ": "R"
+        },
+        {
+          "inum": "COMPLEX-20260723-001",
+          "idt": "2026-07-23",
+          "val": 37241.6,
+          "txval": 32420.0,
+          "camt": 2410.8,
+          "samt": 2410.8,
+          "iamt": 0.0,
+          "pos": "27",
+          "inv_typ": "R"
+        }
+      ]
+    },
+    {
+      "ctin": "29DDDDD4444D1Z4",
+      "trdnm": "Orphan 2B Only Supplier",
+      "inv": [
+        {
+          "inum": "ORPHAN-2B-001",
+          "idt": "2026-07-05",
+          "val": 1180,
+          "txval": 1000,
+          "camt": 90,
+          "samt": 90,
+          "iamt": 0,
+          "pos": "27",
+          "inv_typ": "R"
+        }
+      ]
+    }
+  ]
+}

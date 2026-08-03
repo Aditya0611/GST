@@ -1,104 +1,58 @@
 <!DOCTYPE html>
-<html class="light" lang="en">
+<html class="dark" lang="en">
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>GST Filing - First Invoice Success</title>
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-    <script id="tailwind-config">
-        tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    "colors": {
-                        "error-container": "#ffdad6",
-                        "secondary-container": "#e0ffd5",
-                        "on-primary-fixed": "#0f0069",
-                        "on-primary": "#ffffff",
-                        "primary-fixed": "#e2dfff",
-                        "on-tertiary": "#ffffff",
-                        "inverse-surface": "#27313f",
-                        "surface": "#f8f9ff",
-                        "on-tertiary-fixed": "#1a1b23",
-                        "outline-variant": "#c7c4d8",
-                        "surface-bright": "#f8f9ff",
-                        "secondary-fixed-dim": "#4edea3",
-                        "tertiary-fixed": "#e3e1ed",
-                        "on-primary-fixed-variant": "#3323cc",
-                        "surface-container-high": "#dee9fc",
-                        "surface-container-highest": "#d9e3f6",
-                        "inverse-primary": "#c3c0ff",
-                        "surface-container-low": "#eff4ff",
-                        "outline": "#777587",
-                        "on-secondary": "#ffffff",
-                        "surface-container-lowest": "#ffffff",
-                        "primary": "#3525cd",
-                        "on-primary-container": "#dad7ff",
-                        "secondary": "#006c49",
-                        "on-secondary-container": "#00714d",
-                        "on-secondary-fixed": "#002113",
-                        "secondary-fixed": "#6ffbbe",
-                        "surface-variant": "#d9e3f6",
-                        "tertiary-container": "#5f5f69",
-                        "primary-container": "#4f46e5",
-                        "on-error-container": "#93000a",
-                        "primary-fixed-dim": "#c3c0ff",
-                        "on-tertiary-fixed-variant": "#46464f",
-                        "background": "#f8f9ff",
-                        "on-surface-variant": "#464555",
-                        "surface-tint": "#4d44e3",
-                        "surface-container": "#e6eeff",
-                        "on-surface": "#121c2a",
-                        "on-tertiary-container": "#dbdae5",
-                        "on-secondary-fixed-variant": "#005236",
-                        "on-background": "#121c2a",
-                        "tertiary-fixed-dim": "#c7c5d1",
-                        "on-error": "#ffffff",
-                        "error": "#ba1a1a",
-                        "inverse-on-surface": "#eaf1ff",
-                        "surface-dim": "#d0dbed",
-                        "tertiary": "#474751"
-                    },
-                    "borderRadius": {
-                        "DEFAULT": "0.25rem",
-                        "lg": "0.5rem",
-                        "xl": "0.75rem",
-                        "full": "9999px"
-                    },
-                    "spacing": {
-                        "gutter": "24px",
-                        "onboarding-card-width": "480px",
-                        "stack-gap": "32px",
-                        "margin-mobile": "16px",
-                        "form-gap": "20px",
-                        "container-max": "1200px"
-                    },
-                    "fontFamily": {
-                        "body-md": ["Plus Jakarta Sans"],
-                        "headline-lg-mobile": ["Plus Jakarta Sans"],
-                        "headline-lg": ["Plus Jakarta Sans"],
-                        "body-lg": ["Plus Jakarta Sans"],
-                        "headline-md": ["Plus Jakarta Sans"],
-                        "label-sm": ["Plus Jakarta Sans"],
-                        "label-md": ["Plus Jakarta Sans"]
-                    },
-                    "fontSize": {
-                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
-                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700" }],
-                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
-                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
-                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
-                        "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
-                        "label-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600" }]
-                    }
-                }
-            }
-        }
+    <title>Taxova.ai — You're live</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet"/>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              surface: "#070B12",
+              "surface-container-lowest": "#121A24",
+              "outline-variant": "#2A3848",
+              "on-surface": "#F2F5F8",
+              "on-surface-variant": "#8B9BB0",
+              primary: "#36D6AE",
+              "on-primary": "#04281F",
+              "primary-container": "#36D6AE",
+              secondary: "#2BB896",
+              "secondary-container": "#0E5544",
+              "surface-variant": "#182230",
+            },
+            spacing: {
+              "onboarding-card-width": "480px",
+              "margin-mobile": "16px",
+              gutter: "24px",
+            },
+            fontFamily: {
+              "body-md": ["Sora"],
+              "headline-lg": ["Sora"],
+              "headline-lg-mobile": ["Sora"],
+              "label-md": ["Sora"],
+            },
+            fontSize: {
+              "body-md": ["16px", { lineHeight: "24px" }],
+              "headline-lg": ["28px", { lineHeight: "36px", fontWeight: "700" }],
+              "headline-lg-mobile": ["24px", { lineHeight: "32px", fontWeight: "700" }],
+              "label-md": ["14px", { lineHeight: "20px", fontWeight: "600" }],
+            },
+          },
+        },
+      };
     </script>
     <style>
-        /* Confetti Animation */
+        body {
+            background:
+              radial-gradient(ellipse 80% 50% at 50% -10%, rgba(54,214,174,0.14), transparent 55%),
+              #070B12;
+            font-family: Sora, system-ui, sans-serif;
+        }
         @keyframes fall {
             0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
             100% { transform: translateY(105vh) rotate(360deg); opacity: 0; }
@@ -109,66 +63,47 @@
             z-index: 10;
             animation: fall linear forwards;
         }
+        .material-symbols-outlined { font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24; }
     </style>
 </head>
 <body class="bg-surface text-on-surface min-h-screen flex flex-col font-body-md text-body-md overflow-hidden">
-    <!-- Progress Bar Anchor -->
     <div class="fixed top-0 left-0 w-full h-1 bg-surface-variant z-50">
-        <div class="h-full bg-primary transition-all duration-1000 ease-in-out w-full" style="width: 100%;"></div>
+        <div class="h-full bg-primary w-full"></div>
     </div>
-    <!-- Main Content Canvas -->
     <main class="flex-grow flex items-center justify-center px-margin-mobile md:px-gutter relative z-20">
-        <!-- Confetti Container (Javascript injected) -->
         <div class="absolute inset-0 pointer-events-none" id="confetti-container"></div>
-        <!-- Success Card -->
-        <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-8 md:p-12 max-w-onboarding-card-width w-full flex flex-col items-center text-center shadow-sm relative overflow-hidden bg-[#f5f3ff]">
-            <!-- Icon -->
-            <div class="mb-6 bg-secondary-container bg-opacity-20 rounded-full p-4">
-                <span class="material-symbols-outlined text-[64px] text-secondary" style="font-variation-settings: 'FILL' 1;">
-                    check_circle
-                </span>
+        <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-8 md:p-12 max-w-onboarding-card-width w-full flex flex-col items-center text-center shadow-xl shadow-black/30 relative overflow-hidden">
+            <img src="/static/logo.png?v=4" alt="Taxova.ai" class="h-16 w-auto max-w-[300px] object-contain mb-5"/>
+            <div class="mb-6 bg-secondary-container rounded-full p-4">
+                <span class="material-symbols-outlined text-[48px] text-secondary" style="font-variation-settings: 'FILL' 1;">check_circle</span>
             </div>
-            <!-- Typography -->
-            <h1 class="text-headline-lg-mobile font-headline-lg-mobile md:text-headline-lg md:font-headline-lg text-on-surface mb-4">
-                First Invoice Sent!
-            </h1>
-            <p class="text-body-md font-body-md text-on-surface-variant mb-8">
-                Your GST Autopilot is now live and processing your first record.
+            <h1 class="text-headline-lg-mobile md:text-headline-lg text-on-surface mb-4">You're live</h1>
+            <p class="text-body-md text-on-surface-variant mb-8">
+                Taxova.ai is ready. Send an invoice photo on WhatsApp, then review it in the CA dashboard.
             </p>
-            <!-- Action -->
-            <a href="/dashboard" class="bg-primary hover:bg-primary-container text-on-primary text-label-md font-label-md py-3 px-6 rounded-lg w-full transition-colors duration-200 text-center flex items-center justify-center">
+            <a href="/dashboard" class="bg-primary hover:brightness-110 text-on-primary text-label-md font-label-md py-3 px-6 rounded-lg w-full transition text-center flex items-center justify-center gap-2">
                 Go to Dashboard
+                <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
             </a>
+            <a href="/privacy" class="mt-4 text-sm text-on-surface-variant hover:text-primary transition">Privacy Policy</a>
         </div>
     </main>
     <script>
-        // Simple confetti generator for atmospheric effect
         document.addEventListener("DOMContentLoaded", () => {
             const container = document.getElementById('confetti-container');
-            const colors = ['#4f46e5', '#10b981', '#3b82f6', '#f59e0b', '#ec4899'];
-            
-            for (let i = 0; i < 55; i++) {
+            const colors = ['#36D6AE', '#2BB896', '#F0B35A', '#7BE8C8'];
+            for (let i = 0; i < 40; i++) {
                 const confetti = document.createElement('div');
                 confetti.classList.add('confetti');
-                
                 const width = Math.random() * 8 + 4;
                 const height = Math.random() * 16 + 8;
-                const left = Math.random() * 100;
-                const duration = Math.random() * 3 + 2.5;
-                const delay = Math.random() * 2;
-                const color = colors[Math.floor(Math.random() * colors.length)];
-                
                 confetti.style.width = `${width}px`;
                 confetti.style.height = `${height}px`;
-                confetti.style.left = `${left}vw`;
-                confetti.style.backgroundColor = color;
-                confetti.style.animationDuration = `${duration}s`;
-                confetti.style.animationDelay = `${delay}s`;
-                
-                if (Math.random() > 0.5) {
-                    confetti.style.borderRadius = '50%';
-                }
-                
+                confetti.style.left = `${Math.random() * 100}vw`;
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.animationDuration = `${Math.random() * 3 + 2.5}s`;
+                confetti.style.animationDelay = `${Math.random() * 2}s`;
+                if (Math.random() > 0.5) confetti.style.borderRadius = '50%';
                 container.appendChild(confetti);
             }
         });

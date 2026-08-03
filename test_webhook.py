@@ -2,16 +2,28 @@ import hmac
 import hashlib
 import json
 import os
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 from fastapi.testclient import TestClient
 
-# Mock environment variables before importing main to prevent loading/failures
+# Isolate tests from the developer's live SQLite DB
+_TEST_DIR = tempfile.mkdtemp(prefix="gst_webhook_test_")
+os.environ["STORAGE_DIR"] = _TEST_DIR
 os.environ["WHATSAPP_TOKEN"] = "test_token"
 os.environ["WHATSAPP_PHONE_ID"] = "test_phone_id"
 os.environ["WEBHOOK_VERIFY_TOKEN"] = "test_verify_token"
 os.environ["APP_SECRET"] = "test_app_secret"
+# Clear any DATABASE_URL so tests stay on SQLite
+os.environ.pop("DATABASE_URL", None)
+
+# Re-import after env is set
+import db as db_module
+db_module.SQLITE_DB_PATH = Path(_TEST_DIR) / "gst_autopilot.db"
+db_module.DATABASE_URL = ""
+db_module.IS_POSTGRES = False
 
 from main import app, APP_SECRET, WEBHOOK_VERIFY_TOKEN
 from processor import ProcessingResult, InvoiceExtraction, LineItem
@@ -20,18 +32,16 @@ from processor import ProcessingResult, InvoiceExtraction, LineItem
 class TestWebhook(unittest.TestCase):
     def setUp(self):
         import asyncio
-        import db
-        asyncio.run(db.init_db())
+        asyncio.run(db_module.init_db())
         self.client = TestClient(app)
 
     def tearDown(self):
-        import os
-        import db
-        if os.path.exists(db.SQLITE_DB_PATH):
-            try:
-                os.remove(db.SQLITE_DB_PATH)
-            except Exception:
-                pass
+        # Do NOT delete the live project DB — only the temp test file
+        try:
+            if db_module.SQLITE_DB_PATH.exists():
+                db_module.SQLITE_DB_PATH.unlink()
+        except Exception:
+            pass
 
     def test_webhook_verification_success(self):
         """Test GET /webhook with correct verify token."""
@@ -116,7 +126,13 @@ class TestWebhook(unittest.TestCase):
             calculation_errors=[],
             is_itc_eligible=True,
             itc_ineligibility_reason=None,
-            supply_type="INTRA-STATE"
+            supply_type="INTRA-STATE",
+            itc_eligible_cgst=9.0,
+            itc_eligible_sgst=9.0,
+            itc_eligible_igst=0.0,
+            itc_blocked_gst=0.0,
+            itc_partial=False,
+            line_itc=[],
         )
 
         # 2. Build mock WhatsApp webhook payload
@@ -208,11 +224,14 @@ class TestWebhook(unittest.TestCase):
         self.assertIn("Math Check", second_call.kwargs["body"])
         self.assertIn("ITC Eligibility", second_call.kwargs["body"])
 
-        # Verify JSON was saved next to the invoice
+        # Verify JSON backup: processing result + HITL routing fields
+        expected_data = mock_process_invoice.return_value.model_dump()
+        expected_data["review_status"] = "awaiting_client"
+        expected_data["hitl_reason"] = None
         mock_save_json.assert_called_once_with(
             phone_number="919876543210",
             invoice_path_str="919876543210/2026-06/photo_123.png",
-            data=mock_process_invoice.return_value.model_dump()
+            data=expected_data,
         )
 
 

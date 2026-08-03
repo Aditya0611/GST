@@ -1,0 +1,14 @@
+.git
+.venv
+venv
+__pycache__
+*.pyc
+.pytest_cache
+.env
+storage/
+storage/**
+*.db
+.cursor
+scratch/
+agent-transcripts/
+.git/cursor

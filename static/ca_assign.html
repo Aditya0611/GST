@@ -1,139 +1,110 @@
 <!DOCTYPE html>
-<html class="light" lang="en">
+<html class="dark" lang="en">
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>GST Filing - Assign Your CA</title>
-    <meta name="description" content="Link your Chartered Accountant account to enable seamless GST filing with GST Autopilot."/>
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <title>Taxova.ai — Assign Your CA</title>
+    <meta name="description" content="Link your Chartered Accountant account to enable seamless GST filing with Taxova.ai."/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet"/>
     <script id="tailwind-config">
         tailwind.config = {
             darkMode: "class",
             theme: {
                 extend: {
-                    "colors": {
-                        "error-container": "#ffdad6",
-                        "secondary-container": "#e0ffd5",
-                        "on-primary-fixed": "#0f0069",
-                        "on-primary": "#ffffff",
-                        "primary-fixed": "#e2dfff",
-                        "on-tertiary": "#ffffff",
-                        "inverse-surface": "#27313f",
-                        "surface": "#f8f9ff",
-                        "on-tertiary-fixed": "#1a1b23",
-                        "outline-variant": "#c7c4d8",
-                        "surface-bright": "#f8f9ff",
-                        "secondary-fixed-dim": "#4edea3",
-                        "tertiary-fixed": "#e3e1ed",
-                        "on-primary-fixed-variant": "#3323cc",
-                        "surface-container-high": "#dee9fc",
-                        "surface-container-highest": "#d9e3f6",
-                        "inverse-primary": "#c3c0ff",
-                        "surface-container-low": "#eff4ff",
-                        "outline": "#777587",
-                        "on-secondary": "#ffffff",
-                        "surface-container-lowest": "#ffffff",
-                        "primary": "#3525cd",
-                        "on-primary-container": "#dad7ff",
-                        "secondary": "#006c49",
-                        "on-secondary-container": "#00714d",
-                        "on-secondary-fixed": "#002113",
-                        "secondary-fixed": "#6ffbbe",
-                        "surface-variant": "#d9e3f6",
-                        "tertiary-container": "#5f5f69",
-                        "primary-container": "#4f46e5",
-                        "on-error-container": "#93000a",
-                        "primary-fixed-dim": "#c3c0ff",
-                        "on-tertiary-fixed-variant": "#46464f",
-                        "background": "#f8f9ff",
-                        "on-surface-variant": "#464555",
-                        "surface-tint": "#4d44e3",
-                        "surface-container": "#e6eeff",
-                        "on-surface": "#121c2a",
-                        "on-tertiary-container": "#dbdae5",
-                        "on-secondary-fixed-variant": "#005236",
-                        "on-background": "#121c2a",
-                        "tertiary-fixed-dim": "#c7c5d1",
+                    colors: {
+                        "error-container": "#5C1A1A",
+                        "secondary-container": "#0E5544",
+                        "on-primary": "#04281F",
+                        surface: "#070B12",
+                        "outline-variant": "#2A3848",
+                        "secondary-fixed-dim": "#7BE8C8",
+                        outline: "#7A8EA3",
+                        "on-secondary": "#04281F",
+                        "surface-container-lowest": "#121A24",
+                        primary: "#36D6AE",
+                        secondary: "#2BB896",
+                        "surface-variant": "#182230",
+                        "primary-container": "#36D6AE",
+                        "on-error-container": "#ffdad6",
+                        background: "#070B12",
+                        "on-surface-variant": "#8B9BB0",
+                        "surface-tint": "#2BB896",
+                        "surface-container": "#121A24",
+                        "on-surface": "#F2F5F8",
+                        "on-background": "#F2F5F8",
                         "on-error": "#ffffff",
-                        "error": "#ba1a1a",
-                        "inverse-on-surface": "#eaf1ff",
-                        "surface-dim": "#d0dbed",
-                        "tertiary": "#474751"
+                        error: "#ED6A6A",
+                        "on-primary-fixed-variant": "#1A9B7A",
                     },
-                    "borderRadius": {
-                        "DEFAULT": "0.25rem",
-                        "lg": "0.5rem",
-                        "xl": "0.75rem",
-                        "full": "9999px"
-                    },
-                    "spacing": {
-                        "gutter": "24px",
+                    borderRadius: { DEFAULT: "0.5rem", lg: "0.75rem", xl: "1rem", full: "9999px" },
+                    spacing: {
+                        gutter: "24px",
                         "onboarding-card-width": "480px",
-                        "stack-gap": "32px",
+                        "stack-gap": "28px",
                         "margin-mobile": "16px",
                         "form-gap": "20px",
-                        "container-max": "1200px"
                     },
-                    "fontFamily": {
-                        "body-md": ["Plus Jakarta Sans"],
-                        "headline-lg-mobile": ["Plus Jakarta Sans"],
-                        "headline-lg": ["Plus Jakarta Sans"],
-                        "body-lg": ["Plus Jakarta Sans"],
-                        "headline-md": ["Plus Jakarta Sans"],
-                        "label-sm": ["Plus Jakarta Sans"],
-                        "label-md": ["Plus Jakarta Sans"]
+                    fontFamily: {
+                        "body-md": ["Sora"],
+                        "headline-lg-mobile": ["Sora"],
+                        "headline-lg": ["Sora"],
+                        "headline-md": ["Sora"],
+                        "label-sm": ["Sora"],
+                        "label-md": ["Sora"],
                     },
-                    "fontSize": {
-                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
-                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
-                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
-                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
-                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
-                        "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
-                        "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600"}]
-                    }
-                }
-            }
-        }
+                    fontSize: {
+                        "body-md": ["16px", { lineHeight: "24px", fontWeight: "400" }],
+                        "headline-lg-mobile": ["24px", { lineHeight: "32px", fontWeight: "700" }],
+                        "headline-lg": ["28px", { lineHeight: "36px", fontWeight: "700" }],
+                        "headline-md": ["20px", { lineHeight: "28px", fontWeight: "600" }],
+                        "label-sm": ["12px", { lineHeight: "16px", fontWeight: "500" }],
+                        "label-md": ["14px", { lineHeight: "20px", fontWeight: "600" }],
+                    },
+                },
+            },
+        };
     </script>
     <style>
-        /* OTP-style input boxes */
+        body {
+            background:
+              radial-gradient(ellipse 80% 50% at 10% -10%, rgba(54,214,174,0.12), transparent 50%),
+              #070B12;
+            font-family: Sora, system-ui, sans-serif;
+        }
         .code-input {
             width: 48px;
             height: 56px;
             text-align: center;
             font-size: 22px;
             font-weight: 700;
-            letter-spacing: 0;
-            border: 2px solid #c7c4d8;
+            border: 2px solid #2A3848;
             border-radius: 0.5rem;
-            background: #ffffff;
-            color: #121c2a;
+            background: #0E151E;
+            color: #F2F5F8;
             transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
             outline: none;
-            caret-color: #3525cd;
+            caret-color: #36D6AE;
         }
         .code-input:focus {
-            border-color: #3525cd;
-            box-shadow: 0 0 0 4px rgba(53, 37, 205, 0.12);
+            border-color: #36D6AE;
+            box-shadow: 0 0 0 3px rgba(54, 214, 174, 0.2);
             transform: scale(1.05);
         }
         .code-input.filled {
-            border-color: #3525cd;
-            background: #f0eeff;
+            border-color: #36D6AE;
+            background: rgba(54, 214, 174, 0.08);
         }
         .code-input.error {
-            border-color: #ba1a1a;
-            box-shadow: 0 0 0 4px rgba(186, 26, 26, 0.1);
+            border-color: #ED6A6A;
+            box-shadow: 0 0 0 3px rgba(237, 106, 106, 0.15);
             animation: shake 0.3s ease;
         }
         .code-input.success {
-            border-color: #006c49;
-            background: #e0ffd5;
+            border-color: #2BB896;
+            background: rgba(43, 184, 150, 0.12);
         }
-
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
             20% { transform: translateX(-4px); }
@@ -141,51 +112,37 @@
             60% { transform: translateX(-4px); }
             80% { transform: translateX(4px); }
         }
-
         @keyframes fadeUp {
             from { opacity: 0; transform: translateY(12px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        .animate-fade-up {
-            animation: fadeUp 0.35s ease forwards;
-        }
-
+        .animate-fade-up { animation: fadeUp 0.35s ease forwards; }
         @keyframes pulse-ring {
             0% { transform: scale(0.9); opacity: 0.7; }
             50% { transform: scale(1.05); opacity: 0.3; }
             100% { transform: scale(0.9); opacity: 0.7; }
         }
-        .pulse-ring {
-            animation: pulse-ring 2s ease-in-out infinite;
-        }
-
+        .pulse-ring { animation: pulse-ring 2s ease-in-out infinite; }
         @keyframes success-pop {
             0% { transform: scale(0.5); opacity: 0; }
             60% { transform: scale(1.15); }
             100% { transform: scale(1); opacity: 1; }
         }
-        .success-pop {
-            animation: success-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-        }
-
-        .ca-card {
-            transition: all 0.2s ease;
-        }
-        .ca-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(53, 37, 205, 0.08);
-        }
+        .success-pop { animation: success-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        .ca-card { transition: all 0.2s ease; }
+        .material-symbols-outlined { font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24; }
     </style>
 </head>
 <body class="bg-background text-on-background font-body-md min-h-screen flex flex-col antialiased">
 
-    <!-- Top App Bar -->
-    <header class="fixed top-0 left-0 w-full z-40 flex justify-center border-b border-outline-variant/30 bg-surface/90 backdrop-blur-sm shadow-sm">
+    <header class="fixed top-0 left-0 w-full z-40 flex justify-center border-b border-outline-variant/40 bg-surface/90 backdrop-blur-md">
         <div class="w-full max-w-onboarding-card-width flex items-center justify-between px-margin-mobile md:px-gutter py-4 h-16">
             <a href="/onboarding" id="back-btn" class="text-on-surface-variant hover:text-primary transition-colors hover:bg-surface-variant p-2 rounded-full flex items-center justify-center w-10 h-10">
                 <span class="material-symbols-outlined text-[20px]">arrow_back</span>
             </a>
-            <h1 class="text-headline-md font-headline-md font-bold text-primary">Onboarding</h1>
+            <div class="flex items-center">
+                <img src="/static/logo.png?v=4" alt="Taxova.ai" class="h-12 w-auto max-w-[240px] object-contain"/>
+            </div>
             <div class="w-10"></div>
         </div>
     </header>
@@ -423,7 +380,10 @@
                     const response = await fetch('/api/ca/link', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ invite_code: code })
+                        body: JSON.stringify({
+                            invite_code: code,
+                            client_phone: sessionStorage.getItem('gst_client_phone') || ''
+                        })
                     });
 
                     const result = await response.json();

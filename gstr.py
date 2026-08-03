@@ -8,6 +8,7 @@ to output structured GSTR-1 and GSTR-3B reports.
 from datetime import datetime
 import logging
 import db
+from processor import validate_gstin
 
 logger = logging.getLogger("gstr")
 
@@ -16,7 +17,7 @@ def format_date_to_dd_mm_yyyy(date_str: str) -> str:
     """Converts YYYY-MM-DD to DD-MM-YYYY required by GSTR portal."""
     try:
         dt = datetime.strptime(date_str, "%Y-%m-%d")
-        return dt.strftime("%d-%m-%y")
+        return dt.strftime("%d-%m-%Y")
     except Exception:
         # Fallback if parsing fails
         return date_str
@@ -53,7 +54,7 @@ async def generate_gstr1_json(client_phone: str, year_month: str) -> dict:
         rec_gstin = inv_detail.get("recipient_gstin")
         
         # 1. Classify B2B vs B2CS
-        if rec_gstin and db.validate_gstin(rec_gstin):
+        if rec_gstin and validate_gstin(rec_gstin):
             # Registered Buyer (B2B)
             if rec_gstin not in b2b_groups:
                 b2b_groups[rec_gstin] = []
@@ -178,8 +179,12 @@ async def generate_gstr3b_json(client_phone: str, year_month: str) -> dict:
     """
     Compiles GSTR-3B return summary (Tax liability and Eligible ITC).
     """
+    from itc_rules import normalize_gstin, validate_gstin
+
     client = await db.get_or_create_client(client_phone)
     client_gstin = client.get("gstin", "")
+    gstin = normalize_gstin(client_gstin)
+    has_gstin = validate_gstin(gstin)
 
     # Fetch all approved invoices for the month
     all_invoices = await db.get_invoices(client_phone=client_phone, status="approved", month=year_month)
@@ -193,16 +198,36 @@ async def generate_gstr3b_json(client_phone: str, year_month: str) -> dict:
     itc_inegl_blocked = {"iamt": 0.0, "camt": 0.0, "samt": 0.0}
 
     for inv in all_invoices:
-        is_sale = client_gstin and inv.get("supplier_gstin") == client_gstin
-        
+        if not has_gstin:
+            continue
+
+        inv_sup = normalize_gstin(inv.get("supplier_gstin"))
+        inv_rec = normalize_gstin(inv.get("recipient_gstin"))
+        is_sale = inv_sup == gstin
+        is_purchase = inv_rec == gstin
+
         if is_sale:
             osup_det["txval"] += inv["total_taxable_value"]
             osup_det["iamt"] += inv["total_igst"] or 0.0
             osup_det["camt"] += inv["total_cgst"] or 0.0
             osup_det["samt"] += inv["total_sgst"] or 0.0
-        else:
-            # It's an expense/purchase
-            if inv.get("is_itc_eligible"):
+        elif is_purchase:
+            # Prefer line-level rollups only when evaluation was run
+            if inv.get("itc_line_evaluated"):
+                itc_avl_all["camt"] += float(inv.get("itc_eligible_cgst") or 0)
+                itc_avl_all["samt"] += float(inv.get("itc_eligible_sgst") or 0)
+                itc_avl_all["iamt"] += float(inv.get("itc_eligible_igst") or 0)
+                blocked = float(inv.get("itc_blocked_gst") or 0)
+                # Split blocked proportionally across components if header taxes exist
+                hdr = (inv.get("total_cgst") or 0) + (inv.get("total_sgst") or 0) + (inv.get("total_igst") or 0)
+                if blocked and hdr:
+                    itc_inegl_blocked["camt"] += blocked * ((inv.get("total_cgst") or 0) / hdr)
+                    itc_inegl_blocked["samt"] += blocked * ((inv.get("total_sgst") or 0) / hdr)
+                    itc_inegl_blocked["iamt"] += blocked * ((inv.get("total_igst") or 0) / hdr)
+                elif blocked:
+                    itc_inegl_blocked["camt"] += blocked / 2
+                    itc_inegl_blocked["samt"] += blocked / 2
+            elif inv.get("is_itc_eligible"):
                 itc_avl_all["iamt"] += inv["total_igst"] or 0.0
                 itc_avl_all["camt"] += inv["total_cgst"] or 0.0
                 itc_avl_all["samt"] += inv["total_sgst"] or 0.0
@@ -210,6 +235,7 @@ async def generate_gstr3b_json(client_phone: str, year_month: str) -> dict:
                 itc_inegl_blocked["iamt"] += inv["total_igst"] or 0.0
                 itc_inegl_blocked["camt"] += inv["total_cgst"] or 0.0
                 itc_inegl_blocked["samt"] += inv["total_sgst"] or 0.0
+        # else: unclassified (wrong/missing party GSTIN) — skip
 
     # Round all values
     for k in osup_det:

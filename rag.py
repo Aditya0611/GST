@@ -44,14 +44,27 @@ def clear_knowledge_base():
 
 # ── Gemini Client Configuration ───────────────────────────────────────────────
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+AGENT_LLM_PROVIDER = os.getenv("AGENT_LLM_PROVIDER", "groq").lower().strip()
+
 if GEMINI_API_KEY:
     client = genai.Client(api_key=GEMINI_API_KEY)
 else:
     client = None
-    logger.warning("GEMINI_API_KEY not found in environment. RAG operations will fail.")
+    logger.warning("GEMINI_API_KEY not found in environment. RAG embeddings may fail.")
+
+_groq_client = None
+if GROQ_API_KEY:
+    try:
+        from groq import Groq
+
+        _groq_client = Groq(api_key=GROQ_API_KEY)
+    except Exception as e:
+        logger.warning("Failed to init Groq for RAG answers: %s", e)
 
 EMBEDDING_MODEL = "models/gemini-embedding-2"
 GENERATION_MODEL = "models/gemini-2.5-flash"
+GROQ_GENERATION_MODEL = os.getenv("AGENT_MODEL", "llama-3.3-70b-versatile")
 
 
 # ── Text Chunking ─────────────────────────────────────────────────────────────
@@ -196,7 +209,7 @@ async def answer_query(query: str) -> str:
     context_str = "\n\n".join(contexts) if contexts else "No relevant official reference documents found."
     
     # Build prompt
-    prompt = f"""You are a helpful and professional AI GST Assistant for Indian GST taxation, embedded inside a tax automation app called GST Autopilot.
+    prompt = f"""You are a helpful and professional AI GST Assistant for Indian GST taxation, embedded inside a tax automation app called Taxova.ai.
 
 Your task is to answer the user query as accurately as possible. 
 
@@ -214,6 +227,32 @@ ANSWER:
 """
 
     try:
+        use_groq = AGENT_LLM_PROVIDER == "groq" and _groq_client is not None
+        if use_groq:
+            logger.info("Generating RAG answer with Groq for query: '%s'", query[:60])
+
+            def _call():
+                return _groq_client.chat.completions.create(
+                    model=GROQ_GENERATION_MODEL,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": (
+                                "You are a helpful Taxova.ai assistant for Indian GST. "
+                                "Use the reference context when relevant; otherwise use general GST knowledge."
+                            ),
+                        },
+                        {"role": "user", "content": prompt},
+                    ],
+                    temperature=0.2,
+                )
+
+            response = await asyncio.to_thread(_call)
+            return (response.choices[0].message.content or "").strip()
+
+        if not client:
+            return "AI is not configured. Add GROQ_API_KEY or GEMINI_API_KEY to .env."
+
         logger.info("Generating RAG answer with Gemini for query: '%s'", query[:60])
         response = await client.aio.models.generate_content(
             model=GENERATION_MODEL,
@@ -221,5 +260,11 @@ ANSWER:
         )
         return response.text.strip()
     except Exception as e:
-        logger.exception("Failed to generate answer from Gemini:")
-        return f"Sorry, I encountered an error while answering your question: {str(e)}"
+        logger.exception("Failed to generate answer:")
+        err = str(e)
+        if "429" in err or "RESOURCE_EXHAUSTED" in err or "quota" in err.lower():
+            return (
+                "I'm temporarily at AI capacity. "
+                "Please wait about a minute and try again."
+            )
+        return "Sorry, I couldn't answer that right now. Please try again in a moment."

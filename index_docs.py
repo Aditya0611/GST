@@ -1,8 +1,8 @@
 """
-index_docs.py — Knowledge Base indexing script for GST Autopilot RAG.
+index_docs.py — Knowledge Base indexing script for Taxova.ai RAG.
 
 Reads files in the `reference_docs` folder, chunks them, computes embeddings,
-and stores them in the SQLite/PostgreSQL `knowledge_base` database table.
+and stores them in the ChromaDB vector collection (`gst_knowledge_base`).
 """
 
 import os

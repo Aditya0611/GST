@@ -3,177 +3,294 @@
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>Audit Pro Workspace | GST Compliance</title>
+    <title>Taxova.ai | CA Review</title>
     <meta name="description" content="CA Admin portal for GST invoice review, audit, and GSTR filing compilation."/>
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com" rel="preconnect"/>
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet"/>
-    <!-- Material Symbols -->
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@450;500;600&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet"/>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <!-- Chart.js for real ITC sparkline -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
     <script id="tailwind-config">
         tailwind.config = {
           darkMode: "class",
           theme: {
             extend: {
-              "colors": {
-                      "surface-container": "#1d1f29",
-                      "on-secondary-fixed-variant": "#005236",
-                      "secondary-fixed-dim": "#4edea3",
-                      "background": "#11131c",
-                      "secondary-fixed": "#6ffbbe",
-                      "outline": "#958ea0",
-                      "on-tertiary-fixed": "#2a1700",
-                      "surface": "#11131c",
-                      "surface-container-high": "#282933",
-                      "surface-tint": "#d0bcff",
-                      "secondary": "#4edea3",
-                      "on-surface": "#e1e1ef",
-                      "on-background": "#e1e1ef",
-                      "on-primary-container": "#340080",
-                      "on-secondary-fixed": "#002113",
-                      "on-tertiary": "#472a00",
-                      "error-container": "#93000a",
-                      "tertiary": "#ffb95f",
-                      "primary-fixed": "#e9ddff",
-                      "primary-fixed-dim": "#d0bcff",
-                      "on-primary-fixed": "#23005c",
-                      "on-tertiary-container": "#3e2400",
-                      "on-surface-variant": "#cbc3d7",
-                      "secondary-container": "#00a572",
-                      "surface-bright": "#373943",
-                      "primary": "#d0bcff",
-                      "surface-container-low": "#191b24",
-                      "on-secondary-container": "#00311f",
-                      "on-primary": "#3c0091",
-                      "on-error": "#690005",
-                      "primary-container": "#a078ff",
-                      "inverse-surface": "#e1e1ef",
-                      "on-error-container": "#ffdad6",
-                      "tertiary-fixed-dim": "#ffb95f",
-                      "on-secondary": "#003824",
-                      "surface-container-highest": "#32343e",
-                      "surface-dim": "#11131c",
-                      "error": "#ffb4ab",
-                      "tertiary-fixed": "#ffddb8",
-                      "surface-container-lowest": "#0c0e17",
-                      "inverse-on-surface": "#2e303a",
-                      "outline-variant": "#494454",
-                      "surface-variant": "#32343e",
-                      "on-tertiary-fixed-variant": "#653e00",
-                      "on-primary-fixed-variant": "#5516be",
-                      "inverse-primary": "#6d3bd7"
+              colors: {
+                background: "#070B12",
+                surface: "#0E151E",
+                "surface-container": "#121A24",
+                "surface-container-low": "#0B1219",
+                "surface-container-high": "#182230",
+                "surface-container-highest": "#223040",
+                "surface-bright": "#2A3A4C",
+                "outline-variant": "#2A3848",
+                outline: "#7A8EA3",
+                "on-surface": "#F2F5F8",
+                "on-surface-variant": "#8B9BB0",
+                "on-background": "#F2F5F8",
+                /* CTA / brand bright — buttons, links, active focus */
+                primary: "#36D6AE",
+                "primary-container": "#1A9B7A",
+                "on-primary": "#04281F",
+                /* Success / matched / done — quieter than CTA */
+                secondary: "#2BB896",
+                "secondary-fixed-dim": "#7BE8C8",
+                "secondary-container": "#0E5544",
+                /* Needs CA / active step / attention */
+                tertiary: "#F0B35A",
+                /* Blocked / mismatch / hard fail only */
+                error: "#ED6A6A",
+                "error-container": "#5C1A1A"
               },
-              "spacing": {
-                      "container-max": "1440px",
-                      "unit": "4px",
-                      "gutter": "24px",
-                      "margin-desktop": "40px",
-                      "margin-mobile": "16px"
+              spacing: {
+                "container-max": "1440px",
+                unit: "4px",
+                gutter: "24px",
+                "margin-desktop": "40px",
+                "margin-mobile": "16px"
               },
-              "fontFamily": {
-                      "label-sm": ["JetBrains Mono"],
-                      "label-md": ["JetBrains Mono"],
-                      "display-lg": ["Plus Jakarta Sans"],
-                      "headline-md": ["Plus Jakarta Sans"],
-                      "headline-lg": ["Plus Jakarta Sans"],
-                      "body-md": ["Plus Jakarta Sans"],
-                      "body-lg": ["Plus Jakarta Sans"]
+              fontFamily: {
+                "label-sm": ["IBM Plex Mono"],
+                "label-md": ["IBM Plex Mono"],
+                "display-lg": ["Sora"],
+                "headline-md": ["Sora"],
+                "headline-lg": ["Sora"],
+                "body-md": ["Sora"],
+                "body-lg": ["Sora"]
               }
             }
           }
         }
       </script>
     <style>
-        body {
-            background-color: #0F111A;
-            color: #e1e1ef;
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            overflow-x: hidden;
+        :root {
+            /* Surfaces */
+            --ink: #070B12;
+            --panel: #121A24;
+            --panel-raised: #182230;
+            --line: #2A3848;
+            /* Roles: CTA bright · success soft · warn · danger */
+            --teal: #36D6AE;
+            --teal-soft: #2BB896;
+            --teal-dim: rgba(54, 214, 174, 0.12);
+            --teal-glow: rgba(54, 214, 174, 0.22);
+            --amber: #F0B35A;
+            --amber-dim: rgba(240, 179, 90, 0.14);
+            --rose: #ED6A6A;
+            --rose-dim: rgba(237, 106, 106, 0.14);
+            --text: #F2F5F8;
+            --muted: #8B9BB0;
+            --font: "Sora", system-ui, sans-serif;
+            --mono: "IBM Plex Mono", ui-monospace, monospace;
         }
+
+        body {
+            background-color: var(--ink);
+            background-image:
+                radial-gradient(ellipse 90% 55% at 12% -10%, rgba(54, 214, 174, 0.14), transparent 55%),
+                radial-gradient(ellipse 70% 45% at 100% 0%, rgba(240, 179, 90, 0.09), transparent 50%),
+                radial-gradient(ellipse 50% 40% at 70% 100%, rgba(43, 184, 150, 0.05), transparent 55%),
+                linear-gradient(180deg, #070B12 0%, #070B12 42%, #05080E 100%);
+            background-attachment: fixed;
+            color: var(--text);
+            font-family: var(--font);
+            overflow-x: hidden;
+            position: relative;
+        }
+        body::before {
+            content: '';
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E");
+            opacity: 0.55;
+        }
+        body::after {
+            content: '';
+            position: fixed; inset: -20% -10%; z-index: 0; pointer-events: none;
+            background:
+                radial-gradient(circle at 20% 30%, rgba(54,214,174,0.08), transparent 28%),
+                radial-gradient(circle at 85% 15%, rgba(240,179,90,0.07), transparent 26%);
+            animation: auroraDrift 22s ease-in-out infinite alternate;
+        }
+        @keyframes auroraDrift {
+            from { transform: translate3d(0, 0, 0) scale(1); }
+            to { transform: translate3d(-2%, 3%, 0) scale(1.05); }
+        }
+        main.dashboard-main { position: relative; z-index: 1; }
 
         .material-symbols-outlined {
             font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
         }
 
-        .glass-panel {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(51, 65, 85, 0.5);
-        }
-
-        .neon-glow-primary {
-            box-shadow: 0 0 12px rgba(139, 92, 246, 0.3);
-        }
-
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #334155;
-            border-radius: 10px;
-        }
-
-        .chart-gradient-violet {
-            background: linear-gradient(180deg, rgba(139, 92, 246, 0.1) 0%, rgba(139, 92, 246, 0) 100%);
-        }
-        
-        .chart-gradient-emerald {
-            background: linear-gradient(180deg, rgba(78, 222, 163, 0.1) 0%, rgba(78, 222, 163, 0) 100%);
-        }
-
-        @keyframes pulse-subtle {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-        }
-        .animate-pulse-subtle {
-            animation: pulse-subtle 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-
-        /* ── Scrollbar ── */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #0F111A; }
-        ::-webkit-scrollbar-thumb { background: #494454; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #d0bcff; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #3A4E62; border-radius: 8px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--teal); }
 
-        /* ── Glassmorphic header ── */
         .glass-header {
-            background: rgba(15, 17, 26, 0.85);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            background: rgba(10, 16, 24, 0.82);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            overflow: visible;
         }
 
-        /* ── Audit Drawer ── */
+        .panel {
+            background: linear-gradient(165deg, rgba(26, 38, 51, 0.92) 0%, rgba(20, 30, 40, 0.96) 100%);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 12px 32px rgba(0,0,0,0.18);
+            transition: border-color 0.22s ease, transform 0.22s ease, box-shadow 0.22s ease;
+        }
+
+        .panel:hover {
+            border-color: rgba(54, 214, 174, 0.32);
+            box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset, 0 16px 36px rgba(0,0,0,0.22);
+        }
+
+        .kpi-card {
+            position: relative;
+            overflow: hidden;
+        }
+        .kpi-card::before {
+            content: '';
+            position: absolute; top: 0; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(54,214,174,0.45), transparent);
+            opacity: 0.7;
+        }
+        .kpi-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(54, 214, 174, 0.4);
+        }
+        .kpi-card .kpi-icon {
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+        .kpi-card:hover .kpi-icon {
+            transform: scale(1.06);
+            box-shadow: 0 0 20px rgba(54, 214, 174, 0.15);
+        }
+        .kpi-value {
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.03em;
+            transition: color 0.2s ease;
+        }
+        .kpi-value.is-ticking {
+            animation: kpiFlash 0.45s ease;
+        }
+        @keyframes kpiFlash {
+            0% { opacity: 0.55; transform: translateY(4px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
         #audit-drawer {
-            position: fixed; top: 0; right: -100%; width: 840px; max-width: 96vw;
+            position: fixed; top: 0; right: -100%; width: 860px; max-width: 96vw;
             height: 100vh; z-index: 200;
-            background: #1d1f29;
-            border-left: 1px solid #494454;
+            background: #0E151E;
+            border-left: 1px solid var(--line);
             transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex; flex-direction: column; overflow: hidden;
+            box-shadow: -16px 0 48px rgba(0, 0, 0, 0.35);
         }
         #audit-drawer.active { right: 0; }
 
+        .drawer-issue {
+            border-radius: 10px;
+            padding: 12px 14px;
+            border: 1px solid rgba(240,179,90,0.35);
+            background: rgba(240,179,90,0.08);
+        }
+        .drawer-issue.is-bad {
+            border-color: rgba(255,168,160,0.4);
+            background: rgba(255,168,160,0.08);
+        }
+        .drawer-issue.is-ok {
+            border-color: rgba(54,214,174,0.35);
+            background: rgba(54,214,174,0.08);
+        }
+        .drawer-issue-head {
+            display: flex; align-items: flex-start; gap: 10px;
+        }
+        .drawer-issue-icon {
+            font-size: 20px; margin-top: 1px; color: #F0B35A;
+        }
+        .drawer-issue.is-bad .drawer-issue-icon { color: #FFA8A0; }
+        .drawer-issue.is-ok .drawer-issue-icon { color: #36D6AE; }
+        .drawer-issue-label {
+            font-size: 10px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.06em; color: #8B9BB0; margin-bottom: 2px;
+        }
+        .drawer-issue-title {
+            font-size: 14px; font-weight: 700; color: #F2F5F8; line-height: 1.35;
+        }
+        .drawer-issue-more {
+            margin-top: 8px; padding-top: 8px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            display: flex; flex-wrap: wrap; gap: 4px;
+        }
+        .drawer-issue-chip {
+            display: inline-block; max-width: 100%;
+            padding: 2px 7px; border-radius: 4px;
+            font-size: 10px; font-weight: 600; color: #F0B35A;
+            background: rgba(240,179,90,0.12);
+            border: 1px solid rgba(240,179,90,0.28);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+
+        .drawer-fold {
+            border-radius: 10px;
+            border: 1px solid #2A3848;
+            background: #0E131A;
+            overflow: hidden;
+        }
+        .drawer-fold > summary {
+            display: flex; align-items: center; gap: 8px;
+            padding: 10px 12px;
+            cursor: pointer;
+            list-style: none;
+            font-size: 12px; font-weight: 700; color: #F2F5F8;
+            user-select: none;
+        }
+        .drawer-fold > summary::-webkit-details-marker { display: none; }
+        .drawer-fold > summary::after {
+            content: 'expand_more';
+            font-family: 'Material Symbols Outlined';
+            font-size: 18px; margin-left: auto; color: #8B9BB0;
+        }
+        .drawer-fold[open] > summary::after { content: 'expand_less'; }
+        .drawer-fold > summary:hover { background: rgba(255,255,255,0.03); }
+        .drawer-fold-meta {
+            margin-left: 4px;
+            font-size: 11px; font-weight: 600; color: #8B9BB0;
+        }
+        .drawer-fold-body {
+            padding: 0 12px 12px;
+            border-top: 1px solid rgba(255,255,255,0.04);
+            padding-top: 10px;
+        }
+        .drawer-fold.has-attention > summary {
+            color: #F0B35A;
+        }
+
+        .drawer-sticky-footer {
+            background: #141A22;
+            box-shadow: 0 -8px 24px rgba(0,0,0,0.25);
+        }
+        .drawer-approve-btn {
+            min-width: 112px;
+            box-shadow: 0 0 0 1px rgba(54,214,174,0.25);
+        }
+
         #audit-drawer-overlay {
             position: fixed; inset: 0; z-index: 190;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(2px);
+            background: rgba(4, 8, 14, 0.72);
+            backdrop-filter: blur(3px);
             opacity: 0; pointer-events: none;
             transition: opacity 0.3s ease;
         }
         #audit-drawer-overlay.active { opacity: 1; pointer-events: all; }
 
-        /* ── GSTR Modal ── */
         #gstr-modal-overlay {
             position: fixed; inset: 0; z-index: 300;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(4, 8, 14, 0.75);
             backdrop-filter: blur(4px);
             opacity: 0; pointer-events: none;
             transition: opacity 0.25s ease;
@@ -184,125 +301,1291 @@
             position: fixed; top: 50%; left: 50%;
             transform: translate(-50%, -58%) scale(0.96);
             z-index: 310; width: 560px; max-width: 96vw;
-            background: #1d1f29;
-            border: 1px solid #494454;
-            border-radius: 12px; overflow: hidden;
+            background: #121A24;
+            border: 1px solid var(--line);
+            border-radius: 14px; overflow: hidden;
             opacity: 0; pointer-events: none;
             transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
         #gstr-modal.active { opacity: 1; pointer-events: all; transform: translate(-50%, -50%) scale(1); }
 
-        /* ── Toast ── */
         #toast {
             position: fixed; bottom: 24px; right: 24px; z-index: 400;
-            padding: 12px 20px; border-radius: 8px;
-            font-size: 13px; font-weight: 700; color: #11131c;
-            background: #d0bcff;
-            box-shadow: 0 8px 32px rgba(208, 188, 255, 0.3);
+            padding: 12px 18px; border-radius: 10px;
+            font-size: 13px; font-weight: 600; color: #04281F;
+            background: var(--teal);
             transform: translateY(80px); opacity: 0;
             transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
             pointer-events: none;
         }
         #toast.active { transform: translateY(0); opacity: 1; }
 
-        /* ── Table rows ── */
-        #invoice-rows-body tr { cursor: pointer; }
-        #invoice-rows-body tr:hover { background: rgba(40, 41, 51, 0.6); }
+        #invoice-rows-body tr { cursor: pointer; transition: background 0.15s ease; }
+        #invoice-rows-body tr:hover { background: rgba(54, 214, 174, 0.06); }
 
-        /* ── Status Badges ── */
-        .badge-approved {
+        .badge-approved, .badge-flagged, .badge-pending, .badge, .badge-hitl, .badge-rejected, .badge-confirmed {
             display: inline-flex; align-items: center; gap: 4px;
-            padding: 3px 10px; border-radius: 99px; font-size: 10px; font-weight: 700;
-            letter-spacing: 0.05em; text-transform: uppercase;
-            background: rgba(78, 222, 163, 0.12); color: #4edea3; border: 1px solid rgba(78, 222, 163, 0.3);
+            padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 700;
+            letter-spacing: 0.04em; text-transform: uppercase;
+        }
+        .badge-approved {
+            background: rgba(43, 184, 150, 0.12); color: #7BE8C8; border: 1px solid rgba(43, 184, 150, 0.3);
         }
         .badge-flagged {
-            display: inline-flex; align-items: center; gap: 4px;
-            padding: 3px 10px; border-radius: 99px; font-size: 10px; font-weight: 700;
-            letter-spacing: 0.05em; text-transform: uppercase;
-            background: rgba(255, 180, 171, 0.12); color: #ffb4ab; border: 1px solid rgba(255, 180, 171, 0.3);
+            background: rgba(237, 106, 106, 0.12); color: #FFA8A0; border: 1px solid rgba(237, 106, 106, 0.3);
         }
         .badge-pending {
-            display: inline-flex; align-items: center; gap: 4px;
-            padding: 3px 10px; border-radius: 99px; font-size: 10px; font-weight: 700;
-            letter-spacing: 0.05em; text-transform: uppercase;
-            background: rgba(255, 185, 95, 0.12); color: #ffb95f; border: 1px solid rgba(255, 185, 95, 0.3);
+            background: rgba(240, 179, 90, 0.14); color: #F0B35A; border: 1px solid rgba(240, 179, 90, 0.32);
+        }
+        .badge-hitl {
+            background: rgba(96, 165, 250, 0.12); color: #93C5FD; border: 1px solid rgba(96, 165, 250, 0.28);
+        }
+        .badge-confirmed {
+            background: rgba(43, 184, 150, 0.10); color: #2BB896; border: 1px solid rgba(43, 184, 150, 0.25);
+        }
+        .badge-rejected {
+            background: rgba(237, 106, 106, 0.14); color: #FFA8A0; border: 1px solid rgba(237, 106, 106, 0.32);
         }
 
-        /* ── Drawer form styles ── */
         .audit-form label {
-            display: block; font-size: 11px; font-weight: 700; color: #cbc3d7;
+            display: block; font-size: 11px; font-weight: 600; color: var(--muted);
             margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.06em;
         }
         .audit-form input,
         .audit-form select,
         .audit-form textarea {
-            width: 100%; background: #11131c;
-            border: 1px solid #494454; border-radius: 6px;
-            padding: 8px 12px; font-size: 13px; color: #e1e1ef;
-            font-family: 'Plus Jakarta Sans', sans-serif;
+            width: 100%; background: #0C141C;
+            border: 1px solid var(--line); border-radius: 8px;
+            padding: 9px 12px; font-size: 13px; color: var(--text);
+            font-family: var(--font);
             transition: border-color 0.15s, box-shadow 0.15s; outline: none;
         }
         .audit-form input:focus,
         .audit-form select:focus,
         .audit-form textarea:focus {
-            border-color: #d0bcff;
-            box-shadow: 0 0 0 3px rgba(208, 188, 255, 0.15);
+            border-color: var(--teal);
+            box-shadow: 0 0 0 3px rgba(54, 214, 174, 0.15);
         }
-        .audit-form select option { background: #1d1f29; }
+        .audit-form select option { background: #121A24; }
         .audit-form input[type="date"] { color-scheme: dark; }
         .audit-form input[type="number"] { font-variant-numeric: tabular-nums; }
 
-        .gstin-input.valid   { border-color: #4edea3 !important; }
-        .gstin-input.invalid { border-color: #ffb4ab !important; }
+        .gstin-input.valid   { border-color: #36D6AE !important; }
+        .gstin-input.invalid { border-color: #ED6A6A !important; }
         .validation-label { font-size: 11px; margin-top: 3px; display: block; }
 
-        /* ── Timeline ── */
         .timeline-item {
             display: flex; flex-direction: column; gap: 3px;
-            padding: 10px 0; border-bottom: 1px solid #282933;
+            padding: 10px 0; border-bottom: 1px solid var(--line);
         }
         .timeline-item:last-child { border-bottom: none; }
-        .timeline-user  { font-size: 12px; font-weight: 700; color: #d0bcff; }
-        .timeline-time  { font-size: 11px; color: #cbc3d7; }
-        .timeline-change { font-size: 13px; color: #e1e1ef; margin-top: 2px; }
-        .timeline-change code { background: #11131c; padding: 1px 6px; border-radius: 4px; font-family: monospace; font-size: 11px; border: 1px solid #494454; }
-        .timeline-empty { font-size: 13px; color: #cbc3d7; font-style: italic; }
+        .timeline-user  { font-size: 12px; font-weight: 700; color: var(--teal); }
+        .timeline-time  { font-size: 11px; color: var(--muted); }
+        .timeline-change { font-size: 13px; color: var(--text); margin-top: 2px; }
+        .timeline-change code {
+            background: #0C141C; padding: 1px 6px; border-radius: 4px;
+            font-family: var(--mono); font-size: 11px; border: 1px solid var(--line);
+        }
+        .timeline-empty { font-size: 13px; color: var(--muted); font-style: italic; }
 
-        /* ── Image viewport ── */
-        .invoice-preview-image { max-width: 100%; max-height: 100%; object-fit: contain; transition: transform 0.25s ease; }
+        /* invoice preview styles live under .doc-stage */
         #itc-reason-group { display: none; }
 
-        /* ── GSTR modal aggregates ── */
         .preview-metrics-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px; }
-        .preview-metric { background: #11131c; border: 1px solid #494454; border-radius: 8px; padding: 14px; text-align: center; }
-        .preview-metric .label { display: block; font-size: 10px; font-weight: 700; color: #cbc3d7; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
-        .preview-metric .val { font-size: 18px; font-weight: 800; color: #d0bcff; }
+        .preview-metric { background: #0C141C; border: 1px solid var(--line); border-radius: 10px; padding: 14px; text-align: center; }
+        .preview-metric .label { display: block; font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+        .preview-metric .val { font-size: 18px; font-weight: 800; color: var(--teal); font-variant-numeric: tabular-nums; }
 
-        /* ── Sync button loading ── */
         #sync-btn.loading .sync-icon { animation: spin 0.8s linear infinite; display: inline-block; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* ── Tab buttons ── */
-        .tab-btn { padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 700; color: #cbc3d7; transition: all 0.15s; background: transparent; border: none; cursor: pointer; }
-        .tab-btn:hover { color: #e1e1ef; background: rgba(255,255,255,0.05); }
-        .tab-btn.active { background: rgba(208, 188, 255, 0.15); color: #d0bcff; border: 1px solid rgba(208, 188, 255, 0.25); }
+        .tab-btn {
+            padding: 7px 14px; border-radius: 8px; font-size: 12px; font-weight: 600;
+            color: var(--muted); transition: all 0.15s; background: transparent; border: 1px solid transparent; cursor: pointer;
+        }
+        .tab-btn:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+        .tab-btn.active {
+            background: var(--teal-dim); color: #7BE8C8; border-color: rgba(54, 214, 174, 0.28);
+        }
 
-        /* ── Progress bars ── */
-        .progress-bar-container { height: 5px; background: rgba(255,255,255,0.07); border-radius: 4px; overflow: hidden; margin-top: 6px; }
+        .progress-bar-container { height: 5px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; margin-top: 6px; }
         .progress-bar { height: 100%; border-radius: 4px; transition: width 0.7s ease; }
-        .bg-green  { background: #4edea3; }
-        .bg-orange { background: #ffb95f; }
-        .bg-purple { background: #d0bcff; }
-        .bg-red    { background: #ffb4ab; }
+        .bg-green  { background: #2BB896; }
+        .bg-orange { background: #F0B35A; }
+        .bg-purple { background: #36D6AE; }
+        .bg-red    { background: #ED6A6A; }
 
-        /* ── Empty / loading ── */
-        .empty-state { text-align: center; padding: 56px 24px; color: #cbc3d7; }
+        .empty-state { text-align: center; padding: 56px 28px; color: var(--muted); }
+        .empty-state .empty-illu {
+            width: 88px; height: 88px; margin: 0 auto 18px;
+            border-radius: 22px; display: flex; align-items: center; justify-content: center;
+            background:
+                radial-gradient(circle at 30% 25%, rgba(54,214,174,0.22), transparent 55%),
+                rgba(54,214,174,0.08);
+            border: 1px solid rgba(54, 214, 174, 0.28);
+            color: var(--teal);
+            box-shadow: 0 12px 28px rgba(0,0,0,0.22);
+            position: relative;
+        }
+        .empty-state .empty-illu::after {
+            content: '';
+            position: absolute; inset: -6px;
+            border-radius: 26px;
+            border: 1px solid rgba(54,214,174,0.12);
+            pointer-events: none;
+        }
+        .empty-state.is-clear .empty-illu { color: #36D6AE; }
+        .empty-state.is-muted .empty-illu {
+            color: #8B9BB0;
+            background: rgba(255,255,255,0.03);
+            border-color: #2A3848;
+        }
+        .empty-state .empty-title {
+            font-size: 17px; font-weight: 800; color: #F2F5F8;
+            letter-spacing: -0.02em; margin-bottom: 6px;
+        }
+        .empty-state .empty-sub {
+            font-size: 13px; line-height: 1.5; color: #8B9BB0;
+            max-width: 320px; margin: 0 auto 16px;
+        }
+        .empty-state .empty-actions {
+            display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+        }
+        .empty-state .empty-btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 9px 14px; border-radius: 9px;
+            border: 1px solid #2A3848;
+            background: rgba(255,255,255,0.03);
+            color: #F2F5F8;
+            font-size: 12px; font-weight: 700;
+            cursor: pointer;
+            transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+        }
+        .empty-state .empty-btn:hover {
+            border-color: rgba(54,214,174,0.45);
+            background: rgba(54,214,174,0.08);
+            transform: translateY(-1px);
+        }
+        .empty-state .empty-btn.is-primary {
+            border-color: rgba(54,214,174,0.45);
+            background: rgba(54,214,174,0.14);
+            color: #7BE8C8;
+        }
+
+        .doc-viewer-pane {
+            display: flex; flex-direction: column;
+            border-right: 1px solid var(--line);
+            background:
+                radial-gradient(ellipse 80% 50% at 50% 0%, rgba(54,214,174,0.06), transparent 55%),
+                #0D1219;
+            min-height: 400px;
+        }
+        #invoice-doc-viewport {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow: hidden;
+            gap: 12px;
+            background:
+                linear-gradient(180deg, rgba(8,12,18,0.2), transparent 30%),
+                repeating-linear-gradient(
+                    0deg,
+                    transparent,
+                    transparent 19px,
+                    rgba(255,255,255,0.012) 20px
+                );
+        }
+        .doc-stage {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: min(100%, 420px);
+            min-height: 280px;
+            max-height: calc(100% - 40px);
+            padding: 14px;
+            border-radius: 14px;
+            background: linear-gradient(160deg, #1A2430 0%, #121820 100%);
+            border: 1px solid rgba(44, 60, 78, 0.9);
+            box-shadow:
+                0 1px 0 rgba(255,255,255,0.05) inset,
+                0 18px 40px rgba(0,0,0,0.4),
+                0 0 0 1px rgba(0,0,0,0.35);
+        }
+        .doc-stage::before {
+            content: '';
+            position: absolute; inset: 7px;
+            border-radius: 10px;
+            border: 1px dashed rgba(54,214,174,0.12);
+            pointer-events: none;
+        }
+        .invoice-preview-image {
+            position: relative; z-index: 1;
+            max-width: 100%; max-height: min(58vh, 520px);
+            object-fit: contain;
+            border-radius: 4px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+            transition: transform 0.25s ease;
+            background: #fff;
+        }
+        .invoice-preview-pdf {
+            position: relative; z-index: 1;
+            width: 100%;
+            height: min(58vh, 520px);
+            border: 0;
+            border-radius: 4px;
+            background: #0a0c10;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+            transition: transform 0.25s ease;
+        }
+        .invoice-doc-fallback {
+            position: relative; z-index: 1;
+            display: flex; align-items: center; justify-content: center;
+            margin-top: 4px;
+        }
         .loading-icon { font-size: 36px; margin-bottom: 12px; display: block; }
         @keyframes fadePulse { 0%,100%{opacity:.4} 50%{opacity:1} }
         .loading-pulse { animation: fadePulse 1.5s ease infinite; }
-        @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
-        .fade-up { animation: fadeUp 0.4s ease forwards; }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+        .fade-up { animation: fadeUp 0.45s ease forwards; }
+        .fade-up-delay-1 { animation-delay: 0.06s; opacity: 0; }
+        .fade-up-delay-2 { animation-delay: 0.12s; opacity: 0; }
+        .fade-up-delay-3 { animation-delay: 0.18s; opacity: 0; }
+
+        @keyframes rowEnter {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .queue-table tbody tr.row-enter {
+            animation: rowEnter 0.35s ease both;
+        }
+        .queue-table tbody tr {
+            transition: background-color 0.18s ease, box-shadow 0.18s ease;
+        }
+        .queue-table tbody tr:hover {
+            background-color: rgba(54, 214, 174, 0.05) !important;
+            box-shadow: inset 3px 0 0 rgba(54, 214, 174, 0.55);
+        }
+
+        @keyframes softPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(240,179,90,0.0); }
+            50% { box-shadow: 0 0 0 6px rgba(240,179,90,0.12); }
+        }
+        @keyframes readyGlow {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(54,214,174,0.15); }
+            50% { box-shadow: 0 0 0 8px rgba(54,214,174,0.08); }
+        }
+        .workflow-guide .wf-step.is-active {
+            animation: softPulse 2.4s ease-in-out infinite;
+        }
+        .month-close-ready.is-ready {
+            animation: readyGlow 2.8s ease-in-out infinite;
+        }
+        .month-close-step {
+            transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+        }
+        .month-close-step.is-active {
+            transform: translateY(-1px);
+        }
+        .month-close-step.is-done .step-dot {
+            box-shadow: 0 0 0 4px rgba(54,214,174,0.15);
+        }
+
+        .tab-btn {
+            position: relative;
+            transition: color 0.18s ease, background 0.18s ease;
+        }
+        .tab-btn.active {
+            box-shadow: 0 0 0 1px rgba(54,214,174,0.25);
+        }
+
+        .page-title-accent {
+            background: linear-gradient(120deg, #FFFFFF 10%, #7BE8C8 90%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            body::after,
+            .fade-up, .fade-up-delay-1, .fade-up-delay-2, .fade-up-delay-3,
+            .queue-table tbody tr.row-enter,
+            .workflow-guide .wf-step.is-active,
+            .month-close-ready.is-ready,
+            .kpi-value.is-ticking {
+                animation: none !important;
+            }
+            .kpi-card:hover, .month-close-step.is-active, .brand-mark:hover img {
+                transform: none !important;
+            }
+        }
+
+        .nav-link {
+            display: flex; align-items: center; gap: 10px;
+            padding: 9px 10px; border-radius: 10px;
+            color: var(--muted); transition: all 0.18s ease; font-size: 13px; font-weight: 600;
+            border: 1px solid transparent;
+            cursor: pointer;
+            width: 100%;
+            text-align: left;
+            background: transparent;
+            font-family: inherit;
+            line-height: 1.2;
+        }
+        .nav-link .nav-ico {
+            width: 22px; height: 22px;
+            display: inline-flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            font-size: 20px !important;
+            line-height: 1;
+        }
+        .nav-link .nav-label {
+            min-width: 0;
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .nav-link:hover {
+            background: rgba(255,255,255,0.05);
+            color: var(--text);
+            border-color: rgba(42, 56, 72, 0.9);
+        }
+        .nav-link:active { transform: scale(0.99); }
+        .nav-link.active {
+            background: linear-gradient(90deg, rgba(54, 214, 174, 0.16), rgba(54, 214, 174, 0.04));
+            color: #7BE8C8;
+            border: 1px solid rgba(54, 214, 174, 0.22);
+        }
+        .sidebar-cta {
+            width: 100%;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 11px 12px;
+            background: var(--teal);
+            color: #04281F;
+            font-weight: 700;
+            font-size: 13px;
+            font-family: inherit;
+            border: 0;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: filter 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+            box-shadow: 0 8px 20px rgba(54, 214, 174, 0.22);
+        }
+        .sidebar-cta:hover { filter: brightness(1.06); }
+        .sidebar-cta:active { transform: scale(0.98); }
+
+        .sidebar-shell {
+            background: linear-gradient(180deg, #0E1620 0%, #070B12 100%);
+            border-right: 1px solid var(--line);
+            box-shadow: inset 3px 0 0 #36D6AE;
+            overflow: hidden;
+            height: 100vh;
+            height: 100dvh;
+            max-height: 100dvh;
+        }
+        .sidebar-nav {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-y: auto;
+            padding-right: 2px;
+            margin: 8px 0 4px;
+        }
+        .sidebar-foot {
+            flex: 0 0 auto;
+            margin-top: auto;
+            padding-top: 10px;
+            padding-bottom: 2px;
+            border-top: 1px solid rgba(42, 56, 72, 0.85);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: linear-gradient(180deg, transparent, rgba(7,11,18,0.92) 30%);
+        }
+        .sidebar-foot-links {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+        .sidebar-foot-links .nav-link {
+            justify-content: center;
+            gap: 6px;
+            padding: 7px 6px;
+            font-size: 11px;
+            border-color: #2A3848;
+            background: rgba(255,255,255,0.03);
+        }
+        .sidebar-foot-links .nav-link:hover {
+            border-color: rgba(54,214,174,0.35);
+        }
+        .sidebar-foot-links .nav-link .nav-ico {
+            width: 16px; height: 16px; font-size: 16px !important;
+        }
+        .sidebar-foot-links .nav-label {
+            overflow: visible;
+        }
+
+        .brand-hero {
+            flex: 0 0 auto;
+            padding: 2px 2px 10px;
+            margin-bottom: 0;
+            border-bottom: 1px solid rgba(42, 56, 72, 0.85);
+        }
+        .brand-mark {
+            display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+            padding: 2px 0;
+        }
+        .brand-mark img {
+            width: 100%; height: auto; max-height: 64px; object-fit: contain; object-position: left center;
+            border-radius: 0;
+            background: transparent; padding: 0;
+            border: none;
+            box-shadow: none;
+            transition: opacity 0.25s ease;
+            flex-shrink: 0;
+        }
+        .brand-mark:hover img {
+            transform: none;
+            opacity: 0.9;
+            box-shadow: none;
+        }
+        .brand-mark .brand-text { line-height: 1.15; min-width: 0; }
+        .brand-mark .brand-name { display: none; }
+        .brand-mark .brand-sub {
+            font-size: 9px; font-weight: 700; color: var(--teal);
+            text-transform: uppercase; letter-spacing: 0.1em; margin-top: 0;
+        }
+        .brand-tagline {
+            display: none;
+        }
+
+        .sidebar-client-card {
+            margin-top: 12px;
+            width: 100%;
+            text-align: left;
+            cursor: pointer;
+            border-radius: 12px;
+            border: 1px solid rgba(54, 214, 174, 0.28);
+            background:
+                linear-gradient(145deg, rgba(54,214,174,0.12), rgba(18,26,36,0.95) 55%);
+            padding: 10px 12px;
+            font-family: inherit;
+            color: inherit;
+            transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+            box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset;
+        }
+        .sidebar-client-card:hover {
+            border-color: rgba(54, 214, 174, 0.5);
+            transform: translateY(-1px);
+            box-shadow: 0 10px 24px rgba(0,0,0,0.25);
+        }
+        .sidebar-client-card:active { transform: scale(0.99); }
+        .sidebar-client-card .scc-top {
+            display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+        }
+        .sidebar-client-card .scc-avatar {
+            width: 28px; height: 28px; border-radius: 8px;
+            display: inline-flex; align-items: center; justify-content: center;
+            background: rgba(54,214,174,0.16);
+            color: #36D6AE;
+            flex-shrink: 0;
+        }
+        .sidebar-client-card .scc-avatar .material-symbols-outlined {
+            font-size: 18px;
+        }
+        .sidebar-client-card .scc-kicker {
+            font-size: 9px; font-weight: 800; letter-spacing: 0.1em;
+            text-transform: uppercase; color: #8B9BB0;
+        }
+        .sidebar-client-card .scc-switch {
+            margin-left: auto;
+            font-size: 10px; font-weight: 700; color: #36D6AE;
+        }
+        .sidebar-client-card .scc-name {
+            font-size: 13px; font-weight: 800; color: #F2F5F8;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            letter-spacing: -0.02em;
+        }
+        .sidebar-client-card .scc-meta {
+            margin-top: 4px;
+            font-size: 10px; font-weight: 600; color: #8B9BB0;
+            font-family: var(--mono);
+            letter-spacing: 0.04em;
+            line-height: 1.35;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            word-break: break-all;
+        }
+        .sidebar-client-card.is-empty {
+            border-color: rgba(240, 179, 90, 0.35);
+            background: linear-gradient(145deg, rgba(240,179,90,0.1), rgba(18,26,36,0.95) 55%);
+        }
+        .sidebar-client-card.is-empty .scc-avatar {
+            background: rgba(240,179,90,0.14);
+            color: #F0B35A;
+        }
+        .sidebar-client-card.is-empty .scc-switch { color: #F0B35A; }
+
+        .metric-chip {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 5px 10px; border-radius: 8px; font-size: 11px; font-weight: 600;
+            background: rgba(255,255,255,0.03); border: 1px solid var(--line); color: var(--muted);
+            white-space: nowrap;
+        }
+
+        .header-toolbar {
+            display: flex; align-items: center; gap: 10px;
+            min-width: 0; flex: 1;
+            overflow: visible;
+        }
+        .header-toolbar .workspace-label {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            line-height: 1.15;
+            padding-top: 1px;
+        }
+        .header-actions {
+            display: flex; align-items: center; gap: 10px;
+            flex-shrink: 0;
+        }
+        .header-control {
+            display: inline-flex; align-items: center; gap: 8px;
+            height: 38px; padding: 0 12px;
+            background: var(--surface-2, #121A24);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            color: var(--text);
+        }
+        .header-control select,
+        .header-control input {
+            background: transparent; border: 0; outline: none;
+            color: inherit; font-size: 13px; font-weight: 600;
+            min-width: 0;
+        }
+        .month-picker-wrap {
+            position: relative;
+            min-width: 168px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .month-picker-wrap .month-display {
+            pointer-events: none;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+            min-width: 7.5rem;
+            flex: 1;
+        }
+        .month-picker-wrap.is-empty .month-display { color: var(--muted); }
+        .month-picker-wrap .month-chevron {
+            pointer-events: none;
+            font-size: 18px;
+            color: var(--muted);
+            flex-shrink: 0;
+        }
+        .month-picker-wrap #month-picker-clear {
+            position: relative;
+            z-index: 3;
+        }
+        .month-picker-wrap.is-empty #month-picker-clear {
+            visibility: hidden;
+            pointer-events: none;
+        }
+        .month-cal-popover {
+            display: none;
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            z-index: 80;
+            width: 280px;
+            padding: 14px;
+            border-radius: 12px;
+            background: #121820;
+            border: 1px solid var(--line, #2A3848);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+        }
+        .month-cal-popover.open { display: block; }
+        .month-cal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .month-cal-header .year-label {
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--text);
+            letter-spacing: 0.02em;
+        }
+        .month-cal-nav {
+            width: 32px; height: 32px;
+            border-radius: 8px;
+            border: 1px solid var(--line, #2A3848);
+            background: transparent;
+            color: var(--muted);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        .month-cal-nav:hover {
+            color: var(--text);
+            border-color: rgba(54,214,174,0.45);
+            background: rgba(54,214,174,0.08);
+        }
+        .month-cal-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+        }
+        .month-cal-grid button {
+            height: 36px;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            background: rgba(255,255,255,0.03);
+            color: var(--text);
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .month-cal-grid button:hover {
+            border-color: rgba(54,214,174,0.4);
+            background: rgba(54,214,174,0.1);
+        }
+        .month-cal-grid button.is-selected {
+            background: rgba(54,214,174,0.18);
+            border-color: rgba(54,214,174,0.55);
+            color: #36D6AE;
+        }
+        .month-cal-grid button.is-current:not(.is-selected) {
+            border-color: rgba(255,255,255,0.12);
+        }
+        .month-cal-footer {
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px solid var(--line, #2A3848);
+        }
+        .month-cal-footer button {
+            width: 100%;
+            height: 34px;
+            border-radius: 8px;
+            border: 1px solid var(--line, #2A3848);
+            background: transparent;
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .month-cal-footer button:hover {
+            color: var(--text);
+            border-color: rgba(54,214,174,0.4);
+        }
+
+        .workflow-guide {
+            display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px;
+            margin-top: 10px;
+            font-size: 13px;
+            color: #8B9BB0;
+        }
+        .workflow-guide .wf-step {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 4px 10px;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            font-weight: 600;
+            color: #8B9BB0;
+            background: transparent;
+            cursor: default;
+            transition: color .15s, border-color .15s, background .15s;
+        }
+        .workflow-guide .wf-step.is-clickable { cursor: pointer; }
+        .workflow-guide .wf-step.is-clickable:hover {
+            color: #F2F5F8;
+            border-color: rgba(54,214,174,0.35);
+            background: rgba(54,214,174,0.06);
+        }
+        .workflow-guide .wf-step.is-active {
+            color: #F0B35A;
+            border-color: rgba(240,179,90,0.4);
+            background: rgba(240,179,90,0.1);
+        }
+        .workflow-guide .wf-step.is-done {
+            color: #36D6AE;
+            border-color: rgba(54,214,174,0.28);
+            background: rgba(54,214,174,0.08);
+        }
+        .workflow-guide .wf-arrow {
+            color: #5A6A7A;
+            font-size: 14px;
+            line-height: 1;
+            user-select: none;
+        }
+        .workflow-guide .wf-hint {
+            margin-left: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            color: #8B9BB0;
+        }
+        .month-scope-banner {
+            display: none;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px 10px;
+            margin-top: 12px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(240,179,90,0.35);
+            background: rgba(240,179,90,0.08);
+            color: #F2F5F8;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        .month-scope-banner .msb-text { flex: 1 1 180px; min-width: 0; color: #8B9BB0; }
+        .month-scope-banner .msb-text strong { color: #F2F5F8; font-weight: 700; }
+        .month-scope-banner .msb-btn {
+            padding: 6px 10px;
+            border-radius: 8px;
+            border: 1px solid #2A3848;
+            background: rgba(255,255,255,0.04);
+            color: #F2F5F8;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .month-scope-banner .msb-btn:hover {
+            border-color: rgba(54,214,174,0.45);
+            background: rgba(54,214,174,0.08);
+        }
+        .month-scope-banner .msb-btn.is-primary {
+            border-color: rgba(240,179,90,0.45);
+            background: rgba(240,179,90,0.14);
+            color: #F0B35A;
+        }
+
+        .client-context-bar {
+            display: flex; flex-direction: column; align-items: stretch; gap: 10px;
+            padding: 12px 16px; margin-top: 4px;
+        }
+        .client-context-primary {
+            display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px;
+        }
+        .client-context-bar .gstin-mono {
+            font-family: var(--mono, ui-monospace, monospace);
+            font-size: 12px; font-weight: 700; letter-spacing: 0.04em;
+        }
+        .advanced-toggle {
+            display: inline-flex; align-items: center; gap: 4px;
+            margin-left: auto;
+            padding: 6px 10px;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            background: transparent;
+            color: #8B9BB0;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: color .15s, border-color .15s, background .15s;
+        }
+        .advanced-toggle:hover {
+            color: #F2F5F8;
+            border-color: #2A3848;
+            background: rgba(255,255,255,0.03);
+        }
+        .advanced-toggle[aria-expanded="true"] {
+            color: #F2F5F8;
+            border-color: #2A3848;
+        }
+        .advanced-panel {
+            display: none;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px 14px;
+            padding-top: 10px;
+            border-top: 1px solid #2A3848;
+        }
+        .advanced-panel.is-open { display: flex; }
+        .advanced-panel .advanced-label {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #8B9BB0;
+            width: 100%;
+            margin-bottom: -4px;
+        }
+        .gstin-lookup-wrap {
+            display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+            width: 100%;
+        }
+        .gstin-lookup-wrap input {
+            width: 168px; max-width: 42vw;
+            padding: 7px 10px; border-radius: 8px;
+            border: 1px solid var(--line, #2A3848);
+            background: rgba(255,255,255,0.03);
+            color: var(--text, #F2F5F8);
+            font-family: var(--mono, ui-monospace, monospace);
+            font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
+            outline: none;
+        }
+        .gstin-lookup-wrap input:focus {
+            border-color: rgba(54,214,174,0.55);
+        }
+        .gstin-fy-select {
+            padding: 7px 8px; border-radius: 8px;
+            border: 1px solid var(--line, #2A3848);
+            background: rgba(255,255,255,0.03);
+            color: var(--text, #F2F5F8);
+            font-size: 11px; font-weight: 700;
+            outline: none; cursor: pointer;
+        }
+        .gstin-lookup-result {
+            width: 100%;
+            margin-top: 4px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(54,214,174,0.25);
+            background: rgba(54,214,174,0.06);
+            font-size: 12px;
+            line-height: 1.45;
+            color: var(--text, #F2F5F8);
+            display: none;
+        }
+        .gstin-lookup-result.is-visible { display: block; }
+        .gstin-lookup-result.is-error {
+            border-color: rgba(255,168,160,0.35);
+            background: rgba(255,168,160,0.08);
+        }
+        .gstin-lookup-result .name {
+            font-size: 13px; font-weight: 700; color: #F2F5F8;
+        }
+        .gstin-lookup-result .meta {
+            color: #8B9BB0; margin-top: 2px;
+        }
+        .gstin-filing-table {
+            width: 100%;
+            margin-top: 10px;
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+        .gstin-filing-table th {
+            text-align: left;
+            color: #8B9BB0;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-size: 10px;
+            padding: 4px 6px 6px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .gstin-filing-table td {
+            padding: 5px 8px 5px 0;
+            color: #F2F5F8;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            font-variant-numeric: tabular-nums;
+        }
+        .gstin-filing-table tr:last-child td { border-bottom: none; }
+        .gstin-filing-note {
+            margin-top: 8px;
+            font-size: 11px;
+            color: #7E859E;
+        }
+        .supplier-portal-check {
+            margin-top: 2px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid #2A3848;
+            background: rgba(255,255,255,0.02);
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        .supplier-portal-check.is-ok {
+            border-color: rgba(54,214,174,0.35);
+            background: rgba(54,214,174,0.06);
+        }
+        .supplier-portal-check.is-warn {
+            border-color: rgba(240,179,90,0.4);
+            background: rgba(240,179,90,0.08);
+        }
+        .supplier-portal-check.is-bad {
+            border-color: rgba(255,168,160,0.4);
+            background: rgba(255,168,160,0.08);
+        }
+        .supplier-portal-check .spc-head {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #8B9BB0;
+            margin-bottom: 6px;
+        }
+        .supplier-portal-check .spc-recheck {
+            margin-left: auto;
+            font-size: 10px;
+            font-weight: 700;
+            color: #36D6AE;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .supplier-portal-check .spc-recheck:hover { text-decoration: underline; }
+        .supplier-portal-check .spc-body { color: #F2F5F8; }
+        .supplier-portal-check .spc-meta { color: #8B9BB0; margin-top: 3px; font-size: 11px; }
+        .icon-btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 28px; height: 28px; border-radius: 8px;
+            color: var(--muted); border: 1px solid transparent;
+            transition: color 0.15s, background 0.15s, border-color 0.15s;
+        }
+        .icon-btn:hover {
+            color: var(--text); background: rgba(255,255,255,0.04);
+            border-color: var(--line);
+        }
+
+        .audit-btn {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700;
+            color: #04281F; background: var(--teal); border: none; cursor: pointer;
+            transition: filter 0.15s, transform 0.15s;
+        }
+        .audit-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+
+        .row-actions {
+            display: inline-flex;
+            flex-wrap: nowrap;
+            gap: 6px;
+            justify-content: flex-end;
+            align-items: center;
+            margin-left: auto;
+        }
+        .row-icon-btn {
+            width: 32px; height: 32px;
+            display: inline-flex; align-items: center; justify-content: center;
+            border-radius: 8px;
+            border: 1px solid #2A3848;
+            background: rgba(255,255,255,0.03);
+            color: #8B9BB0;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            flex-shrink: 0;
+        }
+        .row-icon-btn .material-symbols-outlined { font-size: 18px; }
+        .row-icon-btn:hover { border-color: rgba(54,214,174,0.45); color: #F2F5F8; background: rgba(54,214,174,0.08); }
+        .row-icon-btn.is-approve { border-color: rgba(54,214,174,0.45); color: #36D6AE; }
+        .row-icon-btn.is-approve:hover { background: rgba(54,214,174,0.15); }
+        .row-icon-btn:disabled { opacity: 0.45; pointer-events: none; }
+
+        .row-actions .audit-btn {
+            padding: 6px 10px;
+            font-size: 11px;
+            border-radius: 8px;
+        }
+
+        .row-more { position: relative; }
+        .row-more-menu {
+            position: absolute;
+            right: 0; top: calc(100% + 6px);
+            min-width: 148px;
+            padding: 6px;
+            border-radius: 10px;
+            border: 1px solid #2A3848;
+            background: #121A24;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.45);
+            z-index: 40;
+            display: none;
+        }
+        .row-more.open .row-more-menu { display: block; }
+        .row-more-menu button {
+            width: 100%;
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 10px;
+            border: none; border-radius: 7px;
+            background: transparent;
+            color: #F2F5F8;
+            font-size: 12px; font-weight: 600;
+            text-align: left;
+            cursor: pointer;
+        }
+        .row-more-menu button:hover { background: rgba(54,214,174,0.1); }
+        .row-more-menu button.is-danger { color: #FFA8A0; }
+        .row-more-menu .material-symbols-outlined { font-size: 16px; opacity: 0.85; }
+
+        #invoice-rows-body td { vertical-align: middle; }
+        #invoice-rows-body td.actions-cell {
+            padding-top: 10px; padding-bottom: 10px;
+            white-space: nowrap;
+        }
+
+        #chatbot-trigger-btn {
+            bottom: 24px;
+            right: 24px;
+            z-index: 45;
+        }
+        main.dashboard-main,
+        .dashboard-scroll {
+            padding-bottom: 88px;
+        }
+
+        #ca-form-modal-overlay {
+            position: fixed; inset: 0; z-index: 320;
+            background: rgba(4, 8, 14, 0.75);
+            backdrop-filter: blur(4px);
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.25s ease;
+        }
+        #ca-form-modal-overlay.active { opacity: 1; pointer-events: all; }
+
+        #ca-form-modal {
+            position: fixed; top: 50%; left: 50%;
+            transform: translate(-50%, -58%) scale(0.96);
+            z-index: 330; width: 440px; max-width: 94vw;
+            background: #121A24;
+            border: 1px solid var(--line);
+            border-radius: 14px; overflow: hidden;
+            opacity: 0; pointer-events: none;
+            transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        #ca-form-modal.active { opacity: 1; pointer-events: all; transform: translate(-50%, -50%) scale(1); }
+
+        .ca-form-field label {
+            display: block; font-size: 10px; font-weight: 700; color: #8B9BB0;
+            text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;
+        }
+        .ca-form-field input, .ca-form-field textarea, .ca-form-field select {
+            width: 100%; padding: 10px 12px; border-radius: 8px; font-size: 13px; font-weight: 600;
+            border: 1px solid #2A3848; background: #0E131A; color: #e1e1ef; color-scheme: dark;
+        }
+        .ca-form-field input:focus, .ca-form-field textarea:focus, .ca-form-field select:focus {
+            outline: none; border-color: #36D6AE;
+        }
+        .ca-form-hint { font-size: 12px; color: #8B9BB0; line-height: 1.45; margin-top: 4px; }
+
+        .month-close-strip {
+            margin-top: 12px;
+            padding: 14px 16px;
+            border-radius: 14px;
+            border: 1px solid rgba(54,214,174,0.22);
+            background:
+                linear-gradient(135deg, rgba(54,214,174,0.1), rgba(20,30,40,0.92) 55%),
+                linear-gradient(165deg, rgba(26,38,51,0.95), rgba(14,22,32,0.98));
+            box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 14px 36px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+        .month-close-strip::before {
+            content: '';
+            position: absolute; top: 0; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(54,214,174,0.55), transparent);
+        }
+        .month-close-head {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .month-close-icon {
+            font-size: 22px;
+            color: #36D6AE;
+            font-variation-settings: 'FILL' 1;
+        }
+        .month-close-title {
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #8B9BB0;
+        }
+        .month-close-period {
+            font-size: 14px;
+            font-weight: 700;
+            color: #F2F5F8;
+        }
+        .month-close-ready {
+            margin-left: auto;
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            border: 1px solid #2A3848;
+            color: #8B9BB0;
+            background: rgba(255,255,255,0.03);
+        }
+        .month-close-ready.is-ready {
+            color: #04281F;
+            background: #36D6AE;
+            border-color: #36D6AE;
+        }
+        .month-close-ready.is-blocked {
+            color: #FFA8A0;
+            background: rgba(255,168,160,0.12);
+            border-color: rgba(255,168,160,0.35);
+        }
+        .month-close-ready.is-pending {
+            color: #F0B35A;
+            background: rgba(240,179,90,0.12);
+            border-color: rgba(240,179,90,0.35);
+        }
+        .month-close-stats {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+        @media (min-width: 768px) {
+            .month-close-stats {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+        }
+        @media (min-width: 1100px) {
+            .month-close-stats {
+                grid-template-columns: repeat(6, minmax(0, 1fr));
+            }
+        }
+        .month-close-stat {
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid #2A3848;
+            background: rgba(10,16,24,0.55);
+            min-width: 0;
+        }
+        .month-close-stat .lbl {
+            display: block;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #8B9BB0;
+            margin-bottom: 4px;
+        }
+        .month-close-stat .val {
+            font-size: 18px;
+            font-weight: 800;
+            color: #F2F5F8;
+            font-variant-numeric: tabular-nums;
+        }
+        .month-close-stat .val.is-ok { color: #36D6AE; }
+        .month-close-stat .val.is-warn { color: #F0B35A; }
+        .month-close-stat .val.is-bad { color: #FFA8A0; }
+        .month-close-blockers {
+            font-size: 12px;
+            color: #8B9BB0;
+            line-height: 1.45;
+        }
+        .month-close-blockers:empty { display: none; }
+
+        .month-close-steps {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+        }
+        @media (min-width: 900px) {
+            .month-close-steps {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+            }
+        }
+        .month-close-step {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid #2A3848;
+            background: rgba(10,16,24,0.45);
+        }
+        .month-close-step.is-done {
+            border-color: rgba(54,214,174,0.35);
+            background: rgba(54,214,174,0.08);
+        }
+        .month-close-step.is-active {
+            border-color: rgba(240,179,90,0.45);
+            background: rgba(240,179,90,0.08);
+        }
+        .step-dot {
+            width: 10px; height: 10px; margin-top: 4px;
+            border-radius: 50%;
+            background: #2A3848;
+            flex-shrink: 0;
+        }
+        .month-close-step.is-done .step-dot { background: #36D6AE; }
+        .month-close-step.is-active .step-dot { background: #F0B35A; }
+        .step-title {
+            font-size: 12px; font-weight: 800; color: #F2F5F8;
+        }
+        .step-sub {
+            font-size: 11px; color: #8B9BB0; margin-top: 2px;
+        }
+        .month-close-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .month-close-btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #2A3848;
+            background: rgba(255,255,255,0.03);
+            color: #F2F5F8;
+            font-size: 12px; font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .month-close-btn:hover { border-color: rgba(54,214,174,0.45); background: rgba(54,214,174,0.08); }
+        .month-close-btn.is-primary {
+            background: #36D6AE; color: #04281F; border-color: #36D6AE;
+        }
+        .month-close-btn.is-primary:hover { filter: brightness(1.06); }
+        .month-close-btn:disabled { opacity: 0.45; pointer-events: none; }
+
+        .bulk-bar {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 4px 8px; border-radius: 8px;
+            border: 1px solid rgba(54,214,174,0.35);
+            background: rgba(54,214,174,0.08);
+        }
+        .bulk-bar-btn {
+            padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: 700;
+            border: 1px solid #2A3848; background: rgba(255,255,255,0.04); color: #F2F5F8;
+            cursor: pointer;
+        }
+        .bulk-bar-btn.is-approve { border-color: rgba(54,214,174,0.45); color: #36D6AE; }
+        .bulk-bar-btn:hover { filter: brightness(1.08); }
+        .queue-check {
+            width: 15px; height: 15px; accent-color: #36D6AE; cursor: pointer;
+        }
+        .queue-table th, .queue-table td { padding-left: 12px; padding-right: 12px; }
+        .drawer-nav {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 2px; border-radius: 8px; border: 1px solid #2A3848;
+            background: rgba(255,255,255,0.03);
+        }
+        .drawer-nav-btn {
+            width: 28px; height: 28px; border: none; border-radius: 6px;
+            background: transparent; color: #8B9BB0; cursor: pointer;
+            display: inline-flex; align-items: center; justify-content: center;
+        }
+        .drawer-nav-btn:hover { background: rgba(54,214,174,0.12); color: #F2F5F8; }
+        .drawer-nav-btn:disabled { opacity: 0.35; pointer-events: none; }
+        .drawer-nav-pos {
+            min-width: 48px; text-align: center;
+            font-size: 11px; font-weight: 700; color: #8B9BB0;
+            font-variant-numeric: tabular-nums;
+        }
+
+        select option { background: #121A24; color: var(--text); }
     </style>
 </head>
 <body class="min-h-screen antialiased selection:bg-primary/30 selection:text-white">
@@ -310,112 +1593,128 @@
 <!-- ══════════════════════════════════════════════
      SIDEBAR
 ══════════════════════════════════════════════ -->
-<aside class="w-[280px] h-screen fixed left-0 top-0 bg-surface-container border-r border-outline-variant flex flex-col p-6 z-50">
-    <div class="mb-8">
-        <!-- FinTrack GST Logo -->
-        <div class="flex items-center justify-center">
-            <img
-                src="/static/logo.jpeg"
-                alt="FinTrack GST — AI GST Automation"
-                class="w-44 h-auto object-contain rounded-xl"
-                style="filter: drop-shadow(0 0 10px rgba(78,222,163,0.15));"
-            />
+<aside class="w-[272px] fixed left-0 top-0 sidebar-shell flex flex-col p-4 z-50">
+    <div class="brand-hero">
+        <div class="brand-mark">
+            <img src="/static/logo.png?v=4" alt="Taxova.ai"/>
+            <div class="brand-text">
+                <div class="brand-name">Taxova.ai</div>
+                <div class="brand-sub">CA Workspace</div>
+            </div>
         </div>
+        <button type="button" class="sidebar-client-card is-empty" id="nav-clients-btn" data-nav="clients" title="Switch client">
+            <div class="scc-top">
+                <span class="scc-avatar"><span class="material-symbols-outlined">apartment</span></span>
+                <span class="scc-kicker">Active client</span>
+                <span class="scc-switch">Switch</span>
+            </div>
+            <div class="scc-name" id="sidebar-client-name">Select a client</div>
+            <div class="scc-meta" id="sidebar-client-meta">GSTIN will appear here</div>
+        </button>
     </div>
-    <nav class="flex-1 space-y-2">
-        <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-secondary-fixed-dim bg-secondary-container bg-opacity-10 shadow-[0_0_12px_rgba(78,222,163,0.3)] transition-all" href="#">
-            <span class="material-symbols-outlined">dashboard</span>
-            <span class="font-body-md">Dashboard</span>
+    <nav class="sidebar-nav space-y-0.5" aria-label="Workspace">
+        <a class="nav-link active" href="/dashboard" id="nav-dashboard-btn" data-nav="dashboard">
+            <span class="material-symbols-outlined nav-ico">dashboard</span>
+            <span class="nav-label">Dashboard</span>
         </a>
-        <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" href="#">
-            <span class="material-symbols-outlined">fact_check</span>
-            <span class="font-body-md">Audit</span>
+        <button type="button" class="nav-link" id="nav-queue-btn" data-nav="queue">
+            <span class="material-symbols-outlined nav-ico">fact_check</span>
+            <span class="nav-label">Audit Queue</span>
+        </button>
+        <button type="button" class="nav-link" id="nav-gstr-btn" data-nav="gstr">
+            <span class="material-symbols-outlined nav-ico">account_balance_wallet</span>
+            <span class="nav-label">GSTR Filing</span>
+        </button>
+        <a class="nav-link" href="/simulator" id="nav-simulator-btn" data-nav="simulator">
+            <span class="material-symbols-outlined nav-ico">science</span>
+            <span class="nav-label">WA Simulator</span>
         </a>
-        <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" href="#">
-            <span class="material-symbols-outlined">group</span>
-            <span class="font-body-md">Clients</span>
-        </a>
-        <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" href="#" id="nav-gstr-btn">
-            <span class="material-symbols-outlined">account_balance_wallet</span>
-            <span class="font-body-md">GSTR Filing</span>
-        </a>
-        <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" href="/simulator">
-            <span class="material-symbols-outlined">science</span>
-            <span class="font-body-md">WA Simulator</span>
-        </a>
-        <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" href="#">
-            <span class="material-symbols-outlined">settings</span>
-            <span class="font-body-md">Settings</span>
-        </a>
+        <button type="button" class="nav-link" id="nav-settings-btn" data-nav="settings">
+            <span class="material-symbols-outlined nav-ico">settings</span>
+            <span class="nav-label">Settings</span>
+        </button>
     </nav>
-    <div class="pt-6 border-t border-outline-variant space-y-2">
-        <button class="w-full flex items-center justify-center gap-2 py-3 bg-primary text-on-primary font-semibold rounded-lg active:scale-[0.98] transition-transform">
-            <span class="material-symbols-outlined">add</span>
+    <div class="sidebar-foot">
+        <div class="sidebar-foot-links">
+            <button type="button" class="nav-link" id="nav-support-btn" data-nav="support" title="Shortcuts & help">
+                <span class="material-symbols-outlined nav-ico">help</span>
+                <span class="nav-label">Support</span>
+            </button>
+            <a class="nav-link" href="/" id="nav-signout-btn" title="Back to home">
+                <span class="material-symbols-outlined nav-ico">logout</span>
+                <span class="nav-label">Sign out</span>
+            </a>
+        </div>
+        <button type="button" id="nav-new-audit-btn" class="sidebar-cta" title="Jump to Needs review and open the next bill">
+            <span class="material-symbols-outlined text-[18px]">add</span>
             New Audit
         </button>
-        <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" href="#">
-            <span class="material-symbols-outlined">help</span>
-            <span class="font-body-md">Support</span>
-        </a>
-        <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" href="#">
-            <span class="material-symbols-outlined">logout</span>
-            <span class="font-body-md">Sign Out</span>
-        </a>
     </div>
 </aside>
 
 <!-- ══════════════════════════════════════════════
      TOP HEADER
 ══════════════════════════════════════════════ -->
-<header class="h-16 fixed top-0 right-0 left-[280px] bg-surface bg-opacity-80 backdrop-blur-md border-b border-outline-variant flex items-center justify-between px-10 z-40">
-    <div class="flex items-center gap-4 flex-1">
-        <h2 class="font-label-md text-label-md text-primary tracking-wider uppercase whitespace-nowrap">FinTrack GST Workspace</h2>
-        <div class="h-4 w-px bg-outline-variant"></div>
-        
-        <!-- Context selectors -->
-        <div class="flex items-center gap-2">
-            <!-- Client dropdown -->
-            <div class="relative">
-                <select id="client-select"
-                    class="appearance-none bg-surface-container-low border border-outline-variant rounded-md pl-3 pr-8 py-1.5 text-[13px] font-semibold text-on-surface focus:outline-none focus:border-primary/60 hover:border-primary/40 transition-colors cursor-pointer min-w-[180px]"
-                    style="color:#e1e1ef;">
-                    <option value="">Loading Clients…</option>
+<header class="h-16 fixed top-0 right-0 left-[272px] glass-header border-b border-outline-variant z-40" style="overflow:visible;">
+    <div class="h-full px-6 flex items-center justify-between gap-4" style="overflow:visible;">
+        <div class="header-toolbar">
+            <div class="hidden xl:block shrink-0 pr-2 workspace-label">
+                <div class="text-[10px] font-bold uppercase tracking-[0.14em] text-primary">Workspace</div>
+                <div class="text-[13px] font-semibold text-on-surface leading-tight whitespace-nowrap">CA Review Queue</div>
+            </div>
+            <div class="hidden xl:block h-8 w-px bg-outline-variant shrink-0"></div>
+
+            <div class="header-control relative min-w-[180px] max-w-[240px] flex-1">
+                <span class="material-symbols-outlined text-[18px] text-on-surface-variant shrink-0">apartment</span>
+                <select id="client-select" class="appearance-none w-full pr-6 cursor-pointer truncate" title="Select client">
+                    <option value="">Loading clients…</option>
                 </select>
                 <span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant pointer-events-none">expand_more</span>
             </div>
-            <!-- Month picker -->
-            <div class="relative flex items-center gap-2 bg-surface-container-low border border-outline-variant rounded-md px-3 py-1.5 hover:border-primary/40 transition-colors">
-                <span class="material-symbols-outlined text-[16px] text-primary">calendar_today</span>
-                <input type="month" id="month-picker"
-                    class="bg-transparent text-[13px] font-semibold text-on-surface focus:outline-none cursor-pointer"
-                    style="color-scheme: dark; color:#e1e1ef;"/>
+
+            <div class="header-control month-picker-wrap" id="month-picker-wrap" title="Filter by invoice month">
+                <span class="material-symbols-outlined text-[16px] text-primary shrink-0">calendar_today</span>
+                <span class="month-display" id="month-picker-display">Loading…</span>
+                <span class="material-symbols-outlined month-chevron">expand_more</span>
+                <button type="button" id="month-picker-clear" title="Show all months" class="icon-btn shrink-0" aria-label="Clear month filter">
+                    <span class="material-symbols-outlined text-[16px]">close</span>
+                </button>
+                <div class="month-cal-popover" id="month-cal-popover" role="dialog" aria-label="Choose month">
+                    <div class="month-cal-header">
+                        <button type="button" class="month-cal-nav" id="month-cal-prev" aria-label="Previous year">
+                            <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+                        </button>
+                        <span class="year-label" id="month-cal-year">2026</span>
+                        <button type="button" class="month-cal-nav" id="month-cal-next" aria-label="Next year">
+                            <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+                        </button>
+                    </div>
+                    <div class="month-cal-grid" id="month-cal-grid"></div>
+                    <div class="month-cal-footer">
+                        <button type="button" id="month-cal-all">All months</button>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- Right actions -->
-    <div class="flex items-center gap-4">
-        <!-- Search -->
-        <div class="relative">
-            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant">search</span>
-            <input id="global-search" type="text" placeholder="Search invoices, GSTINs..."
-                class="bg-surface-container-low border border-outline-variant rounded-full pl-10 pr-4 py-1.5 text-[13px] focus:ring-1 focus:ring-primary focus:border-primary w-56 transition-all outline-none placeholder:text-on-surface-variant/50"
-                style="color:#e1e1ef;"/>
-        </div>
-        <!-- Sync button -->
-        <button id="sync-btn" class="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-md text-[13px] font-bold hover:bg-primary/95 transition-all shadow-lg shadow-primary/20 focus:outline-none">
-            <span class="material-symbols-outlined text-[16px] sync-icon">sync</span>
-            <span>Sync Portal</span>
-        </button>
-        <div class="h-8 w-px bg-outline-variant mx-1"></div>
-        <!-- Notifications -->
-        <button class="p-2 text-on-surface-variant hover:text-white transition-colors relative">
-            <span class="material-symbols-outlined text-[22px]">notifications</span>
-            <span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
-        </button>
-        <!-- Avatar -->
-        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary-fixed-dim flex items-center justify-center text-on-primary font-bold text-[11px] cursor-pointer ring-2 ring-outline-variant hover:ring-primary/50 transition-all">
-            CA
+        <div class="header-actions">
+            <div class="relative hidden md:block">
+                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant pointer-events-none">search</span>
+                <input id="global-search" type="text" placeholder="Search invoices…"
+                    class="bg-surface-container-low border border-outline-variant rounded-[10px] pl-10 pr-3 py-2 text-[13px] focus:ring-1 focus:ring-primary focus:border-primary w-40 lg:w-52 outline-none placeholder:text-on-surface-variant/50 text-on-surface"/>
+            </div>
+            <button id="sync-btn" title="Reload invoices and metrics from the database"
+                class="flex items-center gap-2 h-[38px] px-3.5 bg-primary text-on-primary rounded-[10px] text-[13px] font-bold hover:brightness-110 transition-all focus:outline-none shrink-0">
+                <span class="material-symbols-outlined text-[16px] sync-icon">sync</span>
+                <span class="hidden sm:inline">Reload</span>
+            </button>
+            <div class="h-8 w-px bg-outline-variant shrink-0 hidden sm:block"></div>
+            <button type="button" class="p-2 text-on-surface-variant hover:text-white transition-colors relative rounded-[10px] hover:bg-white/5 shrink-0" title="Notifications">
+                <span class="material-symbols-outlined text-[22px]">notifications</span>
+            </button>
+            <div class="w-9 h-9 rounded-[10px] bg-gradient-to-br from-primary to-primary-container flex items-center justify-center text-on-primary font-bold text-[11px] border border-outline-variant shrink-0" title="CA session">
+                CA
+            </div>
         </div>
     </div>
 </header>
@@ -423,150 +1722,311 @@
 <!-- ══════════════════════════════════════════════
      MAIN CONTENT
 ══════════════════════════════════════════════ -->
-<main class="pt-16 min-h-screen" style="margin-left: 280px;">
-    <div class="p-8 space-y-gutter max-w-container-max mx-auto">
+<main class="dashboard-main pt-16 min-h-screen" style="margin-left: 272px;">
+    <div class="p-6 md:p-8 space-y-5 max-w-container-max mx-auto">
 
         <!-- ── Page Header ── -->
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-2 fade-up">
-            <div>
-                <!-- Breadcrumb -->
-                <nav class="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-widest text-on-surface-variant mb-2">
-                    <a href="/" class="hover:text-primary transition-colors">Home</a>
-                    <span class="material-symbols-outlined text-[12px]">chevron_right</span>
-                    <span class="text-on-surface">Invoices</span>
-                </nav>
-                <h2 class="text-[28px] font-extrabold text-white tracking-tight">Invoice Review</h2>
-                <p class="text-[14px] text-on-surface-variant mt-1">
-                    Found <span class="text-secondary font-bold" id="record-count-txt">— pending</span> invoices requiring audit for GSTR-2B reconciliation.
-                </p>
-            </div>
-            <div class="flex items-center gap-3">
-                <button class="flex items-center gap-2 px-4 py-2 border border-outline-variant rounded-md text-[13px] font-bold text-on-surface hover:bg-surface-container hover:border-primary/40 transition-colors">
-                    <span class="material-symbols-outlined text-[18px]">file_download</span>
-                    Export CSV
-                </button>
-                <div class="h-9 w-px bg-outline-variant"></div>
-                <!-- Filing Status Badges -->
-                <div class="flex items-center gap-2">
-                    <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-secondary/10 border border-secondary/20">
+        <div class="fade-up space-y-4">
+            <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+                <div class="min-w-0">
+                    <nav class="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-widest text-on-surface-variant mb-2">
+                        <a href="/" class="hover:text-primary transition-colors">Home</a>
+                        <span class="material-symbols-outlined text-[12px]">chevron_right</span>
+                        <span class="text-on-surface">Invoice Review</span>
+                    </nav>
+                    <h2 class="text-[28px] md:text-[32px] font-extrabold tracking-tight page-title-accent">Your review queue</h2>
+                    <p class="text-[14px] text-on-surface-variant mt-1.5">
+                        Only bills that need a CA check. Clean ones stay out of your way.
+                        <span class="text-secondary font-semibold" id="record-count-txt">— pending</span>
+                    </p>
+                    <div class="workflow-guide" id="workflow-guide" aria-label="How to close the month">
+                        <button type="button" class="wf-step is-clickable" data-wf="review" id="wf-step-review" title="Open Needs review">
+                            Review these
+                        </button>
+                        <span class="wf-arrow" aria-hidden="true">→</span>
+                        <button type="button" class="wf-step is-clickable" data-wf="import" id="wf-step-import" title="Import GSTR-2B file">
+                            Import 2B
+                        </button>
+                        <span class="wf-arrow" aria-hidden="true">→</span>
+                        <button type="button" class="wf-step is-clickable" data-wf="close" id="wf-step-close" title="Jump to month close">
+                            Close month
+                        </button>
+                        <span class="wf-hint" id="workflow-hint">Start with the queue</span>
+                    </div>
+                    <div id="month-scope-banner" class="month-scope-banner" style="display:none;" aria-live="polite"></div>
+                </div>
+                <div class="flex flex-wrap items-center gap-2 shrink-0">
+                    <div class="metric-chip" title="Local review readiness — not GST portal filing status">
                         <span class="material-symbols-outlined text-secondary text-[14px]" style="font-variation-settings:'FILL' 1;">check_circle</span>
-                        <span class="text-[11px] font-bold text-secondary uppercase tracking-wider">GSTR-1</span>
-                        <span id="status-gstr1-val" class="text-[11px] font-semibold text-secondary">Filed</span>
+                        <span class="uppercase tracking-wider text-[10px] font-bold">GSTR-1</span>
+                        <span id="status-gstr1-val" class="font-semibold">—</span>
                     </div>
-                    <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-tertiary/10 border border-tertiary/20">
+                    <div class="metric-chip" title="Local review readiness — not GST portal filing status">
                         <span class="material-symbols-outlined text-tertiary text-[14px]">pending</span>
-                        <span class="text-[11px] font-bold text-tertiary uppercase tracking-wider">GSTR-3B</span>
-                        <span id="status-gstr3b-val" class="text-[11px] font-semibold text-tertiary">Pending</span>
+                        <span class="uppercase tracking-wider text-[10px] font-bold text-tertiary">GSTR-3B</span>
+                        <span id="status-gstr3b-val" class="font-semibold">—</span>
                     </div>
+                </div>
+            </div>
+
+            <!-- Client GSTIN / primary month-close tools -->
+            <div class="panel client-context-bar">
+                <div class="client-context-primary">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant shrink-0">Client GSTIN</span>
+                        <button type="button" id="edit-client-gstin-btn" title="Edit client GSTIN (required for ITC)"
+                            class="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-outline-variant hover:border-primary/40 transition-colors min-w-0">
+                            <span class="material-symbols-outlined text-[16px] text-primary shrink-0">badge</span>
+                            <span id="client-gstin-label" class="gstin-mono truncate text-on-surface">No GSTIN</span>
+                            <span class="material-symbols-outlined text-[14px] text-on-surface-variant shrink-0">edit</span>
+                        </button>
+                    </div>
+                    <div class="h-5 w-px bg-outline-variant hidden sm:block"></div>
+                    <button type="button" id="import-gstr2b-btn" title="Import GSTR-2B and reconcile purchase invoices"
+                        class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12px] font-bold border border-primary/30 text-primary hover:bg-primary/10 transition-colors">
+                        <span class="material-symbols-outlined text-[16px]">compare_arrows</span>
+                        Import GSTR-2B
+                    </button>
+                    <input type="file" id="gstr2b-file-input" accept=".json,.csv,application/json,text/csv" class="hidden"/>
+                    <span id="gstr2b-summary-chip" class="text-[11px] font-semibold text-on-surface-variant hidden md:inline" title="GSTR-2B reconciliation (approved eligible ITC)"></span>
+                    <button type="button" id="toggle-advanced-tools" class="advanced-toggle" aria-expanded="false" aria-controls="advanced-tools-panel">
+                        <span class="material-symbols-outlined text-[16px]" id="advanced-tools-chevron">expand_more</span>
+                        Advanced
+                    </button>
+                </div>
+                <div id="advanced-tools-panel" class="advanced-panel" hidden>
+                    <div class="advanced-label">Portal OTP · GSTIN lookup · bulk ITC</div>
+                    <button type="button" id="fetch-gstr2b-btn" title="Connect GST portal with OTP and pull live GSTR-2B"
+                        class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12px] font-bold border border-secondary/30 text-secondary hover:bg-secondary/10 transition-colors">
+                        <span class="material-symbols-outlined text-[16px]">cloud_download</span>
+                        Pull 2B (OTP)
+                    </button>
+                    <span id="gst-session-chip" class="text-[11px] font-semibold text-on-surface-variant" title="GST portal taxpayer session"></span>
+                    <button type="button" id="recompute-client-itc-btn" title="Recompute ITC for all invoices of this client"
+                        class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12px] font-bold border border-secondary/30 text-secondary hover:bg-secondary/10 transition-colors">
+                        <span class="material-symbols-outlined text-[16px]">calculate</span>
+                        Recompute ITC
+                    </button>
+                    <div class="gstin-lookup-wrap" title="Public GSTIN search via Sandbox / GSTN">
+                        <span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant shrink-0 hidden sm:inline">Lookup GSTIN</span>
+                        <input id="gstin-lookup-input" type="text" maxlength="15" placeholder="15-digit GSTIN"
+                            autocomplete="off" spellcheck="false" />
+                        <select id="gstin-lookup-fy" class="gstin-fy-select" title="Filing history financial year"></select>
+                        <button type="button" id="gstin-lookup-btn"
+                            class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12px] font-bold border border-secondary/30 text-secondary hover:bg-secondary/10 transition-colors">
+                            <span class="material-symbols-outlined text-[16px]">travel_explore</span>
+                            Search
+                        </button>
+                        <button type="button" id="gstin-lookup-client-btn" title="Look up current client GSTIN"
+                            class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold border border-outline-variant text-on-surface-variant hover:border-primary/40 hover:text-primary transition-colors">
+                            This client
+                        </button>
+                    </div>
+                    <div id="gstin-lookup-result" class="gstin-lookup-result" aria-live="polite"></div>
+                </div>
+            </div>
+
+            <!-- Month-close strip -->
+            <div id="month-close-strip" class="month-close-strip" aria-live="polite">
+                <div class="month-close-head">
+                    <span class="material-symbols-outlined month-close-icon">event_available</span>
+                    <div class="min-w-0">
+                        <div class="month-close-title">Month close</div>
+                        <div class="month-close-period" id="month-close-period">—</div>
+                    </div>
+                    <div id="month-close-ready-badge" class="month-close-ready is-pending">—</div>
+                </div>
+                <div class="month-close-stats">
+                    <div class="month-close-stat">
+                        <span class="lbl">Bills received</span>
+                        <span class="val" id="month-close-bills">—</span>
+                    </div>
+                    <div class="month-close-stat">
+                        <span class="lbl">Still need CA</span>
+                        <span class="val" id="month-close-need-ca">—</span>
+                    </div>
+                    <div class="month-close-stat">
+                        <span class="lbl">2B imported</span>
+                        <span class="val" id="month-close-2b-imported">—</span>
+                    </div>
+                    <div class="month-close-stat">
+                        <span class="lbl">2B matched</span>
+                        <span class="val is-ok" id="month-close-2b-matched">—</span>
+                    </div>
+                    <div class="month-close-stat">
+                        <span class="lbl">Missing in 2B</span>
+                        <span class="val is-warn" id="month-close-2b-missing">—</span>
+                    </div>
+                    <div class="month-close-stat">
+                        <span class="lbl">2B mismatch</span>
+                        <span class="val is-bad" id="month-close-2b-mismatch">—</span>
+                    </div>
+                </div>
+                <div class="month-close-blockers" id="month-close-blockers"></div>
+                <div class="month-close-steps" id="month-close-steps" aria-label="Month close checklist">
+                    <div class="month-close-step" data-step="bills">
+                        <span class="step-dot" id="step-bills-dot"></span>
+                        <div class="step-body">
+                            <div class="step-title">1. Bills in</div>
+                            <div class="step-sub" id="step-bills-sub">WhatsApp / uploads</div>
+                        </div>
+                    </div>
+                    <div class="month-close-step" data-step="gstr2b">
+                        <span class="step-dot" id="step-2b-dot"></span>
+                        <div class="step-body">
+                            <div class="step-title">2. Import 2B</div>
+                            <div class="step-sub" id="step-2b-sub">Reconcile purchases</div>
+                        </div>
+                    </div>
+                    <div class="month-close-step" data-step="queue">
+                        <span class="step-dot" id="step-queue-dot"></span>
+                        <div class="step-body">
+                            <div class="step-title">3. Clear queue</div>
+                            <div class="step-sub" id="step-queue-sub">CA exceptions</div>
+                        </div>
+                    </div>
+                    <div class="month-close-step" data-step="export">
+                        <span class="step-dot" id="step-export-dot"></span>
+                        <div class="step-body">
+                            <div class="step-title">4. Export draft</div>
+                            <div class="step-sub" id="step-export-sub">GSTR JSON</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="month-close-actions">
+                    <button type="button" id="month-close-review-btn" class="month-close-btn" title="Jump to Needs review">
+                        <span class="material-symbols-outlined text-[16px]">fact_check</span>
+                        Review queue
+                    </button>
+                    <button type="button" id="month-close-import-btn" class="month-close-btn" title="Import GSTR-2B file">
+                        <span class="material-symbols-outlined text-[16px]">compare_arrows</span>
+                        Import 2B
+                    </button>
+                    <button type="button" id="month-close-nudge-btn" class="month-close-btn" title="WhatsApp nudge to client">
+                        <span class="material-symbols-outlined text-[16px]">sms</span>
+                        Nudge client
+                    </button>
+                    <button type="button" id="month-close-export-btn" class="month-close-btn is-primary" title="Export GSTR draft JSON">
+                        <span class="material-symbols-outlined text-[16px]">file_export</span>
+                        Export draft
+                    </button>
                 </div>
             </div>
         </div>
 
-        <!-- ── KPI Cards Grid (4 columns) ── -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 fade-up">
+        <!-- ── KPI Cards Grid ── -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 fade-up fade-up-delay-1">
 
-            <!-- Pending -->
-            <div class="bg-surface border border-outline-variant rounded-xl p-5 hover:border-primary/40 hover:-translate-y-0.5 transition-all group shadow-lg shadow-black/20">
+            <div class="panel kpi-card p-5">
                 <div class="flex items-center justify-between mb-4">
-                    <span class="p-2 rounded-lg bg-tertiary/10 text-tertiary">
+                    <span class="kpi-icon p-2.5 rounded-[10px] bg-tertiary/10 text-tertiary border border-tertiary/15">
                         <span class="material-symbols-outlined text-[22px]">assignment_late</span>
                     </span>
-                    <span class="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">Pending</span>
+                    <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Needs review</span>
                 </div>
-                <div class="text-[26px] font-extrabold text-white" id="kpi-pending-count">—</div>
-                <div class="text-[12px] text-on-surface-variant mt-1 italic" id="kpi-pending-subtext">Audit required</div>
-                <div class="mt-2">
-                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-tertiary/10 text-tertiary border border-tertiary/20" id="kpi-pending-trend">+0 total</span>
+                <div class="text-[28px] font-extrabold text-white kpi-value" id="kpi-pending-count">—</div>
+                <div class="text-[12px] text-on-surface-variant mt-1" id="kpi-pending-subtext">Your CA queue</div>
+                <div class="mt-3">
+                    <span class="text-[10px] font-bold px-2.5 py-1 rounded-md bg-tertiary/10 text-tertiary border border-tertiary/20" id="kpi-pending-trend">+0 total</span>
                 </div>
             </div>
 
-            <!-- Total Taxable -->
-            <div class="bg-surface border border-outline-variant rounded-xl p-5 hover:border-primary/40 hover:-translate-y-0.5 transition-all group shadow-lg shadow-black/20">
+            <div class="panel kpi-card p-5">
                 <div class="flex items-center justify-between mb-4">
-                    <span class="p-2 rounded-lg bg-primary/10 text-primary">
+                    <span class="kpi-icon p-2.5 rounded-[10px] bg-primary/10 text-primary border border-primary/15">
                         <span class="material-symbols-outlined text-[22px]">receipt_long</span>
                     </span>
-                    <span class="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">Total Taxable</span>
+                    <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest" id="kpi-sales-label">Taxable Value</span>
                 </div>
-                <div class="text-[26px] font-extrabold text-white" id="kpi-sales-total">₹0</div>
+                <div class="text-[28px] font-extrabold text-white kpi-value" id="kpi-sales-total">₹0</div>
                 <div class="text-[12px] text-secondary mt-1 flex items-center gap-1 font-semibold" id="kpi-sales-subtext">
                     <span class="material-symbols-outlined text-[14px]">trending_up</span> this period
                 </div>
-                <div class="mt-2">
-                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">+12% vs last month</span>
+                <div class="mt-3">
+                    <span class="text-[10px] font-bold px-2.5 py-1 rounded-md bg-primary/10 text-primary border border-primary/20" id="kpi-sales-chip">Sales + purchases</span>
                 </div>
             </div>
 
-            <!-- ITC Claimable -->
-            <div class="bg-surface border border-outline-variant rounded-xl p-5 hover:border-primary/40 hover:-translate-y-0.5 transition-all group shadow-lg shadow-black/20">
+            <div class="panel kpi-card p-5">
                 <div class="flex items-center justify-between mb-4">
-                    <span class="p-2 rounded-lg bg-secondary/10 text-secondary">
+                    <span class="kpi-icon p-2.5 rounded-[10px] bg-secondary/10 text-secondary border border-secondary/15">
                         <span class="material-symbols-outlined text-[22px]">verified_user</span>
                     </span>
-                    <span class="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">ITC Claimable</span>
+                    <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">ITC Claimable</span>
                 </div>
-                <div class="text-[26px] font-extrabold text-white" id="kpi-itc-total">₹0</div>
-                <div class="text-[12px] text-on-surface-variant mt-1 italic" id="kpi-itc-subtext">Provisional calculation</div>
-                <div class="mt-2">
-                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-secondary/10 text-secondary border border-secondary/20">94.1% matched</span>
+                <div class="text-[28px] font-extrabold text-white kpi-value" id="kpi-itc-total">₹0</div>
+                <div class="text-[12px] text-on-surface-variant mt-1" id="kpi-itc-subtext">Line-level eligible GST · approved · buyer match</div>
+                <div class="mt-3 flex flex-wrap gap-2">
+                    <span class="text-[10px] font-bold px-2.5 py-1 rounded-md bg-secondary/10 text-secondary border border-secondary/20" id="kpi-itc-chip">Approved invoices</span>
+                    <span class="text-[10px] font-bold px-2.5 py-1 rounded-md bg-tertiary/10 text-tertiary border border-tertiary/20" id="kpi-itc-provisional" style="display:none;">Provisional ₹0</span>
                 </div>
             </div>
 
-            <!-- Mismatch / Flagged -->
-            <div class="bg-surface border border-outline-variant rounded-xl p-5 hover:border-error/30 hover:-translate-y-0.5 transition-all group shadow-lg shadow-black/20">
+            <div class="panel kpi-card p-5">
                 <div class="flex items-center justify-between mb-4">
-                    <span class="p-2 rounded-lg bg-error/10 text-error">
+                    <span class="kpi-icon p-2.5 rounded-[10px] bg-error/10 text-error border border-error/15">
                         <span class="material-symbols-outlined text-[22px]">report</span>
                     </span>
-                    <span class="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">Flagged</span>
+                    <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Flagged</span>
                 </div>
-                <div class="text-[26px] font-extrabold text-white" id="kpi-flagged-count">—</div>
-                <div class="text-[12px] text-error mt-1 font-semibold italic">Calculation errors detected</div>
-                <div class="mt-2">
-                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-error/10 text-error border border-error/20">Needs CA Review</span>
+                <div class="text-[28px] font-extrabold text-white kpi-value" id="kpi-flagged-count">—</div>
+                <div class="text-[12px] text-error mt-1 font-medium">Math / GSTIN issues</div>
+                <div class="mt-3">
+                    <span class="text-[10px] font-bold px-2.5 py-1 rounded-md bg-error/10 text-error border border-error/20">Needs CA Review</span>
                 </div>
             </div>
         </div>
 
-        <!-- ── Net GST Payable Summary Row ── -->
-        <div class="bg-surface border border-outline-variant rounded-xl p-5 fade-up shadow-lg shadow-black/20" id="net-gst-row">
+        <!-- ── Period summary (collapsed by default — less noise for CA) ── -->
+        <div class="fade-up fade-up-delay-2">
+            <button type="button" id="toggle-period-summary" class="flex items-center gap-2 text-[12px] font-bold text-on-surface-variant hover:text-on-surface transition-colors mb-2">
+                <span class="material-symbols-outlined text-[18px]" id="period-summary-chevron">expand_more</span>
+                Period totals (ITC, GST, trends)
+            </button>
+            <div id="period-summary-panel" class="space-y-4" style="display:none;">
+        <!-- ── Net GST Payable Summary Row (pr keeps clear of chat FAB) ── -->
+        <div class="panel p-5 pr-20" id="net-gst-row">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div class="flex items-center gap-4">
-                    <span class="p-2.5 rounded-xl bg-primary/10 text-primary">
+                <div class="flex items-center gap-4 min-w-0">
+                    <span class="p-2.5 rounded-[12px] bg-primary/10 text-primary border border-primary/15 shrink-0">
                         <span class="material-symbols-outlined text-[24px]" style="font-variation-settings:'FILL' 1;">account_balance</span>
                     </span>
                     <div>
-                        <div class="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-0.5">Net GST Payable this period</div>
-                        <div class="text-[11px] text-on-surface-variant italic">= Tax Liability on Sales &minus; Eligible ITC</div>
+                        <div class="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-0.5" id="net-gst-title">Net GST Payable this period</div>
+                        <div class="text-[12px] text-on-surface-variant" id="net-gst-subtitle">Approved sales GST − approved eligible ITC</div>
                     </div>
                 </div>
-                <!-- Equation display -->
-                <div class="flex items-center gap-3 flex-wrap">
-                    <div class="text-center">
+                <div class="flex items-center gap-3 flex-wrap justify-center">
+                    <div class="text-center px-3">
                         <div class="text-[11px] text-on-surface-variant mb-0.5">GST Liability</div>
-                        <div class="text-[16px] font-extrabold text-error" id="net-sales-gst">₹0</div>
+                        <div class="text-[17px] font-extrabold text-error kpi-value" id="net-sales-gst">₹0</div>
                     </div>
-                    <span class="text-[20px] font-bold text-on-surface-variant">−</span>
-                    <div class="text-center">
+                    <span class="text-[18px] font-bold text-on-surface-variant">−</span>
+                    <div class="text-center px-3">
                         <div class="text-[11px] text-on-surface-variant mb-0.5">Eligible ITC</div>
-                        <div class="text-[16px] font-extrabold text-secondary" id="net-itc-amount">₹0</div>
+                        <div class="text-[17px] font-extrabold text-secondary kpi-value" id="net-itc-amount">₹0</div>
                     </div>
-                    <span class="text-[20px] font-bold text-on-surface-variant">=</span>
-                    <div class="text-center">
-                        <div class="text-[11px] text-on-surface-variant mb-0.5">Net Payable</div>
-                        <div class="text-[20px] font-extrabold text-primary" id="net-gst-payable">₹0</div>
+                    <span class="text-[18px] font-bold text-on-surface-variant">=</span>
+                    <div class="text-center px-3 py-2 rounded-[10px] bg-primary/10 border border-primary/20">
+                        <div class="text-[11px] text-on-surface-variant mb-0.5" id="net-gst-result-label">Net Payable</div>
+                        <div class="text-[20px] font-extrabold text-primary kpi-value" id="net-gst-payable">₹0</div>
                     </div>
                 </div>
-                <!-- Blocked ITC pill -->
-                <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-error/8 border border-error/20">
+                <div class="flex items-center gap-2 px-3 py-2 rounded-[10px] bg-error/8 border border-error/20 shrink-0 mr-2">
                     <span class="material-symbols-outlined text-error text-[16px]">block</span>
                     <div>
                         <div class="text-[10px] font-bold text-error uppercase tracking-wider">Blocked ITC</div>
-                        <div class="text-[14px] font-extrabold text-error" id="net-itc-blocked">₹0</div>
+                        <div class="text-[14px] font-extrabold text-error kpi-value whitespace-nowrap" id="net-itc-blocked">₹0</div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 px-3 py-2 rounded-[10px] bg-secondary/8 border border-secondary/20 shrink-0">
+                    <span class="material-symbols-outlined text-secondary text-[16px]">verified</span>
+                    <div>
+                        <div class="text-[10px] font-bold text-secondary uppercase tracking-wider">2B Matched ITC</div>
+                        <div class="text-[14px] font-extrabold text-secondary kpi-value whitespace-nowrap" id="net-itc-2b-matched">₹0</div>
                     </div>
                 </div>
             </div>
-            <!-- ITC utilisation bar -->
             <div class="mt-4">
                 <div class="flex justify-between text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">
                     <span>ITC Utilisation</span>
@@ -576,20 +2036,20 @@
                     <div class="progress-bar bg-green" id="itc-utilisation-bar" style="width:0%;"></div>
                 </div>
                 <div class="flex items-center gap-4 mt-2 text-[10px] text-on-surface-variant">
-                    <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-secondary inline-block"></span>CGST: <span id="net-itc-cgst" class="font-bold text-secondary">₹0</span></span>
-                    <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-primary inline-block"></span>SGST: <span id="net-itc-sgst" class="font-bold text-primary">₹0</span></span>
-                    <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-tertiary inline-block"></span>IGST: <span id="net-itc-igst" class="font-bold text-tertiary">₹0</span></span>
+                    <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-sm bg-secondary inline-block"></span>CGST: <span id="net-itc-cgst" class="font-bold text-secondary">₹0</span></span>
+                    <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-sm bg-primary inline-block"></span>SGST: <span id="net-itc-sgst" class="font-bold text-primary">₹0</span></span>
+                    <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-sm bg-tertiary inline-block"></span>IGST: <span id="net-itc-igst" class="font-bold text-tertiary">₹0</span></span>
                 </div>
             </div>
         </div>
 
-        <!-- ── ITC Trend Sparkline (real Chart.js) ── -->
-        <div class="bg-surface border border-outline-variant rounded-xl p-5 fade-up shadow-lg shadow-black/20">
+        <!-- ── ITC Trend Sparkline ── -->
+        <div class="panel p-5 fade-up fade-up-delay-3">
             <div class="flex items-center justify-between mb-4">
                 <div>
                     <h3 class="font-bold text-[14px] text-white">ITC Trend — Last 12 Months</h3>
                     <div class="flex items-baseline gap-2 mt-1">
-                        <span class="text-[22px] font-extrabold text-primary" id="sparkline-total-label">₹0</span>
+                        <span class="text-[22px] font-extrabold text-primary kpi-value" id="sparkline-total-label">₹0</span>
                         <span class="text-[12px] font-bold text-secondary flex items-center gap-0.5" id="sparkline-trend-label">
                             <span class="material-symbols-outlined text-[14px]">trending_up</span> Loading…
                         </span>
@@ -597,87 +2057,84 @@
                 </div>
                 <div class="flex items-center gap-2">
                     <div class="hidden md:flex items-center gap-4 text-[11px] text-on-surface-variant mr-4">
-                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-primary inline-block"></span>ITC Eligible</span>
-                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-error inline-block"></span>Blocked</span>
-                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-secondary inline-block"></span>Sales GST</span>
+                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-primary inline-block"></span>ITC Eligible</span>
+                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-error inline-block"></span>Blocked</span>
+                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-secondary inline-block"></span>Sales GST</span>
                     </div>
-                    <p class="text-[11px] font-bold text-on-surface-variant" id="filing-status-title">Filing Status</p>
+                    <p class="text-[11px] font-bold text-on-surface-variant" id="filing-status-title">Review readiness</p>
                 </div>
             </div>
-            <!-- Real Chart.js canvas -->
-            <div class="relative" style="height:110px;">
+            <div class="relative" style="height:120px;">
                 <canvas id="itc-sparkline-chart"></canvas>
             </div>
         </div>
+            </div><!-- /period-summary-panel -->
+        </div>
 
         <!-- ── Invoice Table ── -->
-        <div class="bg-surface border border-outline-variant rounded-xl overflow-hidden shadow-2xl shadow-black/30 fade-up">
+        <div class="panel overflow-hidden fade-up">
 
-            <!-- Table Toolbar -->
-            <div class="p-4 border-b border-outline-variant flex flex-col md:flex-row md:items-center justify-between gap-4" style="background:rgba(29,31,41,0.5);">
-                <div class="flex items-center gap-3">
-                    <!-- Tab filters -->
-                    <div class="flex items-center gap-0.5 p-1 rounded-lg bg-background border border-outline-variant">
-                        <button class="tab-btn active" data-filter="all">All</button>
+            <div class="p-4 border-b border-outline-variant flex flex-col md:flex-row md:items-center justify-between gap-4 bg-surface-container/40">
+                <div class="flex items-center gap-3 flex-wrap">
+                    <div class="flex items-center gap-0.5 p-1 rounded-[10px] bg-background/80 border border-outline-variant">
+                        <button class="tab-btn active" data-filter="exceptions">Needs review</button>
                         <button class="tab-btn" data-filter="approved">Approved</button>
-                        <button class="tab-btn" data-filter="flagged">Flagged</button>
-                        <button class="tab-btn" data-filter="pending_review">Pending</button>
+                        <button class="tab-btn" data-filter="all">All bills</button>
                     </div>
-                    <!-- Category filter -->
                     <div class="relative">
                         <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[16px] text-on-surface-variant">filter_alt</span>
-                        <select class="bg-surface border border-outline-variant rounded-md pl-8 pr-8 py-1.5 text-[12px] font-semibold text-on-surface appearance-none focus:ring-1 focus:ring-primary focus:border-primary outline-none min-w-[130px] filter-toggle-btn"
-                                style="color:#cbc3d7;">
-                            <option>All Categories</option>
-                            <option>Office Supplies</option>
-                            <option>Electronics & Hardware</option>
-                            <option>Software & SaaS</option>
-                            <option>Professional & Consulting Services</option>
-                            <option>Rent & Infrastructure</option>
-                            <option>Food & Beverages</option>
-                            <option>Motor Vehicle & Cab Bookings</option>
-                            <option>Travel & Lodging</option>
-                            <option>Logistics & Freight</option>
-                            <option>Raw Materials</option>
-                            <option>Marketing & Advertising</option>
-                            <option>Utilities (Electricity/Water/Internet)</option>
-                            <option>Other</option>
+                        <select id="category-filter" class="bg-surface border border-outline-variant rounded-[10px] pl-8 pr-8 py-2 text-[12px] font-semibold text-on-surface appearance-none focus:ring-1 focus:ring-primary focus:border-primary outline-none min-w-[140px] filter-toggle-btn">
+                            <option value="">All Categories</option>
+                            <option value="Office Supplies">Office Supplies</option>
+                            <option value="Electronics & Hardware">Electronics & Hardware</option>
+                            <option value="Software & SaaS">Software & SaaS</option>
+                            <option value="Professional & Consulting Services">Professional & Consulting Services</option>
+                            <option value="Rent & Infrastructure">Rent & Infrastructure</option>
+                            <option value="Food & Beverages">Food & Beverages</option>
+                            <option value="Motor Vehicle & Cab Bookings">Motor Vehicle & Cab Bookings</option>
+                            <option value="Travel & Lodging">Travel & Lodging</option>
+                            <option value="Logistics & Freight">Logistics & Freight</option>
+                            <option value="Raw Materials">Raw Materials</option>
+                            <option value="Marketing & Advertising">Marketing & Advertising</option>
+                            <option value="Utilities (Electricity/Water/Internet)">Utilities (Electricity/Water/Internet)</option>
+                            <option value="Other">Other</option>
                         </select>
                         <span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-[16px] text-on-surface-variant pointer-events-none">expand_more</span>
                     </div>
                 </div>
                 <div class="flex items-center gap-3">
-                    <span class="text-[12px] text-on-surface-variant">Showing from database</span>
-                    <div class="flex items-center border border-outline-variant rounded-md overflow-hidden bg-background">
-                        <button class="p-1.5 hover:bg-surface transition-colors disabled:opacity-30 border-r border-outline-variant" disabled>
-                            <span class="material-symbols-outlined text-[18px] text-on-surface-variant">chevron_left</span>
-                        </button>
-                        <button class="p-1.5 hover:bg-surface transition-colors">
-                            <span class="material-symbols-outlined text-[18px] text-on-surface-variant">chevron_right</span>
-                        </button>
+                    <span class="text-[11px] text-on-surface-variant hidden lg:inline" id="queue-shortcut-hint" title="When audit drawer is open">A approve · R reject · J/K next</span>
+                    <div id="bulk-bar" class="bulk-bar" style="display:none;">
+                        <span id="bulk-selected-count" class="text-[12px] font-bold text-secondary">0 selected</span>
+                        <button type="button" id="bulk-approve-btn" class="bulk-bar-btn is-approve">Approve selected</button>
+                        <button type="button" id="bulk-clear-btn" class="bulk-bar-btn">Clear</button>
                     </div>
                 </div>
             </div>
 
-            <!-- Table -->
             <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
+                <table class="w-full text-left border-collapse queue-table">
                     <thead>
-                        <tr class="border-b border-outline-variant" style="background:rgba(29,31,41,0.8);">
-                            <th class="py-4 px-6 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest whitespace-nowrap">Invoice #</th>
-                            <th class="py-4 px-6 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Supplier / GSTIN</th>
-                            <th class="py-4 px-6 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Date</th>
-                            <th class="py-4 px-6 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Category</th>
-                            <th class="py-4 px-6 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest text-right">Taxable</th>
-                            <th class="py-4 px-6 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest text-right">Total (₹)</th>
-                            <th class="py-4 px-6 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest text-center">Status</th>
-                            <th class="py-4 px-6 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest text-right">Action</th>
+                        <tr class="border-b border-outline-variant bg-surface-container/60">
+                            <th class="py-3 px-3 w-10">
+                                <input type="checkbox" id="select-all-invoices" title="Select all in this view" class="queue-check"/>
+                            </th>
+                            <th class="py-3 px-3 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest whitespace-nowrap">Invoice #</th>
+                            <th class="py-3 px-3 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Supplier / Why</th>
+                            <th class="py-3 px-3 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Date</th>
+                            <th class="py-3 px-3 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Category</th>
+                            <th class="py-3 px-3 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest text-right">Taxable</th>
+                            <th class="py-3 px-3 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest text-right">Total (₹)</th>
+                            <th class="py-3 px-3 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest text-center">Status</th>
+                            <th class="py-3 px-3 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="invoice-rows-body" class="divide-y divide-outline-variant/60 text-sm">
                         <tr>
-                            <td colspan="8" class="empty-state loading-pulse">
-                                <span class="material-symbols-outlined loading-icon" style="font-size:32px;">sync</span>
+                            <td colspan="9" class="empty-state loading-pulse">
+                                <div class="empty-illu mx-auto">
+                                    <span class="material-symbols-outlined" style="font-size:28px;">sync</span>
+                                </div>
                                 <p class="text-[14px] font-medium">Loading invoice records…</p>
                             </td>
                         </tr>
@@ -685,19 +2142,9 @@
                 </table>
             </div>
 
-            <!-- Table Footer -->
-            <div class="p-4 border-t border-outline-variant flex items-center justify-between" style="background:rgba(29,31,41,0.5);">
-                <button class="flex items-center gap-2 text-[13px] font-bold text-on-surface-variant hover:text-white transition-colors">
-                    <span class="material-symbols-outlined text-[18px]">history</span>
-                    Audit Log
-                </button>
-                <div class="flex items-center gap-1">
-                    <button class="w-8 h-8 rounded flex items-center justify-center bg-primary text-on-primary text-[12px] font-bold shadow-lg shadow-primary/20">1</button>
-                    <button class="w-8 h-8 rounded flex items-center justify-center text-on-surface-variant hover:bg-background text-[12px] font-bold transition-colors">2</button>
-                    <button class="w-8 h-8 rounded flex items-center justify-center text-on-surface-variant hover:bg-background text-[12px] font-bold transition-colors">3</button>
-                    <span class="px-1 text-on-surface-variant text-[12px]">…</span>
-                    <button class="w-8 h-8 rounded flex items-center justify-center text-on-surface-variant hover:bg-background text-[12px] font-bold transition-colors">12</button>
-                </div>
+            <div class="p-3 border-t border-outline-variant flex items-center justify-between bg-surface-container/40 gap-3 flex-wrap">
+                <span class="text-[12px] text-on-surface-variant">Select rows for bulk approve · open a bill then use A / R / J / K</span>
+                <span class="text-[12px] font-semibold text-on-surface-variant" id="queue-view-count">—</span>
             </div>
         </div>
     </div>
@@ -709,14 +2156,25 @@
 <div id="audit-drawer-overlay"></div>
 <aside id="audit-drawer">
     <!-- Header -->
-    <div class="flex items-center justify-between px-6 py-4 border-b border-outline-variant shrink-0" style="background:#1d1f29;">
-        <div>
-            <h3 class="font-bold text-[16px] text-white" id="drawer-invoice-num">Audit Invoice #—</h3>
+    <div class="flex items-center justify-between px-6 py-4 border-b border-outline-variant shrink-0" style="background:#141A22;">
+        <div class="min-w-0">
+            <h3 class="font-bold text-[16px] text-white truncate" id="drawer-invoice-num">Audit Invoice #—</h3>
             <span class="text-[12px] text-on-surface-variant" id="drawer-invoice-id">DB ID: —</span>
         </div>
-        <button id="close-drawer-btn" class="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant hover:text-white hover:bg-surface-container-high border border-transparent hover:border-outline-variant transition-all">
-            <span class="material-symbols-outlined text-[20px]">close</span>
-        </button>
+        <div class="flex items-center gap-2 shrink-0">
+            <div class="drawer-nav">
+                <button type="button" id="drawer-prev-btn" class="drawer-nav-btn" title="Previous (K)">
+                    <span class="material-symbols-outlined text-[18px]">keyboard_arrow_up</span>
+                </button>
+                <span id="drawer-nav-pos" class="drawer-nav-pos">—</span>
+                <button type="button" id="drawer-next-btn" class="drawer-nav-btn" title="Next (J)">
+                    <span class="material-symbols-outlined text-[18px]">keyboard_arrow_down</span>
+                </button>
+            </div>
+            <button id="close-drawer-btn" class="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant hover:text-white hover:bg-surface-container-high border border-transparent hover:border-outline-variant transition-all">
+                <span class="material-symbols-outlined text-[20px]">close</span>
+            </button>
+        </div>
     </div>
 
     <!-- Body -->
@@ -724,7 +2182,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 h-full">
 
             <!-- Document Viewer -->
-            <div class="flex flex-col border-r border-outline-variant" style="background:#11131c; min-height: 400px;">
+            <div class="doc-viewer-pane">
                 <div class="flex items-center justify-between px-4 py-3 border-b border-outline-variant shrink-0">
                     <span class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Original Document</span>
                     <div class="flex items-center gap-1">
@@ -733,35 +2191,42 @@
                         <button id="rotate-btn"   title="Rotate"   class="w-7 h-7 rounded flex items-center justify-center text-on-surface-variant hover:text-white hover:bg-surface-container-high transition-colors"><span class="material-symbols-outlined text-[16px]">rotate_right</span></button>
                     </div>
                 </div>
-                <div class="flex-1 flex items-center justify-center p-4 overflow-hidden">
-                    <img id="invoice-doc-img" src="" alt="No invoice preview" class="invoice-preview-image"/>
+                <div id="invoice-doc-viewport">
+                    <div class="doc-stage" id="doc-stage">
+                        <img id="invoice-doc-img" src="" alt="No invoice preview" class="invoice-preview-image"/>
+                        <iframe id="invoice-doc-pdf" class="invoice-preview-pdf" title="PDF invoice preview" style="display:none;"></iframe>
+                    </div>
+                    <div id="invoice-doc-fallback" class="invoice-doc-fallback" style="display:none;">
+                        <a id="invoice-doc-download" href="#" target="_blank" rel="noopener" class="text-[12px] font-semibold text-primary hover:underline">Open original document</a>
+                    </div>
                 </div>
             </div>
 
-            <!-- Audit Forms -->
-            <div class="flex flex-col overflow-y-auto p-4 gap-4 bg-surface-container">
+            <!-- Audit Forms: issue first → decide → details collapsed -->
+            <div class="audit-forms-pane flex flex-col overflow-y-auto p-4 gap-3 bg-surface-container">
 
-                <!-- System Alerts -->
-                <div id="audit-alerts-card" class="rounded-lg border border-error/30 p-4" style="display:none; background:rgba(255,180,171,0.06);">
-                    <h4 class="text-[11px] font-bold text-error uppercase tracking-wider flex items-center gap-2 mb-3">
-                        <span class="material-symbols-outlined text-[16px]">warning</span> System Validation Checks
-                    </h4>
-                    <ul id="audit-alerts-list" class="space-y-1.5 text-[13px] text-error list-disc list-inside"></ul>
+                <div id="drawer-primary-issue" class="drawer-issue is-warn" role="status">
+                    <div class="drawer-issue-head">
+                        <span class="material-symbols-outlined drawer-issue-icon">priority_high</span>
+                        <div class="min-w-0">
+                            <div class="drawer-issue-label">Why this needs you</div>
+                            <div class="drawer-issue-title" id="drawer-issue-title">Loading…</div>
+                        </div>
+                    </div>
+                    <div class="drawer-issue-more" id="drawer-issue-more" style="display:none;"></div>
                 </div>
 
                 <form id="audit-form" class="audit-form flex flex-col gap-3">
-                    <!-- Invoice Details -->
-                    <div class="rounded-lg border border-outline-variant p-4" style="background:#11131c;">
-                        <h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-3 pb-2 border-b border-outline-variant">Invoice Details</h4>
+                    <div class="rounded-lg border border-outline-variant p-3" style="background:#0E131A;">
+                        <h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2">Invoice</h4>
                         <div class="grid grid-cols-2 gap-3">
                             <div><label for="f-inv-num">Invoice Number</label><input type="text" id="f-inv-num"/></div>
                             <div><label for="f-inv-date">Invoice Date</label><input type="date" id="f-inv-date"/></div>
                         </div>
                     </div>
 
-                    <!-- Supplier -->
-                    <div class="rounded-lg border border-outline-variant p-4" style="background:#11131c;">
-                        <h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-3 pb-2 border-b border-outline-variant">Supplier Details</h4>
+                    <div class="rounded-lg border border-outline-variant p-3" style="background:#0E131A;">
+                        <h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2">Supplier</h4>
                         <div class="flex flex-col gap-3">
                             <div><label for="f-sup-name">Supplier Legal Name</label><input type="text" id="f-sup-name"/></div>
                             <div>
@@ -772,69 +2237,8 @@
                         </div>
                     </div>
 
-                    <!-- Recipient -->
-                    <div class="rounded-lg border border-outline-variant p-4" style="background:#11131c;">
-                        <h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-3 pb-2 border-b border-outline-variant">Recipient Details</h4>
-                        <div class="flex flex-col gap-3">
-                            <div><label for="f-rec-name">Recipient Name</label><input type="text" id="f-rec-name"/></div>
-                            <div>
-                                <label for="f-rec-gst">Recipient GSTIN</label>
-                                <input type="text" id="f-rec-gst" class="gstin-input uppercase"/>
-                                <span class="validation-label" id="f-rec-gst-val"></span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Categorisation -->
-                    <div class="rounded-lg border border-outline-variant p-4" style="background:#11131c;">
-                        <h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-3 pb-2 border-b border-outline-variant">Categorisation & Supply</h4>
-                        <div class="grid grid-cols-2 gap-3 mb-3">
-                            <div>
-                                <label for="f-category">Business Category</label>
-                                <select id="f-category">
-                                    <option value="Office Supplies">Office Supplies</option>
-                                    <option value="Electronics & Hardware">Electronics & Hardware</option>
-                                    <option value="Software & SaaS">Software & SaaS</option>
-                                    <option value="Professional & Consulting Services">Professional Services</option>
-                                    <option value="Rent & Infrastructure">Rent & Infrastructure</option>
-                                    <option value="Food & Beverages">Food & Beverages</option>
-                                    <option value="Motor Vehicle & Cab Bookings">Motor Vehicle</option>
-                                    <option value="Travel & Lodging">Travel & Lodging</option>
-                                    <option value="Logistics & Freight">Logistics & Freight</option>
-                                    <option value="Raw Materials">Raw Materials</option>
-                                    <option value="Marketing & Advertising">Marketing & Advertising</option>
-                                    <option value="Utilities">Utilities</option>
-                                    <option value="Other">Other</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="f-supply-type">Supply Type</label>
-                                <select id="f-supply-type">
-                                    <option value="INTRA-STATE">INTRA-STATE</option>
-                                    <option value="INTER-STATE">INTER-STATE</option>
-                                    <option value="UNKNOWN">UNKNOWN</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label for="f-itc-eligible">ITC Claim Status</label>
-                                <select id="f-itc-eligible">
-                                    <option value="true">Eligible</option>
-                                    <option value="false">Blocked / Ineligible</option>
-                                </select>
-                            </div>
-                            <div><label for="f-pos">Place of Supply (POS)</label><input type="text" id="f-pos"/></div>
-                        </div>
-                        <div id="itc-reason-group" class="mt-3">
-                            <label for="f-itc-reason">Ineligibility Reason</label>
-                            <textarea id="f-itc-reason" rows="2"></textarea>
-                        </div>
-                    </div>
-
-                    <!-- Amounts -->
-                    <div class="rounded-lg border border-outline-variant p-4" style="background:#11131c;">
-                        <h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-3 pb-2 border-b border-outline-variant">Amounts Breakdown</h4>
+                    <div class="rounded-lg border border-outline-variant p-3" style="background:#0E131A;">
+                        <h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2">Amounts</h4>
                         <div class="grid grid-cols-2 gap-3 mb-3">
                             <div><label for="f-taxable">Taxable Value (₹)</label><input type="number" step="0.01" id="f-taxable"/></div>
                             <div><label for="f-grand">Grand Total (₹)</label><input type="number" step="0.01" id="f-grand"/></div>
@@ -845,32 +2249,174 @@
                             <div><label for="f-igst">IGST (₹)</label><input type="number" step="0.01" id="f-igst"/></div>
                         </div>
                     </div>
+
+                    <details class="drawer-fold" id="drawer-fold-itc">
+                        <summary>
+                            <span class="material-symbols-outlined text-[16px]">playlist_add_check</span>
+                            Line-level ITC
+                            <span id="line-itc-summary" class="drawer-fold-meta"></span>
+                        </summary>
+                        <div id="line-itc-card" class="drawer-fold-body" style="display:none;">
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left" style="border-collapse:collapse;">
+                                    <thead>
+                                        <tr class="text-[10px] uppercase tracking-wider text-on-surface-variant">
+                                            <th class="py-1.5 pr-2 font-bold">Item</th>
+                                            <th class="py-1.5 pr-2 font-bold">Cat</th>
+                                            <th class="py-1.5 pr-2 font-bold text-right">GST</th>
+                                            <th class="py-1.5 font-bold">ITC</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="line-itc-body" class="text-[12px]"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </details>
+
+                    <details class="drawer-fold" id="drawer-fold-parties">
+                        <summary>
+                            <span class="material-symbols-outlined text-[16px]">badge</span>
+                            Recipient, category &amp; ITC status
+                        </summary>
+                        <div class="drawer-fold-body flex flex-col gap-3">
+                            <div class="rounded-lg border border-outline-variant p-3" style="background:#0d1018;">
+                                <h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2">Recipient</h4>
+                                <div class="flex flex-col gap-3">
+                                    <div><label for="f-rec-name">Recipient Name</label><input type="text" id="f-rec-name"/></div>
+                                    <div>
+                                        <label for="f-rec-gst">Recipient GSTIN</label>
+                                        <input type="text" id="f-rec-gst" class="gstin-input uppercase"/>
+                                        <span class="validation-label" id="f-rec-gst-val"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="rounded-lg border border-outline-variant p-3" style="background:#0d1018;">
+                                <h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2">Supply &amp; ITC</h4>
+                                <div class="grid grid-cols-2 gap-3 mb-3">
+                                    <div>
+                                        <label for="f-category">Business Category</label>
+                                        <select id="f-category">
+                                            <option value="Office Supplies">Office Supplies</option>
+                                            <option value="Electronics & Hardware">Electronics & Hardware</option>
+                                            <option value="Software & SaaS">Software & SaaS</option>
+                                            <option value="Professional & Consulting Services">Professional Services</option>
+                                            <option value="Rent & Infrastructure">Rent & Infrastructure</option>
+                                            <option value="Food & Beverages">Food & Beverages</option>
+                                            <option value="Motor Vehicle & Cab Bookings">Motor Vehicle</option>
+                                            <option value="Travel & Lodging">Travel & Lodging</option>
+                                            <option value="Logistics & Freight">Logistics & Freight</option>
+                                            <option value="Raw Materials">Raw Materials</option>
+                                            <option value="Marketing & Advertising">Marketing & Advertising</option>
+                                            <option value="Utilities (Electricity/Water/Internet)">Utilities</option>
+                                            <option value="Club / Fitness / Wellness">Club / Fitness / Wellness</option>
+                                            <option value="Works Contract / Construction">Works Contract / Construction</option>
+                                            <option value="Personal Consumption">Personal Consumption</option>
+                                            <option value="Free Samples / Gifts / Write-off">Free Samples / Gifts / Write-off</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label for="f-supply-type">Supply Type</label>
+                                        <select id="f-supply-type">
+                                            <option value="INTRA-STATE">INTRA-STATE</option>
+                                            <option value="INTER-STATE">INTER-STATE</option>
+                                            <option value="UNKNOWN">UNKNOWN</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label for="f-itc-eligible">ITC Claim Status</label>
+                                        <select id="f-itc-eligible">
+                                            <option value="true">Eligible</option>
+                                            <option value="partial">Partial (mixed lines)</option>
+                                            <option value="false">Blocked / Ineligible</option>
+                                        </select>
+                                    </div>
+                                    <div><label for="f-pos">Place of Supply (POS)</label><input type="text" id="f-pos"/></div>
+                                </div>
+                                <div id="itc-reason-group" class="mt-3">
+                                    <label for="f-itc-reason">Ineligibility Reason</label>
+                                    <textarea id="f-itc-reason" rows="2"></textarea>
+                                </div>
+                                <div class="mt-3">
+                                    <button type="button" id="recompute-itc-btn" class="flex items-center gap-2 px-3 py-2 rounded-md text-[12px] font-bold text-secondary border border-secondary/30 hover:bg-secondary/10 transition-all">
+                                        <span class="material-symbols-outlined text-[16px]">calculate</span> Recompute ITC (Sec 17(5))
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </details>
+
+                    <details class="drawer-fold" id="drawer-fold-portal">
+                        <summary>
+                            <span class="material-symbols-outlined text-[16px]">travel_explore</span>
+                            GSTN portal checks
+                        </summary>
+                        <div class="drawer-fold-body flex flex-col gap-3">
+                            <div id="supplier-portal-check" class="supplier-portal-check" aria-live="polite">
+                                <div class="spc-head">
+                                    <span class="material-symbols-outlined text-[14px]">travel_explore</span>
+                                    Supplier GSTN
+                                    <button type="button" id="supplier-portal-recheck-btn" class="spc-recheck" title="Re-check supplier GSTIN on GSTN">Recheck</button>
+                                </div>
+                                <div id="supplier-portal-check-body" class="spc-body">Waiting…</div>
+                            </div>
+                            <div id="recipient-portal-check" class="supplier-portal-check" aria-live="polite">
+                                <div class="spc-head">
+                                    <span class="material-symbols-outlined text-[14px]">travel_explore</span>
+                                    Recipient GSTN
+                                    <button type="button" id="recipient-portal-recheck-btn" class="spc-recheck" title="Re-check recipient GSTIN on GSTN">Recheck</button>
+                                </div>
+                                <div id="recipient-portal-check-body" class="spc-body">Waiting…</div>
+                            </div>
+                        </div>
+                    </details>
                 </form>
 
-                <!-- CA Modification History -->
-                <div class="rounded-lg border border-outline-variant p-4" style="background:#11131c;">
-                    <h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-3 flex items-center gap-2">
-                        <span class="material-symbols-outlined text-[14px]">history</span> CA Modification History
-                    </h4>
-                    <div id="drawer-logs-timeline">
-                        <span class="timeline-empty">No CA overrides recorded yet.</span>
+                <details class="drawer-fold" id="drawer-fold-alerts">
+                    <summary>
+                        <span class="material-symbols-outlined text-[16px]">warning</span>
+                        All validation checks
+                        <span class="drawer-fold-meta" id="drawer-alerts-count"></span>
+                    </summary>
+                    <div id="audit-alerts-card" class="drawer-fold-body" style="display:none;">
+                        <ul id="audit-alerts-list" class="space-y-1.5 text-[13px] text-error list-disc list-inside"></ul>
                     </div>
-                </div>
+                </details>
+
+                <details class="drawer-fold" id="drawer-fold-history">
+                    <summary>
+                        <span class="material-symbols-outlined text-[16px]">history</span>
+                        CA modification history
+                    </summary>
+                    <div class="drawer-fold-body">
+                        <div id="drawer-logs-timeline">
+                            <span class="timeline-empty">No CA overrides recorded yet.</span>
+                        </div>
+                    </div>
+                </details>
             </div>
         </div>
     </div>
 
-    <!-- Footer -->
-    <div class="shrink-0 flex items-center justify-between px-6 py-3 border-t border-outline-variant" style="background:#1d1f29;">
-        <button id="drawer-cancel-btn" class="px-4 py-2 rounded-md text-[13px] font-bold text-on-surface-variant hover:text-white hover:bg-surface-container-high border border-outline-variant transition-colors">
-            Cancel
-        </button>
-        <div class="flex items-center gap-2">
-            <button id="drawer-save-btn" class="flex items-center gap-2 px-4 py-2 rounded-md text-[13px] font-bold text-white bg-primary/80 hover:bg-primary transition-all">
-                <span class="material-symbols-outlined text-[16px]">save</span> Save Progress
+    <!-- Sticky decide footer -->
+    <div class="drawer-sticky-footer shrink-0 flex items-center justify-between gap-3 px-5 py-3 border-t border-outline-variant">
+        <div class="flex items-center gap-2 min-w-0">
+            <button id="drawer-cancel-btn" class="px-3 py-2 rounded-md text-[12px] font-bold text-on-surface-variant hover:text-white hover:bg-surface-container-high border border-outline-variant transition-colors">
+                Close
             </button>
-            <button id="drawer-approve-btn" class="flex items-center gap-2 px-4 py-2 rounded-md text-[13px] font-bold text-white transition-all bg-secondary-container hover:bg-secondary-container/90">
-                <span class="material-symbols-outlined text-[16px]" style="font-variation-settings:'FILL' 1;">task_alt</span> Verify & Approve
+            <button id="drawer-save-btn" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-[12px] font-bold text-on-surface-variant border border-outline-variant hover:border-primary/40 hover:text-white transition-all">
+                <span class="material-symbols-outlined text-[15px]">save</span> Save
+            </button>
+            <span class="text-[11px] text-on-surface-variant hidden md:inline truncate" title="Keyboard shortcuts">A approve · R reject · J/K next</span>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+            <button id="drawer-reject-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-md text-[13px] font-bold text-error border border-error/30 hover:bg-error/10 transition-all">
+                <span class="material-symbols-outlined text-[16px]">cancel</span> Reject
+            </button>
+            <button id="drawer-approve-btn" class="drawer-approve-btn flex items-center gap-2 px-4 py-2.5 rounded-md text-[13px] font-bold text-on-primary transition-all bg-primary hover:brightness-110">
+                <span class="material-symbols-outlined text-[18px]" style="font-variation-settings:'FILL' 1;">task_alt</span> Approve
             </button>
         </div>
     </div>
@@ -897,20 +2443,20 @@
                 <label class="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Filing Period</label>
                 <input type="month" id="modal-gstr-month" value="2026-05"
                     class="w-full px-3 py-2 rounded-md text-[13px] font-semibold border border-outline-variant focus:outline-none focus:border-primary transition-colors"
-                    style="background:#11131c; color:#e1e1ef; color-scheme:dark;"/>
+                    style="background:#0E131A; color:#e1e1ef; color-scheme:dark;"/>
             </div>
             <div>
                 <label class="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Export Schema</label>
                 <select id="modal-gstr-type"
                     class="w-full px-3 py-2 rounded-md text-[13px] font-semibold border border-outline-variant focus:outline-none focus:border-primary transition-colors appearance-none"
-                    style="background:#11131c; color:#e1e1ef;">
+                    style="background:#0E131A; color:#e1e1ef;">
                     <option value="GSTR1">GSTR-1 (Sales Invoices & HSN Summary)</option>
                     <option value="GSTR3B">GSTR-3B (Consolidated Tax Liabilities & ITC)</option>
                 </select>
             </div>
         </div>
         <!-- Preview Aggregates -->
-        <div class="rounded-lg border border-outline-variant p-4" style="background:#11131c;">
+        <div class="rounded-lg border border-outline-variant p-4" style="background:#0E131A;">
             <h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-3">Preview Aggregates</h4>
             <div class="preview-metrics-row">
                 <div class="preview-metric"><span class="label">Taxable Sales</span><span class="val" id="prev-sales">₹0.00</span></div>
@@ -919,13 +2465,13 @@
             </div>
             <!-- Extra row: blocked ITC + net payable -->
             <div class="grid grid-cols-2 gap-3 mt-3">
-                <div class="preview-metric" style="border-color:rgba(255,180,171,0.25);">
-                    <span class="label" style="color:#ffb4ab;">Blocked ITC (Sec 17(5))</span>
-                    <span class="val" id="prev-itc-blocked" style="color:#ffb4ab;">₹0.00</span>
+                <div class="preview-metric" style="border-color:rgba(255,168,160,0.25);">
+                    <span class="label" style="color:#FFA8A0;">Blocked ITC (Sec 17(5))</span>
+                    <span class="val" id="prev-itc-blocked" style="color:#FFA8A0;">₹0.00</span>
                 </div>
                 <div class="preview-metric" style="border-color:rgba(208,188,255,0.3);">
-                    <span class="label" style="color:#d0bcff;">Net GST Payable</span>
-                    <span class="val" id="prev-net-gst" style="color:#d0bcff;">₹0.00</span>
+                    <span class="label" style="color:#36D6AE;">Net GST Payable</span>
+                    <span class="val" id="prev-net-gst" style="color:#36D6AE;">₹0.00</span>
                 </div>
             </div>
         </div>
@@ -940,24 +2486,48 @@
     </div>
 </div>
 
+<!-- ══════════════════════════════════════════════
+     CA FORM MODAL (GSTIN / Import 2B / queue notes)
+══════════════════════════════════════════════ -->
+<div id="ca-form-modal-overlay"></div>
+<div id="ca-form-modal" role="dialog" aria-modal="true" aria-labelledby="ca-form-modal-title">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-outline-variant" style="background:#282933;">
+        <h3 id="ca-form-modal-title" class="font-bold text-[15px] text-white flex items-center gap-2">
+            <span class="material-symbols-outlined text-secondary text-[20px]" id="ca-form-modal-icon">edit</span>
+            <span id="ca-form-modal-title-text">Action</span>
+        </h3>
+        <button type="button" id="ca-form-modal-close" class="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant hover:text-white hover:bg-surface-container-high border border-transparent hover:border-outline-variant transition-all">
+            <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+    </div>
+    <div class="p-5 space-y-4" id="ca-form-modal-body"></div>
+    <div class="flex items-center justify-between px-5 py-4 border-t border-outline-variant" style="background:#282933;">
+        <button type="button" id="ca-form-modal-cancel" class="px-4 py-2 rounded-md text-[13px] font-bold text-on-surface-variant hover:text-white hover:bg-surface-container-high border border-outline-variant transition-colors">
+            Cancel
+        </button>
+        <button type="button" id="ca-form-modal-submit" class="flex items-center gap-2 px-5 py-2 rounded-md text-[13px] font-bold text-on-primary bg-primary hover:bg-primary/90 transition-all shadow-lg shadow-primary/20">
+            Save
+        </button>
+    </div>
+</div>
+
 <!-- AI Chatbot Floating Trigger -->
-<button id="chatbot-trigger-btn" class="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-lg shadow-primary/30 hover:scale-105 active:scale-95 transition-all z-50 focus:outline-none">
-    <span class="material-symbols-outlined text-[28px]">smart_toy</span>
+<button id="chatbot-trigger-btn" class="fixed bottom-6 right-6 w-14 h-14 rounded-[16px] bg-primary text-on-primary flex items-center justify-center hover:brightness-110 active:scale-95 transition-all z-50 focus:outline-none border border-primary/30 shadow-lg shadow-primary/20" title="GST assistant">
+    <span class="material-symbols-outlined text-[26px]">smart_toy</span>
 </button>
 
 <!-- AI Chatbot Panel -->
-<div id="chatbot-panel" class="fixed bottom-24 right-6 w-[400px] h-[550px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-120px)] rounded-2xl glass-panel flex flex-col shadow-2xl z-50 opacity-0 pointer-events-none translate-y-4 transition-all duration-300 overflow-hidden">
-    <!-- Header -->
-    <div class="px-5 py-4 border-b border-outline-variant flex items-center justify-between shrink-0" style="background: rgba(29, 31, 41, 0.85);">
+<div id="chatbot-panel" class="fixed bottom-24 right-6 w-[400px] h-[550px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-120px)] rounded-[16px] panel flex flex-col z-50 opacity-0 pointer-events-none translate-y-4 transition-all duration-300 overflow-hidden">
+    <div class="px-5 py-4 border-b border-outline-variant flex items-center justify-between shrink-0 bg-surface-container">
         <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-full bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-background text-sm font-bold shadow-md shadow-primary/20">
-                🤖
+            <div class="w-9 h-9 rounded-[10px] bg-primary/15 text-primary flex items-center justify-center border border-primary/20">
+                <span class="material-symbols-outlined text-[20px]">psychology</span>
             </div>
             <div>
-                <h3 class="font-bold text-[14px] text-white">GST Compliance Copilot</h3>
+                <h3 class="font-bold text-[14px] text-white">GST Compliance Assistant</h3>
                 <div class="flex items-center gap-1.5 mt-0.5">
-                    <span class="w-1.5 h-1.5 rounded-full bg-secondary inline-block animate-pulse"></span>
-                    <span class="text-[10px] text-on-surface-variant font-medium">Ready to assist</span>
+                    <span class="w-1.5 h-1.5 rounded-sm bg-secondary inline-block"></span>
+                    <span class="text-[10px] text-on-surface-variant font-medium">Rules-aware · RAG</span>
                 </div>
             </div>
         </div>
@@ -966,28 +2536,26 @@
         </button>
     </div>
 
-    <!-- Messages Area -->
-    <div id="chatbot-messages" class="flex-1 overflow-y-auto p-5 space-y-4 custom-scrollbar" style="background: rgba(15, 17, 26, 0.4);">
-        <!-- Welcome Message -->
-        <div class="flex items-start gap-2.5 max-w-[85%]">
-            <div class="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-[12px] shrink-0">🤖</div>
-            <div class="rounded-2xl px-4 py-3 bg-surface-container-high text-[13px] leading-relaxed text-on-surface shadow-md">
-                <p>Hello! I am your AI GST Compliance Copilot. I can search through official GST rules (Section 17(5) blocked credits, registration thresholds, state codes, etc.) to answer your compliance questions.</p>
-                <p class="mt-2 text-on-surface-variant">Here are some things you can ask me:</p>
+    <div id="chatbot-messages" class="flex-1 overflow-y-auto p-5 space-y-4" style="background: rgba(10, 16, 24, 0.45);">
+        <div class="flex items-start gap-2.5 max-w-[90%]">
+            <div class="w-7 h-7 rounded-[8px] bg-primary/15 text-primary flex items-center justify-center shrink-0 border border-primary/20">
+                <span class="material-symbols-outlined text-[14px]">psychology</span>
+            </div>
+            <div class="rounded-[12px] px-4 py-3 bg-surface-container-high text-[13px] leading-relaxed text-on-surface">
+                <p>Ask about ITC eligibility, blocked credits under Section 17(5), registration thresholds, or GSTR timelines. Answers are grounded in your reference docs.</p>
                 <div class="mt-3 flex flex-col gap-2">
-                    <button class="chat-chip text-[11px] font-semibold px-3 py-1.5 rounded-full bg-primary/10 border border-primary/25 text-primary hover:bg-primary/20 transition-all text-left">Is food & beverage eligible for ITC?</button>
-                    <button class="chat-chip text-[11px] font-semibold px-3 py-1.5 rounded-full bg-primary/10 border border-primary/25 text-primary hover:bg-primary/20 transition-all text-left">What are the rules for motor vehicle ITC?</button>
-                    <button class="chat-chip text-[11px] font-semibold px-3 py-1.5 rounded-full bg-primary/10 border border-primary/25 text-primary hover:bg-primary/20 transition-all text-left">GSTIN State Code list</button>
+                    <button class="chat-chip text-[11px] font-semibold px-3 py-1.5 rounded-[8px] bg-primary/10 border border-primary/25 text-primary hover:bg-primary/20 transition-all text-left">Is food & beverage eligible for ITC?</button>
+                    <button class="chat-chip text-[11px] font-semibold px-3 py-1.5 rounded-[8px] bg-primary/10 border border-primary/25 text-primary hover:bg-primary/20 transition-all text-left">What are the rules for motor vehicle ITC?</button>
+                    <button class="chat-chip text-[11px] font-semibold px-3 py-1.5 rounded-[8px] bg-primary/10 border border-primary/25 text-primary hover:bg-primary/20 transition-all text-left">GSTIN State Code list</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Input Area -->
-    <div class="p-4 border-t border-outline-variant shrink-0" style="background: rgba(29, 31, 41, 0.85);">
+    <div class="p-4 border-t border-outline-variant shrink-0 bg-surface-container">
         <form id="chatbot-form" class="flex items-center gap-2">
-            <input id="chatbot-input" type="text" placeholder="Ask a GST question..." class="flex-1 bg-background border border-outline-variant rounded-xl px-4 py-2.5 text-[13px] focus:ring-1 focus:ring-primary focus:border-primary outline-none text-on-surface placeholder:text-on-surface-variant/40" style="color: #e1e1ef;"/>
-            <button type="submit" class="w-10 h-10 rounded-xl bg-primary text-on-primary flex items-center justify-center hover:bg-primary/90 transition-all shadow-md shadow-primary/20 shrink-0">
+            <input id="chatbot-input" type="text" placeholder="Ask a GST question…" class="flex-1 bg-background border border-outline-variant rounded-[10px] px-4 py-2.5 text-[13px] focus:ring-1 focus:ring-primary focus:border-primary outline-none text-on-surface placeholder:text-on-surface-variant/40"/>
+            <button type="submit" class="w-10 h-10 rounded-[10px] bg-primary text-on-primary flex items-center justify-center hover:brightness-110 transition-all shrink-0">
                 <span class="material-symbols-outlined text-[18px]">send</span>
             </button>
         </form>
@@ -997,28 +2565,6 @@
 <!-- Toast -->
 <div id="toast">Filing updated successfully!</div>
 
-<!-- ── Bridge: month picker → JS state ── -->
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const mp = document.getElementById('month-picker');
-        if (mp) {
-            mp.value = new Date().toISOString().slice(0, 7);
-            mp.addEventListener('change', (e) => {
-                if (window.state) {
-                    window.state.selectedMonth = e.target.value;
-                    if (window.fetchData) window.fetchData();
-                }
-            });
-        }
-    });
-</script>
-
 <script src="/static/dashboard.js"></script>
-
-<!-- ── Post-load: patch JS rendering for new theme ── -->
-<script>
-    // Override renderInvoiceTable row template for new indigo theme
-    const _origRender = window.renderInvoiceTable;
-</script>
 </body>
 </html>

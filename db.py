@@ -1,5 +1,5 @@
 """
-db.py — Database management layer for GST Autopilot
+db.py — Database management layer for Taxova.ai
 
 Supports local development with SQLite (aiosqlite) out-of-the-box,
 and seamlessly switches to PostgreSQL (asyncpg) if DATABASE_URL is set in environment.
@@ -22,8 +22,14 @@ logger = logging.getLogger("db")
 DATABASE_URL = os.getenv("DATABASE_URL", "")
 IS_POSTGRES = DATABASE_URL.startswith("postgresql://") or DATABASE_URL.startswith("postgres://")
 
-# Default local SQLite database file path
-SQLITE_DB_PATH = Path(os.getenv("STORAGE_DIR", "./storage")) / "gst_autopilot.db"
+# Always resolve to an absolute path so cwd does not change which DB is used.
+_PROJECT_ROOT = Path(__file__).resolve().parent
+_STORAGE_DIR = Path(os.getenv("STORAGE_DIR", str(_PROJECT_ROOT / "storage")))
+if not _STORAGE_DIR.is_absolute():
+    _STORAGE_DIR = (_PROJECT_ROOT / _STORAGE_DIR).resolve()
+else:
+    _STORAGE_DIR = _STORAGE_DIR.resolve()
+SQLITE_DB_PATH = _STORAGE_DIR / "gst_autopilot.db"
 
 
 async def get_connection():
@@ -34,7 +40,9 @@ async def get_connection():
     else:
         # Ensure directory exists for local SQLite
         SQLITE_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-        return await aiosqlite.connect(SQLITE_DB_PATH)
+        conn = await aiosqlite.connect(SQLITE_DB_PATH)
+        conn.row_factory = sqlite3.Row
+        return conn
 
 
 async def init_db():
@@ -76,6 +84,8 @@ async def init_db():
                     itc_ineligibility_reason TEXT,
                     supply_type VARCHAR(20),
                     is_approved BOOLEAN DEFAULT FALSE,
+                    review_status VARCHAR(32) DEFAULT 'needs_review',
+                    hitl_reason TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
 
@@ -110,7 +120,37 @@ async def init_db():
                     new_value TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
+
+                CREATE TABLE IF NOT EXISTS cas (
+                    invite_code VARCHAR(6) PRIMARY KEY,
+                    name VARCHAR(150) NOT NULL,
+                    firm_name VARCHAR(150),
+                    phone VARCHAR(20),
+                    email VARCHAR(150),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS client_ca_links (
+                    client_phone VARCHAR(20) PRIMARY KEY REFERENCES clients(phone_number),
+                    ca_invite_code VARCHAR(6) REFERENCES cas(invite_code),
+                    linked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS processed_messages (
+                    message_id VARCHAR(128) PRIMARY KEY,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
             """)
+            # Seed a demo CA invite code for local/testing if table is empty
+            ca_count = await conn.fetchval("SELECT COUNT(*) FROM cas")
+            if ca_count == 0:
+                await conn.execute(
+                    """
+                    INSERT INTO cas (invite_code, name, firm_name, phone, email)
+                    VALUES ($1, $2, $3, $4, $5)
+                    """,
+                    "123456", "Demo CA", "Taxova.ai Demo Firm", "919876543210", "demo.ca@taxova.ai"
+                )
         else:
             # SQLite Schema (uses AUTOINCREMENT instead of SERIAL)
             await conn.execute("""
@@ -145,6 +185,8 @@ async def init_db():
                     itc_ineligibility_reason TEXT,
                     supply_type TEXT,
                     is_approved BOOLEAN DEFAULT 0,
+                    review_status TEXT DEFAULT 'needs_review',
+                    hitl_reason TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
             """)
@@ -183,13 +225,844 @@ async def init_db():
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
             """)
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS cas (
+                    invite_code TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    firm_name TEXT,
+                    phone TEXT,
+                    email TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+            """)
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS client_ca_links (
+                    client_phone TEXT PRIMARY KEY REFERENCES clients(phone_number),
+                    ca_invite_code TEXT REFERENCES cas(invite_code),
+                    linked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+            """)
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS processed_messages (
+                    message_id TEXT PRIMARY KEY,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+            """)
+            # Seed a demo CA invite code for local/testing if table is empty
+            cursor = await conn.execute("SELECT COUNT(*) FROM cas")
+            ca_count = (await cursor.fetchone())[0]
+            if ca_count == 0:
+                await conn.execute(
+                    """
+                    INSERT INTO cas (invite_code, name, firm_name, phone, email)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    ("123456", "Demo CA", "Taxova.ai Demo Firm", "919876543210", "demo.ca@taxova.ai")
+                )
             await conn.commit()
+        await _ensure_hitl_columns(conn)
+        await _ensure_itc_line_columns(conn)
+        await _ensure_gstr2b_schema(conn)
+        await _ensure_gstin_portal_cache_schema(conn)
+        await _ensure_gst_taxpayer_session_schema(conn)
         logger.info("Database initialized successfully.")
     except Exception as e:
         logger.exception("Error creating tables:")
         raise e
     finally:
         await conn.close()
+
+
+async def _ensure_itc_line_columns(conn) -> None:
+    """Add line-level ITC columns + invoice rollups (idempotent)."""
+    invoice_cols = [
+        ("itc_eligible_cgst", "REAL DEFAULT 0"),
+        ("itc_eligible_sgst", "REAL DEFAULT 0"),
+        ("itc_eligible_igst", "REAL DEFAULT 0"),
+        ("itc_blocked_gst", "REAL DEFAULT 0"),
+        ("itc_partial", "BOOLEAN DEFAULT 0" if not IS_POSTGRES else "BOOLEAN DEFAULT FALSE"),
+        ("itc_line_evaluated", "BOOLEAN DEFAULT 0" if not IS_POSTGRES else "BOOLEAN DEFAULT FALSE"),
+    ]
+    line_cols = [
+        ("is_itc_eligible", "BOOLEAN"),
+        ("itc_ineligibility_reason", "TEXT"),
+        ("itc_rule_code", "TEXT" if not IS_POSTGRES else "VARCHAR(64)"),
+        ("inferred_category", "TEXT" if not IS_POSTGRES else "VARCHAR(80)"),
+    ]
+    for col, col_type in invoice_cols:
+        try:
+            if IS_POSTGRES:
+                await conn.execute(
+                    f"ALTER TABLE invoices ADD COLUMN IF NOT EXISTS {col} {col_type}"
+                )
+            else:
+                await conn.execute(f"ALTER TABLE invoices ADD COLUMN {col} {col_type}")
+                await conn.commit()
+        except Exception:
+            pass
+    for col, col_type in line_cols:
+        try:
+            if IS_POSTGRES:
+                await conn.execute(
+                    f"ALTER TABLE line_items ADD COLUMN IF NOT EXISTS {col} {col_type}"
+                )
+            else:
+                await conn.execute(f"ALTER TABLE line_items ADD COLUMN {col} {col_type}")
+                await conn.commit()
+        except Exception:
+            pass
+
+
+async def _ensure_gstr2b_schema(conn) -> None:
+    """GSTR-2B entries table + invoice match columns (idempotent)."""
+    if IS_POSTGRES:
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS gstr2b_entries (
+                id SERIAL PRIMARY KEY,
+                client_phone VARCHAR(20) NOT NULL,
+                return_period VARCHAR(7) NOT NULL,
+                supplier_gstin VARCHAR(15),
+                supplier_name TEXT,
+                invoice_number TEXT,
+                invoice_number_norm TEXT,
+                invoice_date VARCHAR(10),
+                taxable_value REAL DEFAULT 0,
+                igst REAL DEFAULT 0,
+                cgst REAL DEFAULT 0,
+                sgst REAL DEFAULT 0,
+                invoice_value REAL DEFAULT 0,
+                place_of_supply VARCHAR(2),
+                invoice_type VARCHAR(8) DEFAULT 'R',
+                matched_invoice_id INTEGER,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+    else:
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS gstr2b_entries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                client_phone TEXT NOT NULL,
+                return_period TEXT NOT NULL,
+                supplier_gstin TEXT,
+                supplier_name TEXT,
+                invoice_number TEXT,
+                invoice_number_norm TEXT,
+                invoice_date TEXT,
+                taxable_value REAL DEFAULT 0,
+                igst REAL DEFAULT 0,
+                cgst REAL DEFAULT 0,
+                sgst REAL DEFAULT 0,
+                invoice_value REAL DEFAULT 0,
+                place_of_supply TEXT,
+                invoice_type TEXT DEFAULT 'R',
+                matched_invoice_id INTEGER,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        await conn.commit()
+
+    invoice_cols = [
+        ("gstr2b_match_status", "TEXT DEFAULT 'none'" if not IS_POSTGRES else "VARCHAR(16) DEFAULT 'none'"),
+        ("gstr2b_entry_id", "INTEGER"),
+        ("gstr2b_mismatch_reason", "TEXT"),
+        ("gstr2b_matched_at", "TEXT" if not IS_POSTGRES else "TIMESTAMP"),
+    ]
+    for col, col_type in invoice_cols:
+        try:
+            if IS_POSTGRES:
+                await conn.execute(
+                    f"ALTER TABLE invoices ADD COLUMN IF NOT EXISTS {col} {col_type}"
+                )
+            else:
+                await conn.execute(f"ALTER TABLE invoices ADD COLUMN {col} {col_type}")
+                await conn.commit()
+        except Exception:
+            pass
+
+
+async def _ensure_gstin_portal_cache_schema(conn) -> None:
+    """Public GSTIN search cache (24h TTL enforced in app code)."""
+    if IS_POSTGRES:
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS gstin_portal_cache (
+                gstin VARCHAR(15) PRIMARY KEY,
+                found BOOLEAN,
+                status VARCHAR(64),
+                legal_name TEXT,
+                trade_name TEXT,
+                taxpayer_type VARCHAR(64),
+                profile_json TEXT,
+                error_message TEXT,
+                checked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+    else:
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS gstin_portal_cache (
+                gstin TEXT PRIMARY KEY,
+                found INTEGER,
+                status TEXT,
+                legal_name TEXT,
+                trade_name TEXT,
+                taxpayer_type TEXT,
+                profile_json TEXT,
+                error_message TEXT,
+                checked_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        await conn.commit()
+
+
+def _portal_cache_row_to_dict(row) -> dict | None:
+    if not row:
+        return None
+    d = dict(row)
+    raw = d.get("profile_json")
+    profile = None
+    if raw:
+        try:
+            profile = json.loads(raw)
+        except Exception:
+            profile = None
+    d["profile"] = profile
+    return d
+
+
+async def get_gstin_portal_cache(gstin: str) -> dict | None:
+    g = (gstin or "").strip().upper()
+    if not g:
+        return None
+    conn = await get_connection()
+    try:
+        if IS_POSTGRES:
+            row = await conn.fetchrow("SELECT * FROM gstin_portal_cache WHERE gstin = $1", g)
+        else:
+            cur = await conn.execute("SELECT * FROM gstin_portal_cache WHERE gstin = ?", (g,))
+            row = await cur.fetchone()
+        return _portal_cache_row_to_dict(row)
+    finally:
+        await conn.close()
+
+
+async def get_gstin_portal_cache_many(gstins: list[str]) -> dict[str, dict]:
+    """Return map gstin -> cache row for requested GSTINs."""
+    cleaned = sorted({(g or "").strip().upper() for g in gstins if (g or "").strip()})
+    if not cleaned:
+        return {}
+    conn = await get_connection()
+    out: dict[str, dict] = {}
+    try:
+        if IS_POSTGRES:
+            rows = await conn.fetch(
+                "SELECT * FROM gstin_portal_cache WHERE gstin = ANY($1::text[])",
+                cleaned,
+            )
+            for row in rows:
+                d = _portal_cache_row_to_dict(row)
+                if d:
+                    out[d["gstin"]] = d
+        else:
+            placeholders = ",".join("?" * len(cleaned))
+            cur = await conn.execute(
+                f"SELECT * FROM gstin_portal_cache WHERE gstin IN ({placeholders})",
+                cleaned,
+            )
+            rows = await cur.fetchall()
+            for row in rows:
+                d = _portal_cache_row_to_dict(row)
+                if d:
+                    out[d["gstin"]] = d
+        return out
+    finally:
+        await conn.close()
+
+
+async def upsert_gstin_portal_cache(
+    gstin: str,
+    *,
+    profile: dict | None = None,
+    error_message: str | None = None,
+) -> dict:
+    """Insert/update portal cache row. Returns stored row dict."""
+    from datetime import datetime, timezone
+
+    g = (gstin or "").strip().upper()
+    found = bool(profile and profile.get("found"))
+    status = (profile or {}).get("status")
+    legal_name = (profile or {}).get("legal_name")
+    trade_name = (profile or {}).get("trade_name")
+    taxpayer_type = (profile or {}).get("taxpayer_type")
+    profile_json = json.dumps(profile) if profile else None
+    checked_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    conn = await get_connection()
+    try:
+        if IS_POSTGRES:
+            await conn.execute(
+                """
+                INSERT INTO gstin_portal_cache (
+                    gstin, found, status, legal_name, trade_name, taxpayer_type,
+                    profile_json, error_message, checked_at
+                ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+                ON CONFLICT (gstin) DO UPDATE SET
+                    found = EXCLUDED.found,
+                    status = EXCLUDED.status,
+                    legal_name = EXCLUDED.legal_name,
+                    trade_name = EXCLUDED.trade_name,
+                    taxpayer_type = EXCLUDED.taxpayer_type,
+                    profile_json = EXCLUDED.profile_json,
+                    error_message = EXCLUDED.error_message,
+                    checked_at = EXCLUDED.checked_at
+                """,
+                g, found, status, legal_name, trade_name, taxpayer_type,
+                profile_json, error_message, checked_at,
+            )
+        else:
+            await conn.execute(
+                """
+                INSERT INTO gstin_portal_cache (
+                    gstin, found, status, legal_name, trade_name, taxpayer_type,
+                    profile_json, error_message, checked_at
+                ) VALUES (?,?,?,?,?,?,?,?,?)
+                ON CONFLICT(gstin) DO UPDATE SET
+                    found = excluded.found,
+                    status = excluded.status,
+                    legal_name = excluded.legal_name,
+                    trade_name = excluded.trade_name,
+                    taxpayer_type = excluded.taxpayer_type,
+                    profile_json = excluded.profile_json,
+                    error_message = excluded.error_message,
+                    checked_at = excluded.checked_at
+                """,
+                (
+                    g, 1 if found else 0, status, legal_name, trade_name, taxpayer_type,
+                    profile_json, error_message, checked_at,
+                ),
+            )
+            await conn.commit()
+        return {
+            "gstin": g,
+            "found": found,
+            "status": status,
+            "legal_name": legal_name,
+            "trade_name": trade_name,
+            "taxpayer_type": taxpayer_type,
+            "profile": profile,
+            "error_message": error_message,
+            "checked_at": checked_at,
+        }
+    finally:
+        await conn.close()
+
+
+async def _ensure_gst_taxpayer_session_schema(conn) -> None:
+    """OTP taxpayer session + optional GST portal username on clients."""
+    if IS_POSTGRES:
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS gst_taxpayer_sessions (
+                client_phone VARCHAR(20) PRIMARY KEY,
+                gstin VARCHAR(15) NOT NULL,
+                username TEXT NOT NULL,
+                access_token TEXT NOT NULL,
+                token_expiry BIGINT,
+                session_expiry BIGINT,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        try:
+            await conn.execute(
+                "ALTER TABLE clients ADD COLUMN IF NOT EXISTS gst_portal_username TEXT"
+            )
+        except Exception:
+            pass
+    else:
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS gst_taxpayer_sessions (
+                client_phone TEXT PRIMARY KEY,
+                gstin TEXT NOT NULL,
+                username TEXT NOT NULL,
+                access_token TEXT NOT NULL,
+                token_expiry INTEGER,
+                session_expiry INTEGER,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        await conn.commit()
+        try:
+            await conn.execute("ALTER TABLE clients ADD COLUMN gst_portal_username TEXT")
+            await conn.commit()
+        except Exception:
+            pass
+
+
+def _session_row_public(row: dict) -> dict:
+    """Session status without exposing the access token."""
+    from datetime import datetime, timezone
+
+    token_expiry = row.get("token_expiry")
+    session_expiry = row.get("session_expiry")
+    now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+    active = False
+    try:
+        if token_expiry and int(token_expiry) > now_ms:
+            active = True
+    except (TypeError, ValueError):
+        active = bool(row.get("access_token"))
+    return {
+        "client_phone": row.get("client_phone"),
+        "gstin": row.get("gstin"),
+        "username": row.get("username"),
+        "token_expiry": token_expiry,
+        "session_expiry": session_expiry,
+        "updated_at": row.get("updated_at"),
+        "active": active,
+    }
+
+
+async def get_gst_taxpayer_session(client_phone: str, *, include_token: bool = False) -> dict | None:
+    conn = await get_connection()
+    try:
+        if IS_POSTGRES:
+            row = await conn.fetchrow(
+                "SELECT * FROM gst_taxpayer_sessions WHERE client_phone = $1",
+                client_phone,
+            )
+        else:
+            cur = await conn.execute(
+                "SELECT * FROM gst_taxpayer_sessions WHERE client_phone = ?",
+                (client_phone,),
+            )
+            row = await cur.fetchone()
+        if not row:
+            return None
+        d = dict(row)
+        if include_token:
+            pub = _session_row_public(d)
+            pub["access_token"] = d.get("access_token")
+            return pub
+        return _session_row_public(d)
+    finally:
+        await conn.close()
+
+
+async def upsert_gst_taxpayer_session(
+    client_phone: str,
+    *,
+    gstin: str,
+    username: str,
+    access_token: str,
+    token_expiry: int | None = None,
+    session_expiry: int | None = None,
+) -> dict:
+    from datetime import datetime, timezone
+
+    updated_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    g = (gstin or "").strip().upper()
+    user = (username or "").strip()
+    conn = await get_connection()
+    try:
+        if IS_POSTGRES:
+            await conn.execute(
+                """
+                INSERT INTO gst_taxpayer_sessions (
+                    client_phone, gstin, username, access_token,
+                    token_expiry, session_expiry, updated_at
+                ) VALUES ($1,$2,$3,$4,$5,$6,$7)
+                ON CONFLICT (client_phone) DO UPDATE SET
+                    gstin = EXCLUDED.gstin,
+                    username = EXCLUDED.username,
+                    access_token = EXCLUDED.access_token,
+                    token_expiry = EXCLUDED.token_expiry,
+                    session_expiry = EXCLUDED.session_expiry,
+                    updated_at = EXCLUDED.updated_at
+                """,
+                client_phone, g, user, access_token,
+                token_expiry, session_expiry, updated_at,
+            )
+            # Remember username on client for next OTP
+            await conn.execute(
+                "UPDATE clients SET gst_portal_username = $1 WHERE phone_number = $2",
+                user, client_phone,
+            )
+        else:
+            await conn.execute(
+                """
+                INSERT INTO gst_taxpayer_sessions (
+                    client_phone, gstin, username, access_token,
+                    token_expiry, session_expiry, updated_at
+                ) VALUES (?,?,?,?,?,?,?)
+                ON CONFLICT(client_phone) DO UPDATE SET
+                    gstin = excluded.gstin,
+                    username = excluded.username,
+                    access_token = excluded.access_token,
+                    token_expiry = excluded.token_expiry,
+                    session_expiry = excluded.session_expiry,
+                    updated_at = excluded.updated_at
+                """,
+                (client_phone, g, user, access_token, token_expiry, session_expiry, updated_at),
+            )
+            try:
+                await conn.execute(
+                    "UPDATE clients SET gst_portal_username = ? WHERE phone_number = ?",
+                    (user, client_phone),
+                )
+            except Exception:
+                pass
+            await conn.commit()
+        return await get_gst_taxpayer_session(client_phone) or {
+            "client_phone": client_phone,
+            "gstin": g,
+            "username": user,
+            "active": True,
+            "token_expiry": token_expiry,
+            "session_expiry": session_expiry,
+        }
+    finally:
+        await conn.close()
+
+
+async def clear_gst_taxpayer_session(client_phone: str) -> None:
+    conn = await get_connection()
+    try:
+        if IS_POSTGRES:
+            await conn.execute(
+                "DELETE FROM gst_taxpayer_sessions WHERE client_phone = $1",
+                client_phone,
+            )
+        else:
+            await conn.execute(
+                "DELETE FROM gst_taxpayer_sessions WHERE client_phone = ?",
+                (client_phone,),
+            )
+            await conn.commit()
+    finally:
+        await conn.close()
+
+
+async def replace_gstr2b_entries(
+    client_phone: str,
+    return_period: str,
+    entries: list[dict],
+) -> list[dict]:
+    """Replace all 2B rows for a client+period; return inserted rows with ids."""
+    conn = await get_connection()
+    try:
+        if IS_POSTGRES:
+            await conn.execute(
+                "DELETE FROM gstr2b_entries WHERE client_phone = $1 AND return_period = $2",
+                client_phone, return_period,
+            )
+            # Clear prior match links for this period's invoices (best-effort)
+            await conn.execute(
+                """
+                UPDATE invoices SET gstr2b_match_status = 'none', gstr2b_entry_id = NULL,
+                    gstr2b_mismatch_reason = NULL, gstr2b_matched_at = NULL
+                WHERE client_phone = $1 AND substr(invoice_date, 1, 7) = $2
+                """,
+                client_phone, return_period,
+            )
+            inserted = []
+            for e in entries:
+                row = await conn.fetchrow(
+                    """
+                    INSERT INTO gstr2b_entries (
+                        client_phone, return_period, supplier_gstin, supplier_name,
+                        invoice_number, invoice_number_norm, invoice_date,
+                        taxable_value, igst, cgst, sgst, invoice_value,
+                        place_of_supply, invoice_type
+                    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+                    RETURNING *
+                    """,
+                    client_phone, return_period,
+                    e.get("supplier_gstin"), e.get("supplier_name"),
+                    e.get("invoice_number"), e.get("invoice_number_norm"),
+                    e.get("invoice_date"),
+                    float(e.get("taxable_value") or 0),
+                    float(e.get("igst") or 0), float(e.get("cgst") or 0),
+                    float(e.get("sgst") or 0), float(e.get("invoice_value") or 0),
+                    e.get("place_of_supply"), e.get("invoice_type") or "R",
+                )
+                inserted.append(dict(row))
+            return inserted
+        else:
+            await conn.execute(
+                "DELETE FROM gstr2b_entries WHERE client_phone = ? AND return_period = ?",
+                (client_phone, return_period),
+            )
+            await conn.execute(
+                """
+                UPDATE invoices SET gstr2b_match_status = 'none', gstr2b_entry_id = NULL,
+                    gstr2b_mismatch_reason = NULL, gstr2b_matched_at = NULL
+                WHERE client_phone = ? AND substr(invoice_date, 1, 7) = ?
+                """,
+                (client_phone, return_period),
+            )
+            inserted = []
+            for e in entries:
+                cur = await conn.execute(
+                    """
+                    INSERT INTO gstr2b_entries (
+                        client_phone, return_period, supplier_gstin, supplier_name,
+                        invoice_number, invoice_number_norm, invoice_date,
+                        taxable_value, igst, cgst, sgst, invoice_value,
+                        place_of_supply, invoice_type
+                    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    """,
+                    (
+                        client_phone, return_period,
+                        e.get("supplier_gstin"), e.get("supplier_name"),
+                        e.get("invoice_number"), e.get("invoice_number_norm"),
+                        e.get("invoice_date"),
+                        float(e.get("taxable_value") or 0),
+                        float(e.get("igst") or 0), float(e.get("cgst") or 0),
+                        float(e.get("sgst") or 0), float(e.get("invoice_value") or 0),
+                        e.get("place_of_supply"), e.get("invoice_type") or "R",
+                    ),
+                )
+                eid = cur.lastrowid
+                inserted.append({**e, "id": eid, "client_phone": client_phone, "return_period": return_period})
+            await conn.commit()
+            return inserted
+    finally:
+        await conn.close()
+
+
+async def get_gstr2b_entries(client_phone: str, return_period: str | None = None) -> list[dict]:
+    conn = await get_connection()
+    try:
+        if return_period:
+            if IS_POSTGRES:
+                rows = await conn.fetch(
+                    "SELECT * FROM gstr2b_entries WHERE client_phone = $1 AND return_period = $2 ORDER BY id",
+                    client_phone, return_period,
+                )
+            else:
+                cur = await conn.execute(
+                    "SELECT * FROM gstr2b_entries WHERE client_phone = ? AND return_period = ? ORDER BY id",
+                    (client_phone, return_period),
+                )
+                rows = await cur.fetchall()
+        else:
+            if IS_POSTGRES:
+                rows = await conn.fetch(
+                    "SELECT * FROM gstr2b_entries WHERE client_phone = $1 ORDER BY return_period DESC, id",
+                    client_phone,
+                )
+            else:
+                cur = await conn.execute(
+                    "SELECT * FROM gstr2b_entries WHERE client_phone = ? ORDER BY return_period DESC, id",
+                    (client_phone,),
+                )
+                rows = await cur.fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        await conn.close()
+
+
+async def apply_gstr2b_reconcile_results(results: list[dict]) -> int:
+    """Persist per-invoice 2B match fields. Returns updated count."""
+    from datetime import datetime as _dt
+
+    conn = await get_connection()
+    now = _dt.utcnow().isoformat(timespec="seconds") + "Z"
+    updated = 0
+    try:
+        for r in results:
+            status = r.get("gstr2b_match_status") or "none"
+            eid = r.get("gstr2b_entry_id")
+            reason = r.get("gstr2b_mismatch_reason")
+            iid = r["invoice_id"]
+            if IS_POSTGRES:
+                await conn.execute(
+                    """
+                    UPDATE invoices SET
+                        gstr2b_match_status = $1,
+                        gstr2b_entry_id = $2,
+                        gstr2b_mismatch_reason = $3,
+                        gstr2b_matched_at = $4
+                    WHERE id = $5
+                    """,
+                    status, eid, reason, now, iid,
+                )
+                if eid and status in ("matched", "mismatch"):
+                    await conn.execute(
+                        "UPDATE gstr2b_entries SET matched_invoice_id = $1 WHERE id = $2",
+                        iid, eid,
+                    )
+            else:
+                await conn.execute(
+                    """
+                    UPDATE invoices SET
+                        gstr2b_match_status = ?,
+                        gstr2b_entry_id = ?,
+                        gstr2b_mismatch_reason = ?,
+                        gstr2b_matched_at = ?
+                    WHERE id = ?
+                    """,
+                    (status, eid, reason, now, iid),
+                )
+                if eid and status in ("matched", "mismatch"):
+                    await conn.execute(
+                        "UPDATE gstr2b_entries SET matched_invoice_id = ? WHERE id = ?",
+                        (iid, eid),
+                    )
+            updated += 1
+        if not IS_POSTGRES:
+            await conn.commit()
+        return updated
+    finally:
+        await conn.close()
+
+
+async def reconcile_gstr2b_for_client(client_phone: str, return_period: str) -> dict:
+    """Load 2B + purchase invoices for period, match, persist."""
+    from gstr2b import reconcile_purchase_invoices
+    from itc_rules import normalize_gstin, validate_gstin
+
+    client = await get_or_create_client(client_phone)
+    gstin = normalize_gstin(client.get("gstin"))
+    if not validate_gstin(gstin):
+        return {
+            "ok": False,
+            "error": "Client needs a valid GSTIN before GSTR-2B reconciliation.",
+            "return_period": return_period,
+        }
+
+    entries = await get_gstr2b_entries(client_phone, return_period)
+    if not entries:
+        return {
+            "ok": False,
+            "error": f"No GSTR-2B entries imported for {return_period}.",
+            "return_period": return_period,
+            "imported": 0,
+        }
+
+    invoices = await get_invoices(client_phone=client_phone, month=return_period)
+    summary = reconcile_purchase_invoices(invoices, entries, client_gstin=gstin)
+    updated = await apply_gstr2b_reconcile_results(summary["invoice_results"])
+
+    # Clear matched_invoice_id on orphans
+    conn = await get_connection()
+    try:
+        matched_ids = {
+            r["gstr2b_entry_id"]
+            for r in summary["invoice_results"]
+            if r.get("gstr2b_entry_id") and r.get("gstr2b_match_status") in ("matched", "mismatch")
+        }
+        if IS_POSTGRES:
+            rows = await conn.fetch(
+                "SELECT id FROM gstr2b_entries WHERE client_phone = $1 AND return_period = $2",
+                client_phone, return_period,
+            )
+            for row in rows:
+                if row["id"] not in matched_ids:
+                    await conn.execute(
+                        "UPDATE gstr2b_entries SET matched_invoice_id = NULL WHERE id = $1",
+                        row["id"],
+                    )
+        else:
+            cur = await conn.execute(
+                "SELECT id FROM gstr2b_entries WHERE client_phone = ? AND return_period = ?",
+                (client_phone, return_period),
+            )
+            rows = await cur.fetchall()
+            for row in rows:
+                rid = dict(row)["id"]
+                if rid not in matched_ids:
+                    await conn.execute(
+                        "UPDATE gstr2b_entries SET matched_invoice_id = NULL WHERE id = ?",
+                        (rid,),
+                    )
+            await conn.commit()
+    finally:
+        await conn.close()
+
+    metrics = await get_monthly_metrics(client_phone, return_period)
+    return {
+        "ok": True,
+        "return_period": return_period,
+        "imported": len(entries),
+        "updated_invoices": updated,
+        "counts": summary["counts"],
+        "orphan_2b_count": summary["orphan_2b_count"],
+        "orphans": [
+            {
+                "id": o.get("id"),
+                "supplier_gstin": o.get("supplier_gstin"),
+                "invoice_number": o.get("invoice_number"),
+                "invoice_date": o.get("invoice_date"),
+                "taxable_value": o.get("taxable_value"),
+            }
+            for o in summary.get("orphans") or []
+        ],
+        "metrics": metrics,
+    }
+
+
+async def _ensure_hitl_columns(conn) -> None:
+    """Add HITL columns to existing databases (idempotent)."""
+    alter_stmts = [
+        ("review_status", "TEXT DEFAULT 'needs_review'" if not IS_POSTGRES else "VARCHAR(32) DEFAULT 'needs_review'"),
+        ("hitl_reason", "TEXT"),
+    ]
+    for col, col_type in alter_stmts:
+        try:
+            if IS_POSTGRES:
+                await conn.execute(
+                    f"ALTER TABLE invoices ADD COLUMN IF NOT EXISTS {col} {col_type}"
+                )
+            else:
+                await conn.execute(f"ALTER TABLE invoices ADD COLUMN {col} {col_type}")
+                await conn.commit()
+        except Exception:
+            # Column already exists
+            pass
+
+    # Backfill statuses for legacy rows
+    try:
+        if IS_POSTGRES:
+            await conn.execute(
+                """
+                UPDATE invoices SET review_status = 'approved'
+                WHERE is_approved = TRUE AND (review_status IS NULL OR review_status = '' OR review_status = 'needs_review')
+                """
+            )
+            await conn.execute(
+                """
+                UPDATE invoices SET review_status = 'needs_review'
+                WHERE is_approved = FALSE AND (review_status IS NULL OR review_status = '')
+                """
+            )
+        else:
+            await conn.execute(
+                """
+                UPDATE invoices SET review_status = 'approved'
+                WHERE is_approved = 1 AND (review_status IS NULL OR review_status = '' OR review_status = 'needs_review')
+                  AND id IN (SELECT id FROM invoices WHERE is_approved = 1)
+                """
+            )
+            # Simpler backfill
+            await conn.execute(
+                "UPDATE invoices SET review_status = 'approved' WHERE is_approved = 1 AND review_status = 'needs_review'"
+            )
+            await conn.execute(
+                "UPDATE invoices SET review_status = 'needs_review' WHERE is_approved = 0 AND (review_status IS NULL OR review_status = '')"
+            )
+            await conn.commit()
+    except Exception as e:
+        logger.warning("HITL backfill skipped: %s", e)
 
 
 async def get_or_create_client(phone_number: str, name: str = "Unknown Client") -> dict:
@@ -253,100 +1126,170 @@ async def update_client_profile(phone_number: str, gstin: str, registered: bool,
         await conn.close()
 
 
+async def update_client_gst_portal_username(phone_number: str, username: str) -> None:
+    conn = await get_connection()
+    try:
+        user = (username or "").strip()
+        if IS_POSTGRES:
+            await conn.execute(
+                "UPDATE clients SET gst_portal_username = $1 WHERE phone_number = $2",
+                user, phone_number,
+            )
+        else:
+            await conn.execute(
+                "UPDATE clients SET gst_portal_username = ? WHERE phone_number = ?",
+                (user, phone_number),
+            )
+            await conn.commit()
+    finally:
+        await conn.close()
+
+
 async def save_invoice(client_phone: str, file_path: str, result: dict) -> int:
     """
     Saves an extracted invoice, line items, and audit errors to database.
-    Args:
-        client_phone: Phone number of the client who sent the invoice.
-        file_path: Relative storage path of the file.
-        result: The `ProcessingResult` model dump as dictionary.
-    Returns:
-        The newly created invoice ID.
+    Supports line-level ITC fields when present on result / line items.
     """
+    from itc_rules import evaluate_line_items_itc, validate_gstin
+
     conn = await get_connection()
     ext = result["extraction"]
+    review_status = result.get("review_status") or "needs_review"
+    hitl_reason = result.get("hitl_reason")
+
+    # Ensure line-level ITC evaluation exists (complex bills)
+    line_items = list(ext.get("line_items") or [])
+    if result.get("line_itc"):
+        line_items = list(result["line_itc"])
+    elif not result.get("itc_line_evaluated"):
+        line_eval = evaluate_line_items_itc(
+            line_items,
+            invoice_category=ext.get("business_category") or "Other",
+            is_recipient_registered=validate_gstin(ext.get("recipient_gstin")),
+        )
+        line_items = line_eval["lines"] or line_items
+        result["is_itc_eligible"] = line_eval["is_itc_eligible"]
+        result["itc_ineligibility_reason"] = line_eval["itc_ineligibility_reason"]
+        result["itc_eligible_cgst"] = line_eval["eligible_cgst"]
+        result["itc_eligible_sgst"] = line_eval["eligible_sgst"]
+        result["itc_eligible_igst"] = line_eval["eligible_igst"]
+        result["itc_blocked_gst"] = line_eval["blocked_gst"]
+        result["itc_partial"] = line_eval["partial"]
+
+    elig_c = float(result.get("itc_eligible_cgst") or 0)
+    elig_s = float(result.get("itc_eligible_sgst") or 0)
+    elig_i = float(result.get("itc_eligible_igst") or 0)
+    blocked_gst = float(result.get("itc_blocked_gst") or 0)
+    # Legacy fallback: no line rollup computed
+    if elig_c == elig_s == elig_i == blocked_gst == 0 and not line_items:
+        gst_c = float(ext.get("total_cgst") or 0)
+        gst_s = float(ext.get("total_sgst") or 0)
+        gst_i = float(ext.get("total_igst") or 0)
+        if result.get("is_itc_eligible"):
+            elig_c, elig_s, elig_i = gst_c, gst_s, gst_i
+        else:
+            blocked_gst = gst_c + gst_s + gst_i
+
+    itc_partial = 1 if result.get("itc_partial") else 0
 
     try:
         if IS_POSTGRES:
-            # Insert invoice
             invoice_id = await conn.fetchval("""
                 INSERT INTO invoices (
                     client_phone, file_path, supplier_name, supplier_gstin, recipient_name, recipient_gstin,
                     invoice_number, invoice_date, place_of_supply, total_taxable_value,
                     total_cgst, total_sgst, total_igst, grand_total, business_category,
-                    is_calculation_correct, is_itc_eligible, itc_ineligibility_reason, supply_type
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+                    is_calculation_correct, is_itc_eligible, itc_ineligibility_reason, supply_type,
+                    review_status, hitl_reason,
+                    itc_eligible_cgst, itc_eligible_sgst, itc_eligible_igst, itc_blocked_gst,
+                    itc_partial, itc_line_evaluated
+                ) VALUES (
+                    $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,
+                    $22,$23,$24,$25,$26,$27
+                )
                 RETURNING id
-            """, 
+            """,
                 client_phone, file_path, ext["supplier_name"], ext["supplier_gstin"],
                 ext["recipient_name"], ext["recipient_gstin"], ext["invoice_number"],
                 ext["invoice_date"], ext["place_of_supply"], ext["total_taxable_value"],
                 ext["total_cgst"], ext["total_sgst"], ext["total_igst"], ext["grand_total"],
                 ext["business_category"], result["is_calculation_correct"], result["is_itc_eligible"],
-                result["itc_ineligibility_reason"], result["supply_type"]
+                result["itc_ineligibility_reason"], result["supply_type"],
+                review_status, hitl_reason,
+                elig_c, elig_s, elig_i, blocked_gst, bool(itc_partial), True,
             )
 
-            # Insert line items
-            for item in ext["line_items"]:
+            for item in line_items:
                 await conn.execute("""
                     INSERT INTO line_items (
                         invoice_id, description, hsn_or_sac, quantity, unit_price,
-                        taxable_value, gst_rate, cgst, sgst, igst, line_total
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                        taxable_value, gst_rate, cgst, sgst, igst, line_total,
+                        is_itc_eligible, itc_ineligibility_reason, itc_rule_code, inferred_category
+                    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
                 """,
-                    invoice_id, item["description"], item["hsn_or_sac"], item["quantity"],
-                    item["unit_price"], item["taxable_value"], item["gst_rate"],
-                    item["cgst"], item["sgst"], item["igst"], item["line_total"]
+                    invoice_id, item.get("description"), item.get("hsn_or_sac"), item.get("quantity"),
+                    item.get("unit_price"), item.get("taxable_value"), item.get("gst_rate"),
+                    item.get("cgst"), item.get("sgst"), item.get("igst"), item.get("line_total"),
+                    item.get("is_itc_eligible"), item.get("itc_ineligibility_reason"),
+                    item.get("itc_rule_code"), item.get("inferred_category"),
                 )
 
-            # Insert calculation errors
             for err in result["calculation_errors"]:
                 await conn.execute(
                     "INSERT INTO audit_errors (invoice_id, error_message) VALUES ($1, $2)",
                     invoice_id, err
                 )
         else:
-            # SQLite Insert
             cursor = await conn.execute("""
                 INSERT INTO invoices (
                     client_phone, file_path, supplier_name, supplier_gstin, recipient_name, recipient_gstin,
                     invoice_number, invoice_date, place_of_supply, total_taxable_value,
                     total_cgst, total_sgst, total_igst, grand_total, business_category,
-                    is_calculation_correct, is_itc_eligible, itc_ineligibility_reason, supply_type
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    is_calculation_correct, is_itc_eligible, itc_ineligibility_reason, supply_type,
+                    review_status, hitl_reason,
+                    itc_eligible_cgst, itc_eligible_sgst, itc_eligible_igst, itc_blocked_gst,
+                    itc_partial, itc_line_evaluated
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 client_phone, file_path, ext["supplier_name"], ext["supplier_gstin"],
                 ext["recipient_name"], ext["recipient_gstin"], ext["invoice_number"],
                 ext["invoice_date"], ext["place_of_supply"], ext["total_taxable_value"],
                 ext["total_cgst"], ext["total_sgst"], ext["total_igst"], ext["grand_total"],
                 ext["business_category"], result["is_calculation_correct"], result["is_itc_eligible"],
-                result["itc_ineligibility_reason"], result["supply_type"]
+                result["itc_ineligibility_reason"], result["supply_type"],
+                review_status, hitl_reason,
+                elig_c, elig_s, elig_i, blocked_gst, itc_partial, 1,
             ))
             invoice_id = cursor.lastrowid
 
-            # Insert line items
-            for item in ext["line_items"]:
+            for item in line_items:
                 await conn.execute("""
                     INSERT INTO line_items (
                         invoice_id, description, hsn_or_sac, quantity, unit_price,
-                        taxable_value, gst_rate, cgst, sgst, igst, line_total
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        taxable_value, gst_rate, cgst, sgst, igst, line_total,
+                        is_itc_eligible, itc_ineligibility_reason, itc_rule_code, inferred_category
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
-                    invoice_id, item["description"], item["hsn_or_sac"], item["quantity"],
-                    item["unit_price"], item["taxable_value"], item["gst_rate"],
-                    item["cgst"], item["sgst"], item["igst"], item["line_total"]
+                    invoice_id, item.get("description"), item.get("hsn_or_sac"), item.get("quantity"),
+                    item.get("unit_price"), item.get("taxable_value"), item.get("gst_rate"),
+                    item.get("cgst"), item.get("sgst"), item.get("igst"), item.get("line_total"),
+                    1 if item.get("is_itc_eligible") else 0,
+                    item.get("itc_ineligibility_reason"),
+                    item.get("itc_rule_code"),
+                    item.get("inferred_category"),
                 ))
 
-            # Insert calculation errors
             for err in result["calculation_errors"]:
                 await conn.execute(
                     "INSERT INTO audit_errors (invoice_id, error_message) VALUES (?, ?)",
                     (invoice_id, err)
                 )
-
             await conn.commit()
-            
-        logger.info("Saved invoice to database with ID: %d", invoice_id)
+
+        logger.info(
+            "Saved invoice ID %s for %s (HITL=%s, partial_itc=%s)",
+            invoice_id, client_phone, review_status, bool(itc_partial),
+        )
         return invoice_id
     finally:
         await conn.close()
@@ -373,7 +1316,8 @@ async def get_invoices(client_phone: str = None, status: str = None, month: str 
     Fetch list of invoices with filters.
     Args:
         client_phone: Filter by phone number.
-        status: 'approved' or 'pending_review' or 'flagged'.
+        status: 'approved' | 'pending_review' | 'flagged' | 'hitl' |
+                'needs_review' | 'awaiting_client' | 'client_confirmed' | 'rejected'.
         month: YYYY-MM based on invoice_date.
     """
     conn = await get_connection()
@@ -391,9 +1335,22 @@ async def get_invoices(client_phone: str = None, status: str = None, month: str 
     if status == "approved":
         query += " AND is_approved = 1" if not IS_POSTGRES else " AND is_approved = TRUE"
     elif status == "pending_review":
-        query += " AND is_approved = 0" if not IS_POSTGRES else " AND is_approved = FALSE"
+        # Exclude rejected — pending = awaiting CA action
+        if IS_POSTGRES:
+            query += " AND is_approved = FALSE AND COALESCE(review_status, 'needs_review') <> 'rejected'"
+        else:
+            query += " AND is_approved = 0 AND COALESCE(review_status, 'needs_review') != 'rejected'"
     elif status == "flagged":
         query += " AND is_calculation_correct = 0" if not IS_POSTGRES else " AND is_calculation_correct = FALSE"
+    elif status == "hitl":
+        query += " AND review_status IN ('needs_review', 'awaiting_client', 'client_confirmed')"
+    elif status in ("needs_review", "awaiting_client", "client_confirmed", "rejected"):
+        if IS_POSTGRES:
+            params.append(status)
+            query += f" AND review_status = ${len(params)}"
+        else:
+            params.append(status)
+            query += " AND review_status = ?"
 
     if month:
         # Match YYYY-MM prefix in invoice_date (format YYYY-MM-DD)
@@ -485,12 +1442,18 @@ async def update_invoice(invoice_id: int, updated_fields: dict, ca_user: str = "
             return False
 
         # Build dynamic query
+        allowed_extra = {
+            "itc_eligible_cgst", "itc_eligible_sgst", "itc_eligible_igst",
+            "itc_blocked_gst", "itc_partial", "itc_line_evaluated",
+        }
         sets = []
         params = []
         for key, new_val in updated_fields.items():
             # Basic validation check to ensure key exists in table
-            if key in old_invoice and key not in ["id", "client_phone", "file_path", "line_items", "calculation_errors", "ca_action_logs"]:
-                old_val = old_invoice[key]
+            if (key in old_invoice or key in allowed_extra) and key not in [
+                "id", "client_phone", "file_path", "line_items", "calculation_errors", "ca_action_logs"
+            ]:
+                old_val = old_invoice.get(key)
                 if old_val != new_val:
                     if IS_POSTGRES:
                         params.append(new_val)
@@ -522,25 +1485,211 @@ async def update_invoice(invoice_id: int, updated_fields: dict, ca_user: str = "
 
 
 async def approve_invoice(invoice_id: int, ca_user: str = "CA Operator") -> bool:
-    """Marks an invoice as verified and approved."""
+    """Marks an invoice as verified and approved (HITL final gate)."""
     conn = await get_connection()
     try:
         if IS_POSTGRES:
             await conn.execute(
-                "UPDATE invoices SET is_approved = TRUE WHERE id = $1",
+                "UPDATE invoices SET is_approved = TRUE, review_status = 'approved' WHERE id = $1",
                 invoice_id
             )
-            await insert_audit_log(conn, invoice_id, ca_user, "APPROVE", None, "FALSE", "TRUE")
+            await insert_audit_log(conn, invoice_id, ca_user, "APPROVE", "review_status", None, "approved")
         else:
             await conn.execute(
-                "UPDATE invoices SET is_approved = 1 WHERE id = ?",
+                "UPDATE invoices SET is_approved = 1, review_status = 'approved' WHERE id = ?",
                 (invoice_id,)
             )
-            await insert_audit_log(conn, invoice_id, ca_user, "APPROVE", None, "FALSE", "TRUE")
+            await insert_audit_log(conn, invoice_id, ca_user, "APPROVE", "review_status", None, "approved")
             await conn.commit()
 
         logger.info("Invoice approved: %d by CA %s", invoice_id, ca_user)
         return True
+    finally:
+        await conn.close()
+
+
+async def skip_invoice(
+    invoice_id: int,
+    reason: str = "Skipped by CA",
+    ca_user: str = "CA Operator",
+) -> bool:
+    """Defer an invoice out of the CA review queue without approving or rejecting."""
+    conn = await get_connection()
+    reason = (reason or "Skipped by CA").strip()
+    try:
+        detail = await get_invoice_detail(invoice_id)
+        if not detail:
+            return False
+        old = detail.get("review_status")
+        note = reason
+        prev = (detail.get("hitl_reason") or "").strip()
+        if prev and reason not in prev:
+            note = f"{prev}; {reason}"
+        if IS_POSTGRES:
+            await conn.execute(
+                """
+                UPDATE invoices
+                SET review_status = 'skipped', hitl_reason = $1, is_approved = FALSE
+                WHERE id = $2
+                """,
+                note, invoice_id,
+            )
+            await insert_audit_log(
+                conn, invoice_id, ca_user, "SKIP", "review_status", old, f"skipped:{reason}"
+            )
+        else:
+            await conn.execute(
+                """
+                UPDATE invoices
+                SET review_status = 'skipped', hitl_reason = ?, is_approved = 0
+                WHERE id = ?
+                """,
+                (note, invoice_id),
+            )
+            await insert_audit_log(
+                conn, invoice_id, ca_user, "SKIP", "review_status", old, f"skipped:{reason}"
+            )
+            await conn.commit()
+        logger.info("Invoice skipped: %d by %s", invoice_id, ca_user)
+        return True
+    finally:
+        await conn.close()
+
+
+async def acknowledge_gstr2b_mismatch(
+    invoice_id: int,
+    note: str = "CA noted GSTR-2B mismatch",
+    ca_user: str = "CA Operator",
+) -> bool:
+    """Mark a 2B mismatch as reviewed so it no longer drives exception risk."""
+    conn = await get_connection()
+    note = (note or "CA noted GSTR-2B mismatch").strip()
+    try:
+        detail = await get_invoice_detail(invoice_id)
+        if not detail:
+            return False
+        old_status = detail.get("gstr2b_match_status")
+        prev = (detail.get("hitl_reason") or "").strip()
+        hitl = note if not prev else (prev if note in prev else f"{prev}; {note}")
+        if IS_POSTGRES:
+            await conn.execute(
+                """
+                UPDATE invoices
+                SET gstr2b_match_status = 'mismatch_accepted',
+                    gstr2b_mismatch_reason = COALESCE(gstr2b_mismatch_reason, $1),
+                    hitl_reason = $2
+                WHERE id = $3
+                """,
+                note, hitl, invoice_id,
+            )
+            await insert_audit_log(
+                conn, invoice_id, ca_user, "2B_NOTE", "gstr2b_match_status",
+                old_status, "mismatch_accepted",
+            )
+        else:
+            await conn.execute(
+                """
+                UPDATE invoices
+                SET gstr2b_match_status = 'mismatch_accepted',
+                    gstr2b_mismatch_reason = COALESCE(gstr2b_mismatch_reason, ?),
+                    hitl_reason = ?
+                WHERE id = ?
+                """,
+                (note, hitl, invoice_id),
+            )
+            await insert_audit_log(
+                conn, invoice_id, ca_user, "2B_NOTE", "gstr2b_match_status",
+                old_status, "mismatch_accepted",
+            )
+            await conn.commit()
+        return True
+    finally:
+        await conn.close()
+
+
+async def reject_invoice(
+    invoice_id: int,
+    reason: str,
+    actor: str = "CA Operator",
+    source: str = "ca",
+) -> bool:
+    """Reject an invoice in the HITL loop (CA or client)."""
+    conn = await get_connection()
+    reason = (reason or "Rejected").strip()
+    try:
+        detail = await get_invoice_detail(invoice_id)
+        if not detail:
+            return False
+        old = detail.get("review_status")
+        if IS_POSTGRES:
+            await conn.execute(
+                """
+                UPDATE invoices
+                SET is_approved = FALSE, review_status = 'rejected', hitl_reason = $1
+                WHERE id = $2
+                """,
+                reason, invoice_id
+            )
+            await insert_audit_log(
+                conn, invoice_id, actor, "REJECT", "review_status", old, f"rejected:{reason}"
+            )
+        else:
+            await conn.execute(
+                """
+                UPDATE invoices
+                SET is_approved = 0, review_status = 'rejected', hitl_reason = ?
+                WHERE id = ?
+                """,
+                (reason, invoice_id)
+            )
+            await insert_audit_log(
+                conn, invoice_id, actor, "REJECT", "review_status", old, f"rejected:{reason}"
+            )
+            await conn.commit()
+        logger.info("Invoice %d rejected by %s (%s): %s", invoice_id, actor, source, reason)
+        return True
+    finally:
+        await conn.close()
+
+
+async def client_confirm_invoice(invoice_id: int, client_phone: str) -> tuple[bool, str]:
+    """Client WhatsApp CONFIRM. Moves awaiting_client -> client_confirmed."""
+    detail = await get_invoice_detail(invoice_id)
+    if not detail:
+        return False, "Invoice not found."
+    if detail.get("client_phone") != client_phone:
+        return False, "This invoice does not belong to your account."
+
+    status = detail.get("review_status") or "needs_review"
+    if status == "approved":
+        return False, "This invoice is already approved by your CA."
+    if status == "rejected":
+        return False, "This invoice was rejected. Send a new photo or ask your CA."
+    if status == "needs_review":
+        return False, "This invoice is with your CA for review. They will confirm after fixing issues."
+    if status == "client_confirmed":
+        return True, "You already confirmed this invoice. Waiting for CA approval."
+
+    conn = await get_connection()
+    try:
+        if IS_POSTGRES:
+            await conn.execute(
+                "UPDATE invoices SET review_status = 'client_confirmed' WHERE id = $1",
+                invoice_id
+            )
+            await insert_audit_log(
+                conn, invoice_id, client_phone, "CLIENT_CONFIRM", "review_status", status, "client_confirmed"
+            )
+        else:
+            await conn.execute(
+                "UPDATE invoices SET review_status = 'client_confirmed' WHERE id = ?",
+                (invoice_id,)
+            )
+            await insert_audit_log(
+                conn, invoice_id, client_phone, "CLIENT_CONFIRM", "review_status", status, "client_confirmed"
+            )
+            await conn.commit()
+        return True, "Thanks! Confirmed. Your CA will do the final approval for GSTR."
     finally:
         await conn.close()
 
@@ -559,328 +1708,458 @@ async def insert_audit_log(conn, invoice_id: int, ca_user: str, action: str, fie
         """, (invoice_id, ca_user, action, field_name, old_val, new_val))
 
 
-async def get_monthly_metrics(client_phone: str, year_month: str) -> dict:
+async def get_monthly_metrics(client_phone: str, year_month: str | None = None) -> dict:
     """
-    Computes key performance indicators (KPIs) for a given month:
-    - Total sales & GST liability
-    - Taxable expenses
-    - Eligible ITC breakdown (CGST/SGST/IGST) from approved purchase invoices
-    - Blocked ITC (ineligible) amount
-    - Net GST payable (sales liability - eligible ITC)
-    - Pending review count
-    - Flagged (calculation errors) count
+    Computes KPIs for a client.
+
+    year_month:
+      - 'YYYY-MM' filters invoice_date to that month
+      - None / '' / 'all' means all invoices (no date filter)
+
+    ITC / sales classification requires a valid client GSTIN:
+      - Sales: supplier_gstin == client GSTIN AND approved
+      - ITC claimed/blocked: recipient_gstin == client GSTIN AND approved
+      - ITC provisional: same recipient match, eligible, not approved, not rejected
+    Without a valid GSTIN, sales/ITC stay 0 (total_taxable still shows all invoices).
     """
+    from itc_rules import normalize_gstin, validate_gstin
+
+    scope_all = (not year_month) or str(year_month).lower() in ("all", "*")
+    month = None if scope_all else year_month
+
+    client = await get_or_create_client(client_phone)
+    raw_gstin = client.get("gstin")
+    client_gstin = normalize_gstin(raw_gstin)
+    has_gstin = validate_gstin(client_gstin)
+
+    invoices = await get_invoices(client_phone=client_phone, month=month)
+    metrics = _compute_metrics_from_invoices(
+        invoices,
+        client_gstin=client_gstin if has_gstin else "",
+        has_gstin=has_gstin,
+        period="all" if scope_all else year_month,
+    )
+
+    # Month-close extras: was GSTR-2B imported for this period?
+    if scope_all:
+        metrics["gstr2b_imported"] = False
+        metrics["gstr2b_entry_count"] = 0
+        metrics["month_scope"] = "all"
+    else:
+        entries = await get_gstr2b_entries(client_phone, year_month)
+        metrics["gstr2b_imported"] = len(entries) > 0
+        metrics["gstr2b_entry_count"] = len(entries)
+        metrics["month_scope"] = year_month
+
+    needs_ca = 0
+    for inv in invoices:
+        if _invoice_needs_ca(inv):
+            needs_ca += 1
+    metrics["needs_ca_count"] = needs_ca
+
+    blockers = []
+    if not has_gstin:
+        blockers.append("Set a valid client GSTIN")
+    if scope_all:
+        blockers.append("Pick a single month to close")
+    elif metrics["invoice_count"] == 0:
+        blockers.append("No bills in this month")
+    if needs_ca > 0:
+        blockers.append(f"{needs_ca} still need CA")
+    if not scope_all and not metrics["gstr2b_imported"]:
+        blockers.append("Import GSTR-2B for this month")
+    elif not scope_all and metrics["gstr2b_imported"]:
+        if metrics.get("gstr2b_unmatched_count", 0) > 0:
+            blockers.append(f"{metrics['gstr2b_unmatched_count']} missing in 2B")
+        if metrics.get("gstr2b_mismatch_count", 0) > 0:
+            blockers.append(f"{metrics['gstr2b_mismatch_count']} 2B mismatch")
+
+    metrics["month_close_ready"] = len(blockers) == 0
+    metrics["month_close_blockers"] = blockers
+    return metrics
+
+
+def _invoice_needs_ca(inv: dict) -> bool:
+    """Mirror dashboard exception queue: CA must still act."""
+    review = (inv.get("review_status") or (
+        "approved" if _truthy(inv.get("is_approved")) else "needs_review"
+    )).strip()
+    if review in ("rejected", "skipped", "approved"):
+        return False
+    if _truthy(inv.get("is_approved")):
+        # Approved but still open 2B risk
+        m2b = (inv.get("gstr2b_match_status") or "none").strip().lower()
+        if m2b in ("unmatched", "mismatch"):
+            return True
+        if not _truthy(inv.get("is_calculation_correct")):
+            return True
+        return False
+    return True  # pending / awaiting / client_confirmed etc.
+
+
+def _truthy(val) -> bool:
+    return val in (True, 1, "1")
+
+
+def _invoice_gst(inv: dict) -> float:
+    return (
+        float(inv.get("total_cgst") or 0)
+        + float(inv.get("total_sgst") or 0)
+        + float(inv.get("total_igst") or 0)
+    )
+
+
+def _compute_metrics_from_invoices(
+    invoices: list[dict],
+    *,
+    client_gstin: str,
+    has_gstin: bool,
+    period,
+) -> dict:
+    from itc_rules import normalize_gstin
+
+    pending_cnt = 0
+    flagged_cnt = 0
+    total_taxable = 0.0
+    total_gst = 0.0
+    sales_taxable = 0.0
+    sales_gst = 0.0
+    purchase_taxable = 0.0
+    itc_cgst = itc_sgst = itc_igst = 0.0
+    itc_blocked = 0.0
+    itc_provisional = 0.0
+    itc_2b_matched = 0.0
+    itc_2b_unmatched = 0.0
+    itc_2b_mismatch = 0.0
+    gstr2b_matched_count = 0
+    gstr2b_unmatched_count = 0
+    gstr2b_mismatch_count = 0
+
+    gstin = normalize_gstin(client_gstin) if has_gstin else ""
+
+    for inv in invoices:
+        taxable = float(inv.get("total_taxable_value") or 0)
+        gst = _invoice_gst(inv)
+        total_taxable += taxable
+        total_gst += gst
+
+        approved = _truthy(inv.get("is_approved"))
+        review = (inv.get("review_status") or ("approved" if approved else "needs_review")).strip()
+        if not approved and review != "rejected":
+            pending_cnt += 1
+        if not _truthy(inv.get("is_calculation_correct")):
+            flagged_cnt += 1
+
+        if not has_gstin or not gstin:
+            continue
+
+        sup = normalize_gstin(inv.get("supplier_gstin"))
+        rec = normalize_gstin(inv.get("recipient_gstin"))
+
+        # Sales liability — approved outward supplies only
+        if approved and sup == gstin:
+            sales_taxable += taxable
+            sales_gst += gst
+
+        # Purchases — client must be the recipient
+        if rec != gstin:
+            continue
+
+        elig_c, elig_s, elig_i, blocked_gst = _invoice_itc_buckets(inv)
+        eligible_gst = elig_c + elig_s + elig_i
+        match_status = (inv.get("gstr2b_match_status") or "none").strip().lower()
+
+        if approved:
+            itc_cgst += elig_c
+            itc_sgst += elig_s
+            itc_igst += elig_i
+            itc_blocked += blocked_gst
+            # expenses_taxable ≈ taxable share of eligible portion when partial
+            if eligible_gst + blocked_gst > 0 and gst > 0:
+                purchase_taxable += taxable * (eligible_gst / (eligible_gst + blocked_gst))
+            elif eligible_gst > 0:
+                purchase_taxable += taxable
+
+            if eligible_gst > 0:
+                if match_status == "matched":
+                    itc_2b_matched += eligible_gst
+                    gstr2b_matched_count += 1
+                elif match_status == "mismatch":
+                    itc_2b_mismatch += eligible_gst
+                    gstr2b_mismatch_count += 1
+                elif match_status == "unmatched":
+                    itc_2b_unmatched += eligible_gst
+                    gstr2b_unmatched_count += 1
+        elif review != "rejected" and eligible_gst > 0:
+            itc_provisional += eligible_gst
+
+    itc_claimed = itc_cgst + itc_sgst + itc_igst
+    net_raw = sales_gst - itc_claimed
+    net_gst_payable = max(0.0, net_raw)
+    itc_credit_balance = max(0.0, -net_raw)
+
+    return {
+        "period": period,
+        "has_gstin": has_gstin,
+        "invoice_count": len(invoices),
+        "pending_review": pending_cnt,
+        "flagged_count": flagged_cnt,
+        "total_taxable": total_taxable,
+        "total_gst": total_gst,
+        "sales_taxable": sales_taxable,
+        "sales_gst_liability": sales_gst,
+        "expenses_taxable": purchase_taxable,
+        "itc_claimed": itc_claimed,
+        "itc_cgst": itc_cgst,
+        "itc_sgst": itc_sgst,
+        "itc_igst": itc_igst,
+        "itc_blocked": itc_blocked,
+        "itc_provisional": itc_provisional,
+        "net_gst_payable": net_gst_payable,
+        "itc_credit_balance": itc_credit_balance,
+        # GSTR-2B reconciliation (approved eligible purchases only)
+        "itc_2b_matched": itc_2b_matched,
+        "itc_2b_unmatched": itc_2b_unmatched,
+        "itc_2b_mismatch": itc_2b_mismatch,
+        "gstr2b_matched_count": gstr2b_matched_count,
+        "gstr2b_unmatched_count": gstr2b_unmatched_count,
+        "gstr2b_mismatch_count": gstr2b_mismatch_count,
+    }
+
+
+def _invoice_itc_buckets(inv: dict) -> tuple[float, float, float, float]:
+    """
+    Return (eligible_cgst, eligible_sgst, eligible_igst, blocked_gst).
+    Uses line-level rollups only when itc_line_evaluated is set; else legacy whole-invoice.
+    """
+    if _truthy(inv.get("itc_line_evaluated")):
+        return (
+            float(inv.get("itc_eligible_cgst") or 0),
+            float(inv.get("itc_eligible_sgst") or 0),
+            float(inv.get("itc_eligible_igst") or 0),
+            float(inv.get("itc_blocked_gst") or 0),
+        )
+
+    # Legacy: whole invoice GST is either claimable or blocked
+    cgst = float(inv.get("total_cgst") or 0)
+    sgst = float(inv.get("total_sgst") or 0)
+    igst = float(inv.get("total_igst") or 0)
+    if _truthy(inv.get("is_itc_eligible")):
+        return cgst, sgst, igst, 0.0
+    return 0.0, 0.0, 0.0, cgst + sgst + igst
+
+
+async def apply_line_itc_evaluation(invoice_id: int, ca_user: str = "system") -> dict | None:
+    """Re-run line-level ITC on an existing invoice and persist rollups."""
+    from itc_rules import evaluate_line_items_itc, validate_gstin
+
+    detail = await get_invoice_detail(invoice_id)
+    if not detail:
+        return None
+
+    line_eval = evaluate_line_items_itc(
+        detail.get("line_items") or [],
+        invoice_category=detail.get("business_category") or "Other",
+        is_recipient_registered=validate_gstin(detail.get("recipient_gstin")),
+    )
+
+    fields = {
+        "is_itc_eligible": line_eval["is_itc_eligible"],
+        "itc_ineligibility_reason": line_eval["itc_ineligibility_reason"] or "",
+        "itc_eligible_cgst": line_eval["eligible_cgst"],
+        "itc_eligible_sgst": line_eval["eligible_sgst"],
+        "itc_eligible_igst": line_eval["eligible_igst"],
+        "itc_blocked_gst": line_eval["blocked_gst"],
+        "itc_partial": bool(line_eval["partial"]),
+        "itc_line_evaluated": True,
+    }
+    await update_invoice(invoice_id, fields, ca_user)
+
+    # Update each line item ITC flags
     conn = await get_connection()
-    like_str = f"{year_month}%"
-
     try:
-        if IS_POSTGRES:
-            client_gstin = await conn.fetchval("SELECT gstin FROM clients WHERE phone_number = $1", client_phone)
-
-            pending_cnt = await conn.fetchval(
-                "SELECT COUNT(*) FROM invoices WHERE client_phone = $1 AND invoice_date LIKE $2 AND is_approved = FALSE",
-                client_phone, like_str
-            ) or 0
-
-            flagged_cnt = await conn.fetchval(
-                "SELECT COUNT(*) FROM invoices WHERE client_phone = $1 AND invoice_date LIKE $2 AND is_calculation_correct = FALSE",
-                client_phone, like_str
-            ) or 0
-
-            sales_taxable = 0.0
-            sales_gst = 0.0
-            purchase_taxable = 0.0
-            itc_cgst = 0.0
-            itc_sgst = 0.0
-            itc_igst = 0.0
-            itc_blocked = 0.0
-
-            if client_gstin:
-                sales_row = await conn.fetchrow("""
-                    SELECT SUM(total_taxable_value) as taxable,
-                           SUM(COALESCE(total_cgst,0) + COALESCE(total_sgst,0) + COALESCE(total_igst,0)) as gst
-                    FROM invoices
-                    WHERE client_phone = $1 AND invoice_date LIKE $2 AND supplier_gstin = $3
-                """, client_phone, like_str, client_gstin)
-                if sales_row and sales_row["taxable"]:
-                    sales_taxable = float(sales_row["taxable"])
-                    sales_gst = float(sales_row["gst"] or 0.0)
-
-                # Eligible ITC — broken down by tax head
-                itc_row = await conn.fetchrow("""
-                    SELECT SUM(COALESCE(total_cgst,0)) as cgst,
-                           SUM(COALESCE(total_sgst,0)) as sgst,
-                           SUM(COALESCE(total_igst,0)) as igst,
-                           SUM(total_taxable_value) as taxable
-                    FROM invoices
-                    WHERE client_phone = $1 AND invoice_date LIKE $2
-                      AND recipient_gstin = $3 AND is_itc_eligible = TRUE AND is_approved = TRUE
-                """, client_phone, like_str, client_gstin)
-                if itc_row and itc_row["taxable"]:
-                    purchase_taxable = float(itc_row["taxable"])
-                    itc_cgst = float(itc_row["cgst"] or 0.0)
-                    itc_sgst = float(itc_row["sgst"] or 0.0)
-                    itc_igst = float(itc_row["igst"] or 0.0)
-
-                # Blocked ITC
-                blocked_row = await conn.fetchrow("""
-                    SELECT SUM(COALESCE(total_cgst,0) + COALESCE(total_sgst,0) + COALESCE(total_igst,0)) as gst
-                    FROM invoices
-                    WHERE client_phone = $1 AND invoice_date LIKE $2
-                      AND recipient_gstin = $3 AND is_itc_eligible = FALSE AND is_approved = TRUE
-                """, client_phone, like_str, client_gstin)
-                if blocked_row and blocked_row["gst"]:
-                    itc_blocked = float(blocked_row["gst"])
+        for line in line_eval["lines"]:
+            lid = line.get("id")
+            if not lid:
+                continue
+            if IS_POSTGRES:
+                await conn.execute(
+                    """
+                    UPDATE line_items
+                    SET is_itc_eligible = $1,
+                        itc_ineligibility_reason = $2,
+                        itc_rule_code = $3,
+                        inferred_category = $4
+                    WHERE id = $5
+                    """,
+                    line.get("is_itc_eligible"),
+                    line.get("itc_ineligibility_reason"),
+                    line.get("itc_rule_code"),
+                    line.get("inferred_category"),
+                    lid,
+                )
             else:
-                itc_row = await conn.fetchrow("""
-                    SELECT SUM(COALESCE(total_cgst,0)) as cgst,
-                           SUM(COALESCE(total_sgst,0)) as sgst,
-                           SUM(COALESCE(total_igst,0)) as igst,
-                           SUM(total_taxable_value) as taxable
-                    FROM invoices
-                    WHERE client_phone = $1 AND invoice_date LIKE $2
-                      AND is_itc_eligible = TRUE AND is_approved = TRUE
-                """, client_phone, like_str)
-                if itc_row and itc_row["taxable"]:
-                    purchase_taxable = float(itc_row["taxable"])
-                    itc_cgst = float(itc_row["cgst"] or 0.0)
-                    itc_sgst = float(itc_row["sgst"] or 0.0)
-                    itc_igst = float(itc_row["igst"] or 0.0)
-
-                blocked_row = await conn.fetchrow("""
-                    SELECT SUM(COALESCE(total_cgst,0) + COALESCE(total_sgst,0) + COALESCE(total_igst,0)) as gst
-                    FROM invoices
-                    WHERE client_phone = $1 AND invoice_date LIKE $2
-                      AND is_itc_eligible = FALSE AND is_approved = TRUE
-                """, client_phone, like_str)
-                if blocked_row and blocked_row["gst"]:
-                    itc_blocked = float(blocked_row["gst"])
-
-            itc_claimed = itc_cgst + itc_sgst + itc_igst
-            net_gst_payable = max(0.0, sales_gst - itc_claimed)
-
-            return {
-                "pending_review": pending_cnt,
-                "flagged_count": flagged_cnt,
-                "sales_taxable": sales_taxable,
-                "sales_gst_liability": sales_gst,
-                "expenses_taxable": purchase_taxable,
-                "itc_claimed": itc_claimed,
-                "itc_cgst": itc_cgst,
-                "itc_sgst": itc_sgst,
-                "itc_igst": itc_igst,
-                "itc_blocked": itc_blocked,
-                "net_gst_payable": net_gst_payable,
-            }
-        else:
-            # SQLite Implementation
-            conn.row_factory = sqlite3.Row
-
-            cursor = await conn.execute("SELECT gstin FROM clients WHERE phone_number = ?", (client_phone,))
-            row = await cursor.fetchone()
-            client_gstin = row[0] if row else None
-
-            cursor = await conn.execute(
-                "SELECT COUNT(*) FROM invoices WHERE client_phone = ? AND invoice_date LIKE ? AND is_approved = 0",
-                (client_phone, like_str)
-            )
-            pending_cnt = (await cursor.fetchone())[0]
-
-            cursor = await conn.execute(
-                "SELECT COUNT(*) FROM invoices WHERE client_phone = ? AND invoice_date LIKE ? AND is_calculation_correct = 0",
-                (client_phone, like_str)
-            )
-            flagged_cnt = (await cursor.fetchone())[0]
-
-            sales_taxable = 0.0
-            sales_gst = 0.0
-            purchase_taxable = 0.0
-            itc_cgst = 0.0
-            itc_sgst = 0.0
-            itc_igst = 0.0
-            itc_blocked = 0.0
-
-            if client_gstin:
-                cursor = await conn.execute("""
-                    SELECT SUM(total_taxable_value),
-                           SUM(COALESCE(total_cgst,0) + COALESCE(total_sgst,0) + COALESCE(total_igst,0))
-                    FROM invoices
-                    WHERE client_phone = ? AND invoice_date LIKE ? AND supplier_gstin = ?
-                """, (client_phone, like_str, client_gstin))
-                res = await cursor.fetchone()
-                if res and res[0] is not None:
-                    sales_taxable = float(res[0])
-                    sales_gst = float(res[1] or 0.0)
-
-                cursor = await conn.execute("""
-                    SELECT SUM(COALESCE(total_cgst,0)), SUM(COALESCE(total_sgst,0)),
-                           SUM(COALESCE(total_igst,0)), SUM(total_taxable_value)
-                    FROM invoices
-                    WHERE client_phone = ? AND invoice_date LIKE ? AND recipient_gstin = ?
-                      AND is_itc_eligible = 1 AND is_approved = 1
-                """, (client_phone, like_str, client_gstin))
-                res = await cursor.fetchone()
-                if res and res[3] is not None:
-                    itc_cgst = float(res[0] or 0.0)
-                    itc_sgst = float(res[1] or 0.0)
-                    itc_igst = float(res[2] or 0.0)
-                    purchase_taxable = float(res[3])
-
-                cursor = await conn.execute("""
-                    SELECT SUM(COALESCE(total_cgst,0) + COALESCE(total_sgst,0) + COALESCE(total_igst,0))
-                    FROM invoices
-                    WHERE client_phone = ? AND invoice_date LIKE ? AND recipient_gstin = ?
-                      AND is_itc_eligible = 0 AND is_approved = 1
-                """, (client_phone, like_str, client_gstin))
-                res = await cursor.fetchone()
-                if res and res[0] is not None:
-                    itc_blocked = float(res[0])
-            else:
-                cursor = await conn.execute("""
-                    SELECT SUM(COALESCE(total_cgst,0)), SUM(COALESCE(total_sgst,0)),
-                           SUM(COALESCE(total_igst,0)), SUM(total_taxable_value)
-                    FROM invoices
-                    WHERE client_phone = ? AND invoice_date LIKE ? AND is_itc_eligible = 1 AND is_approved = 1
-                """, (client_phone, like_str))
-                res = await cursor.fetchone()
-                if res and res[3] is not None:
-                    itc_cgst = float(res[0] or 0.0)
-                    itc_sgst = float(res[1] or 0.0)
-                    itc_igst = float(res[2] or 0.0)
-                    purchase_taxable = float(res[3])
-
-                cursor = await conn.execute("""
-                    SELECT SUM(COALESCE(total_cgst,0) + COALESCE(total_sgst,0) + COALESCE(total_igst,0))
-                    FROM invoices
-                    WHERE client_phone = ? AND invoice_date LIKE ? AND is_itc_eligible = 0 AND is_approved = 1
-                """, (client_phone, like_str))
-                res = await cursor.fetchone()
-                if res and res[0] is not None:
-                    itc_blocked = float(res[0])
-
-            itc_claimed = itc_cgst + itc_sgst + itc_igst
-            net_gst_payable = max(0.0, sales_gst - itc_claimed)
-
-            return {
-                "pending_review": pending_cnt,
-                "flagged_count": flagged_cnt,
-                "sales_taxable": sales_taxable,
-                "sales_gst_liability": sales_gst,
-                "expenses_taxable": purchase_taxable,
-                "itc_claimed": itc_claimed,
-                "itc_cgst": itc_cgst,
-                "itc_sgst": itc_sgst,
-                "itc_igst": itc_igst,
-                "itc_blocked": itc_blocked,
-                "net_gst_payable": net_gst_payable,
-            }
+                await conn.execute(
+                    """
+                    UPDATE line_items
+                    SET is_itc_eligible = ?,
+                        itc_ineligibility_reason = ?,
+                        itc_rule_code = ?,
+                        inferred_category = ?
+                    WHERE id = ?
+                    """,
+                    (
+                        1 if line.get("is_itc_eligible") else 0,
+                        line.get("itc_ineligibility_reason"),
+                        line.get("itc_rule_code"),
+                        line.get("inferred_category"),
+                        lid,
+                    ),
+                )
+        if not IS_POSTGRES:
+            await conn.commit()
     finally:
         await conn.close()
+
+    return await get_invoice_detail(invoice_id)
 
 
 async def get_itc_monthly_trend(client_phone: str, num_months: int = 12) -> list[dict]:
     """
     Returns month-by-month ITC trend for the last `num_months` months.
     Each entry: { month: 'YYYY-MM', itc_eligible, itc_blocked, sales_gst }
-    Used to power the dashboard sparkline chart.
+    Uses the same classification rules as get_monthly_metrics.
     """
     from datetime import date
-    import calendar
 
+    today = date.today()
+    results = []
+    for i in range(num_months - 1, -1, -1):
+        total_months = (today.year * 12 + today.month - 1) - i
+        year = total_months // 12
+        month = total_months % 12 + 1
+        year_month = f"{year:04d}-{month:02d}"
+        m = await get_monthly_metrics(client_phone, year_month)
+        results.append({
+            "month": year_month,
+            "itc_eligible": float(m.get("itc_claimed") or 0),
+            "itc_blocked": float(m.get("itc_blocked") or 0),
+            "sales_gst": float(m.get("sales_gst_liability") or 0),
+        })
+    return results
+
+
+# ── CA invite codes ───────────────────────────────────────────────────────────
+async def get_ca_by_invite_code(invite_code: str) -> dict | None:
+    """Look up a CA profile by 6-digit invite code. Returns None if not found."""
     conn = await get_connection()
     try:
-        conn.row_factory = sqlite3.Row
-        cursor = await conn.execute("SELECT gstin FROM clients WHERE phone_number = ?", (client_phone,))
-        row = await cursor.fetchone()
-        client_gstin = row[0] if row else None
-
-        today = date.today()
-        results = []
-
-        for i in range(num_months - 1, -1, -1):
-            # Calculate the month offset
-            month_offset = today.month - 1 - i
-            year = today.year + month_offset // 12
-            month = month_offset % 12 + 1
-            if month_offset < 0:
-                year = today.year - 1 + (today.month - i - 1) // 12
-                month = ((today.month - i - 1) % 12 + 12) % 12 + 1
-
-            # Recalculate properly
-            total_months = (today.year * 12 + today.month - 1) - i
-            year = total_months // 12
-            month = total_months % 12 + 1
-
-            year_month = f"{year:04d}-{month:02d}"
-            like_str = f"{year_month}%"
-
-            if IS_POSTGRES:
-                # Eligible ITC
-                if client_gstin:
-                    itc_row = await conn.fetchrow("""
-                        SELECT SUM(COALESCE(total_cgst,0) + COALESCE(total_sgst,0) + COALESCE(total_igst,0)) as eligible
-                        FROM invoices WHERE client_phone = $1 AND invoice_date LIKE $2
-                          AND recipient_gstin = $3 AND is_itc_eligible = TRUE AND is_approved = TRUE
-                    """, client_phone, like_str, client_gstin)
-                    blocked_row = await conn.fetchrow("""
-                        SELECT SUM(COALESCE(total_cgst,0) + COALESCE(total_sgst,0) + COALESCE(total_igst,0)) as blocked
-                        FROM invoices WHERE client_phone = $1 AND invoice_date LIKE $2
-                          AND recipient_gstin = $3 AND is_itc_eligible = FALSE AND is_approved = TRUE
-                    """, client_phone, like_str, client_gstin)
-                    sales_row = await conn.fetchrow("""
-                        SELECT SUM(COALESCE(total_cgst,0) + COALESCE(total_sgst,0) + COALESCE(total_igst,0)) as gst
-                        FROM invoices WHERE client_phone = $1 AND invoice_date LIKE $2 AND supplier_gstin = $3
-                    """, client_phone, like_str, client_gstin)
-                    results.append({
-                        "month": year_month,
-                        "itc_eligible": float(itc_row["eligible"] or 0),
-                        "itc_blocked": float(blocked_row["blocked"] or 0),
-                        "sales_gst": float(sales_row["gst"] or 0),
-                    })
-                else:
-                    results.append({"month": year_month, "itc_eligible": 0, "itc_blocked": 0, "sales_gst": 0})
-            else:
-                # SQLite
-                if client_gstin:
-                    c = await conn.execute("""
-                        SELECT SUM(COALESCE(total_cgst,0) + COALESCE(total_sgst,0) + COALESCE(total_igst,0))
-                        FROM invoices WHERE client_phone = ? AND invoice_date LIKE ?
-                          AND recipient_gstin = ? AND is_itc_eligible = 1 AND is_approved = 1
-                    """, (client_phone, like_str, client_gstin))
-                    itc_elig = (await c.fetchone())[0] or 0
-
-                    c = await conn.execute("""
-                        SELECT SUM(COALESCE(total_cgst,0) + COALESCE(total_sgst,0) + COALESCE(total_igst,0))
-                        FROM invoices WHERE client_phone = ? AND invoice_date LIKE ?
-                          AND recipient_gstin = ? AND is_itc_eligible = 0 AND is_approved = 1
-                    """, (client_phone, like_str, client_gstin))
-                    itc_blk = (await c.fetchone())[0] or 0
-
-                    c = await conn.execute("""
-                        SELECT SUM(COALESCE(total_cgst,0) + COALESCE(total_sgst,0) + COALESCE(total_igst,0))
-                        FROM invoices WHERE client_phone = ? AND invoice_date LIKE ? AND supplier_gstin = ?
-                    """, (client_phone, like_str, client_gstin))
-                    sales_gst = (await c.fetchone())[0] or 0
-                else:
-                    c = await conn.execute("""
-                        SELECT SUM(COALESCE(total_cgst,0) + COALESCE(total_sgst,0) + COALESCE(total_igst,0))
-                        FROM invoices WHERE client_phone = ? AND invoice_date LIKE ?
-                          AND is_itc_eligible = 1 AND is_approved = 1
-                    """, (client_phone, like_str))
-                    itc_elig = (await c.fetchone())[0] or 0
-                    itc_blk = 0
-                    sales_gst = 0
-
-                results.append({
-                    "month": year_month,
-                    "itc_eligible": float(itc_elig),
-                    "itc_blocked": float(itc_blk),
-                    "sales_gst": float(sales_gst),
-                })
-
-        return results
+        if IS_POSTGRES:
+            row = await conn.fetchrow("SELECT * FROM cas WHERE invite_code = $1", invite_code)
+            return dict(row) if row else None
+        else:
+            conn.row_factory = sqlite3.Row
+            cursor = await conn.execute("SELECT * FROM cas WHERE invite_code = ?", (invite_code,))
+            row = await cursor.fetchone()
+            return dict(row) if row else None
     finally:
         await conn.close()
 
 
+async def link_client_to_ca(client_phone: str, invite_code: str) -> dict:
+    """
+    Link a client phone to a CA invite code.
+    Creates the client row if needed, then upserts the link.
+    """
+    await get_or_create_client(client_phone, name="Onboarding Client")
+    ca = await get_ca_by_invite_code(invite_code)
+    if not ca:
+        raise ValueError("Invite code not found")
+
+    conn = await get_connection()
+    try:
+        if IS_POSTGRES:
+            await conn.execute(
+                """
+                INSERT INTO client_ca_links (client_phone, ca_invite_code)
+                VALUES ($1, $2)
+                ON CONFLICT (client_phone) DO UPDATE SET
+                    ca_invite_code = EXCLUDED.ca_invite_code,
+                    linked_at = CURRENT_TIMESTAMP
+                """,
+                client_phone, invite_code
+            )
+        else:
+            await conn.execute(
+                """
+                INSERT INTO client_ca_links (client_phone, ca_invite_code)
+                VALUES (?, ?)
+                ON CONFLICT(client_phone) DO UPDATE SET
+                    ca_invite_code = excluded.ca_invite_code,
+                    linked_at = CURRENT_TIMESTAMP
+                """,
+                (client_phone, invite_code)
+            )
+            await conn.commit()
+        return ca
+    finally:
+        await conn.close()
+
+
+# ── WhatsApp message deduplication ────────────────────────────────────────────
+async def is_message_processed(message_id: str) -> bool:
+    """Return True if this WhatsApp message ID was already handled."""
+    if not message_id:
+        return False
+    conn = await get_connection()
+    try:
+        if IS_POSTGRES:
+            row = await conn.fetchrow(
+                "SELECT 1 FROM processed_messages WHERE message_id = $1", message_id
+            )
+            return row is not None
+        else:
+            cursor = await conn.execute(
+                "SELECT 1 FROM processed_messages WHERE message_id = ?", (message_id,)
+            )
+            return await cursor.fetchone() is not None
+    finally:
+        await conn.close()
+
+
+async def mark_message_processed(message_id: str) -> None:
+    """Record a WhatsApp message ID as processed (idempotent)."""
+    if not message_id:
+        return
+    conn = await get_connection()
+    try:
+        if IS_POSTGRES:
+            await conn.execute(
+                """
+                INSERT INTO processed_messages (message_id)
+                VALUES ($1)
+                ON CONFLICT (message_id) DO NOTHING
+                """,
+                message_id
+            )
+            # Keep table bounded — drop entries older than 7 days
+            await conn.execute(
+                "DELETE FROM processed_messages WHERE created_at < NOW() - INTERVAL '7 days'"
+            )
+        else:
+            await conn.execute(
+                """
+                INSERT OR IGNORE INTO processed_messages (message_id) VALUES (?)
+                """,
+                (message_id,)
+            )
+            await conn.execute(
+                """
+                DELETE FROM processed_messages
+                WHERE created_at < datetime('now', '-7 days')
+                """
+            )
+            await conn.commit()
+    finally:
+        await conn.close()
 

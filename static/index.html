@@ -1,451 +1,615 @@
 <!DOCTYPE html>
-
-<html class="dark" lang="en"><head>
+<html lang="en">
+<head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>Fintrack GST | AI-Powered Tax Compliance</title>
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<script id="tailwind-config">
-        tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    "colors": {
-                        "surface": "#0f131c",
-                        "outline": "#918fa1",
-                        "on-tertiary-container": "#93e8ff",
-                        "on-primary-fixed": "#0f0069",
-                        "on-error": "#690005",
-                        "primary-fixed": "#e2dfff",
-                        "on-error-container": "#ffdad6",
-                        "on-secondary-fixed-variant": "#2f3aa3",
-                        "primary-fixed-dim": "#c3c0ff",
-                        "error": "#ffb4ab",
-                        "surface-bright": "#353943",
-                        "surface-tint": "#c3c0ff",
-                        "surface-container-highest": "#31353f",
-                        "background": "#0f131c",
-                        "inverse-primary": "#4d44e3",
-                        "inverse-on-surface": "#2c303a",
-                        "primary-container": "#4f46e5",
-                        "outline-variant": "#464555",
-                        "on-tertiary-fixed-variant": "#004e5c",
-                        "secondary-container": "#2f3aa3",
-                        "error-container": "#93000a",
-                        "on-background": "#dfe2ef",
-                        "surface-container": "#1c1f29",
-                        "on-tertiary": "#003640",
-                        "on-primary-fixed-variant": "#3323cc",
-                        "tertiary": "#4cd7f6",
-                        "on-secondary-container": "#a8afff",
-                        "secondary-fixed": "#e0e0ff",
-                        "primary": "#c3c0ff",
-                        "tertiary-container": "#006a7c",
-                        "on-primary": "#1d00a5",
-                        "secondary-fixed-dim": "#bdc2ff",
-                        "on-tertiary-fixed": "#001f26",
-                        "on-secondary": "#131e8c",
-                        "on-surface": "#dfe2ef",
-                        "surface-container-low": "#181b25",
-                        "inverse-surface": "#dfe2ef",
-                        "surface-dim": "#0f131c",
-                        "tertiary-fixed": "#acedff",
-                        "surface-container-high": "#262a34",
-                        "on-primary-container": "#dad7ff",
-                        "tertiary-fixed-dim": "#4cd7f6",
-                        "surface-variant": "#31353f",
-                        "secondary": "#bdc2ff",
-                        "on-surface-variant": "#c7c4d8",
-                        "on-secondary-fixed": "#000767",
-                        "surface-container-lowest": "#0a0e17"
-                    },
-                    "borderRadius": {
-                        "DEFAULT": "0.25rem",
-                        "lg": "0.5rem",
-                        "xl": "0.75rem",
-                        "full": "9999px"
-                    },
-                    "spacing": {
-                        "margin-mobile": "16px",
-                        "base": "4px",
-                        "margin-desktop": "40px",
-                        "gutter": "24px",
-                        "container-max": "1440px"
-                    },
-                    "fontFamily": {
-                        "body-sm": ["Plus Jakarta Sans"],
-                        "headline-md": ["Plus Jakarta Sans"],
-                        "headline-lg-mobile": ["Plus Jakarta Sans"],
-                        "display-lg": ["Plus Jakarta Sans"],
-                        "label-md": ["Plus Jakarta Sans"],
-                        "body-lg": ["Plus Jakarta Sans"],
-                        "headline-lg": ["Plus Jakarta Sans"],
-                        "display-lg-mobile": ["Plus Jakarta Sans"],
-                        "body-md": ["Plus Jakarta Sans"]
-                    },
-                    "fontSize": {
-                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
-                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
-                        "headline-lg-mobile": ["28px", {"lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
-                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
-                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
-                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
-                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
-                        "display-lg-mobile": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
-                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
-                    }
-                },
-            },
-        }
-    </script>
-<style>
-        body {
-            background-color: #0f131c;
-            color: #dfe2ef;
-            overflow-x: hidden;
-        }
-        .glass-panel {
-            background: rgba(28, 31, 41, 0.8);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-        }
-        .inner-glow {
-            box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
-        }
-        .reveal {
-            opacity: 0;
-            transform: translateY(20px);
-            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .reveal.active {
-            opacity: 1;
-            transform: translateY(0);
-        }
-        .mesh-gradient {
-            background: radial-gradient(at 0% 0%, rgba(79, 70, 229, 0.15) 0px, transparent 50%),
-                        radial-gradient(at 100% 100%, rgba(76, 215, 246, 0.1) 0px, transparent 50%);
-        }
-        .hero-circles {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 120vw;
-            height: 120vw;
-            border-radius: 50%;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            pointer-events: none;
-        }
-    </style>
-</head>
-<body class="font-body-md text-body-md antialiased">
-<!-- TopNavBar -->
-<nav class="fixed top-0 w-full z-50 border-b border-white/5 bg-surface-container/80 backdrop-blur-xl shadow-sm">
-<div class="flex justify-between items-center px-margin-desktop py-4 max-w-container-max mx-auto">
-<div class="flex items-center gap-3">
-<img alt="Fintrack GST Logo" class="w-8 h-8 rounded-lg" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA5tWyEjMqWWRnHLx1XJdX9BDqClBMbT8gt0yvTe98mp1WLyAvGg2CE9xVtM8MpXI11hFufMSoYXTUtnGq4jB9kkFfuu8Fg_UHrb0L0lDKfvpcayVR7M1YlYX0gVDeynYZjL-xshuTM-_OIj99FYuRc8rS32MSXnERTUvt91x86wqZar81ty1rhvHcPgkEwSvFtWp4NxHVzMhX9OWr0eVdBm5QOnqg-3e-1giqWKBAicq2AhKl3F9l3mR1RfgZZgWmBcTajQ7oLK64"/>
-<span class="font-headline-md text-headline-md font-bold text-on-surface tracking-tight">Fintrack GST</span>
-<span class="px-2 py-0.5 rounded bg-primary-container/20 text-primary font-label-md text-[10px] uppercase tracking-wider">BETA</span>
-</div>
-<div class="hidden md:flex items-center gap-8">
-<a class="text-primary font-bold border-b-2 border-primary pb-1 font-body-md text-body-md" href="#">Features</a>
-<a class="text-on-surface-variant hover:text-on-surface transition-colors font-body-md text-body-md" href="#">How It Works</a>
-<a class="text-on-surface-variant hover:text-on-surface transition-colors font-body-md text-body-md" href="#">Pricing</a>
-<a class="text-on-surface-variant hover:text-on-surface transition-colors font-body-md text-body-md" href="#">About</a>
-</div>
-<div class="flex items-center gap-4">
-<button onclick="window.location.href='/dashboard'" class="hidden md:flex items-center gap-2 px-4 py-2 text-on-surface-variant hover:text-on-surface transition-all">
-<span class="material-symbols-outlined text-[18px]">lock</span>
-<span class="font-label-md text-label-md">CA Login</span>
-</button>
-<button onclick="window.location.href='/onboarding'" class="bg-primary-container text-on-primary-container px-6 py-2.5 rounded-full font-label-md text-label-md font-bold flex items-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary-container/20">
-                    Get Started Free
-                    <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
-</button>
-</div>
-</div>
-</nav>
-<!-- Main Content -->
-<main class="pt-24 mesh-gradient relative">
-<!-- Background Shader -->
-
-<!-- Hero Section -->
-<section class="relative min-h-screen flex flex-col items-center justify-center text-center px-margin-mobile overflow-hidden">
-<!-- Decorative Circles -->
-<div class="hero-circles scale-[0.6] md:scale-100 opacity-20"></div>
-<div class="hero-circles scale-[0.45] md:scale-[0.8] opacity-15"></div>
-<div class="hero-circles scale-[0.3] md:scale-[0.6] opacity-10"></div>
-<div class="relative z-10 max-w-4xl mx-auto space-y-8">
-<div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-panel border-white/10 inner-glow reveal">
-<span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
-<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-widest">Powered by Gemini AI • WhatsApp Native</span>
-</div>
-<h1 class="font-display-lg text-display-lg-mobile md:text-display-lg leading-tight tracking-tighter reveal">
-                    GST Filing, <br/>
-<span class="text-transparent bg-clip-text bg-gradient-to-r from-primary to-tertiary">On Autopilot.</span>
-</h1>
-<p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto reveal" style="transition-delay: 100ms">
-                    Send your invoices on <span class="text-tertiary font-bold">WhatsApp</span>. Our AI extracts every field, validates GSTIN, checks ITC eligibility, and helps your CA file returns — in minutes, not days.
-                </p>
-<div class="flex flex-col md:flex-row gap-4 justify-center items-center pt-8 reveal" style="transition-delay: 200ms">
-<button onclick="window.location.href='/onboarding'" class="w-full md:w-auto bg-[#25D366] text-white px-8 py-4 rounded-full font-headline-md text-body-md flex items-center justify-center gap-3 hover:shadow-xl hover:shadow-emerald-500/20 transition-all active:scale-95">
-<span class="material-symbols-outlined" data-weight="fill">chat</span>
-                        Start Free via WhatsApp
-                    </button>
-<button onclick="window.location.href='/dashboard'" class="w-full md:w-auto glass-panel px-8 py-4 rounded-full font-headline-md text-body-md flex items-center justify-center gap-3 hover:bg-white/5 transition-all border-white/10 inner-glow active:scale-95">
-<span class="material-symbols-outlined">dashboard</span>
-                        Open CA Dashboard
-                    </button>
-</div>
-<!-- Stats Grid -->
-<div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-gutter pt-20 reveal" style="transition-delay: 300ms">
-<div class="p-6 glass-panel rounded-2xl text-center">
-<div class="text-primary font-display-lg text-[32px] font-bold">10K+</div>
-<div class="text-on-surface-variant font-label-md">Invoices Filed</div>
-</div>
-<div class="p-6 glass-panel rounded-2xl text-center">
-<div class="text-tertiary font-display-lg text-[32px] font-bold">₹50Cr+</div>
-<div class="text-on-surface-variant font-label-md">Tax Managed</div>
-</div>
-<div class="p-6 glass-panel rounded-2xl text-center">
-<div class="text-primary font-display-lg text-[32px] font-bold">500+</div>
-<div class="text-on-surface-variant font-label-md">Business Users</div>
-</div>
-<div class="p-6 glass-panel rounded-2xl text-center">
-<div class="text-tertiary font-display-lg text-[32px] font-bold">99.9%</div>
-<div class="text-on-surface-variant font-label-md">AI Accuracy</div>
-</div>
-</div>
-</div>
-</section>
-<!-- Product Showcase (WhatsApp Mockup) -->
-<section class="py-24 px-margin-desktop max-w-container-max mx-auto">
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
-<div class="space-y-8 reveal">
-<h2 class="font-headline-lg text-headline-lg">Filing tax as easy as <span class="text-tertiary">chatting with a friend.</span></h2>
-<ul class="space-y-6">
-<li class="flex gap-4">
-<div class="flex-shrink-0 w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-<span class="material-symbols-outlined text-primary">photo_camera</span>
-</div>
-<div>
-<h4 class="font-headline-md text-body-md font-bold mb-1">Click &amp; Send</h4>
-<p class="text-on-surface-variant text-body-sm">Snap a photo of your invoice and send it to our WhatsApp number. No portals, no password resets.</p>
-</div>
-</li>
-<li class="flex gap-4">
-<div class="flex-shrink-0 w-12 h-12 rounded-xl bg-tertiary/10 flex items-center justify-center">
-<span class="material-symbols-outlined text-tertiary">auto_awesome</span>
-</div>
-<div>
-<h4 class="font-headline-md text-body-md font-bold mb-1">AI Extraction</h4>
-<p class="text-on-surface-variant text-body-sm">Gemini AI extracts Vendor name, GSTIN, Items, and Taxes with human-level accuracy in seconds.</p>
-</div>
-</li>
-<li class="flex gap-4">
-<div class="flex-shrink-0 w-12 h-12 rounded-xl bg-secondary/10 flex items-center justify-center">
-<span class="material-symbols-outlined text-secondary">verified_user</span>
-</div>
-<div>
-<h4 class="font-headline-md text-body-md font-bold mb-1">Instant Compliance Check</h4>
-<p class="text-on-surface-variant text-body-sm">Automatic GSTIN validation and ITC eligibility check. We flag errors before they reach your CA.</p>
-</div>
-</li>
-</ul>
-</div>
-<div class="relative reveal" style="transition-delay: 200ms">
-<div class="absolute -inset-4 bg-gradient-to-tr from-primary/20 to-tertiary/20 blur-3xl opacity-30 rounded-full"></div>
-<div class="relative w-full max-w-[400px] mx-auto glass-panel rounded-[40px] border-white/10 p-4 inner-glow shadow-2xl">
-<!-- Mockup Header -->
-<div class="bg-[#075E54] -mx-4 -mt-4 rounded-t-[36px] p-4 flex items-center gap-3">
-<div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-<img alt="Fintrack Logo" class="w-8 h-8 rounded-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA5tWyEjMqWWRnHLx1XJdX9BDqClBMbT8gt0yvTe98mp1WLyAvGg2CE9xVtM8MpXI11hFufMSoYXTUtnGq4jB9kkFfuu8Fg_UHrb0L0lDKfvpcayVR7M1YlYX0gVDeynYZjL-xshuTM-_OIj99FYuRc8rS32MSXnERTUvt91x86wqZar81ty1rhvHcPgkEwSvFtWp4NxHVzMhX9OWr0eVdBm5QOnqg-3e-1giqWKBAicq2AhKl3F9l3mR1RfgZZgWmBcTajQ7oLK64"/>
-</div>
-<div>
-<div class="text-white font-bold text-body-sm">Fintrack GST Assistant</div>
-<div class="text-white/70 text-[10px]">Online</div>
-</div>
-</div>
-<!-- Mockup Messages -->
-<div class="space-y-4 py-6 px-2 overflow-hidden h-[450px]">
-<div class="flex justify-end">
-<div class="bg-[#dcf8c6] text-surface p-3 rounded-2xl rounded-tr-none max-w-[80%] text-sm shadow-sm">
-                                    [Attached Invoice.jpg]
-                                    <div class="text-[10px] text-gray-500 mt-1 text-right">10:42 AM</div>
-</div>
-</div>
-<div class="flex justify-start">
-<div class="bg-surface-container-high p-3 rounded-2xl rounded-tl-none max-w-[85%] text-sm border border-white/5">
-<p class="font-bold text-primary mb-1">AI analyzing...</p>
-<div class="space-y-1 text-on-surface-variant text-[12px]">
-<div>• Vendor: TechSolutions Ltd</div>
-<div>• GSTIN: 27AABCT1234F1Z1 <span class="text-emerald-400">✓</span></div>
-<div>• Total: ₹14,250.00</div>
-<div>• ITC: ₹2,173.72 (Eligible)</div>
-</div>
-<div class="mt-2 pt-2 border-t border-white/5 text-primary text-[12px] font-bold">
-                                        Data pushed to CA Dashboard.
-                                    </div>
-<div class="text-[10px] text-on-surface-variant/60 mt-1">10:42 AM</div>
-</div>
-</div>
-<div class="flex justify-end">
-<div class="bg-[#dcf8c6] text-surface p-3 rounded-2xl rounded-tr-none max-w-[80%] text-sm shadow-sm">
-                                    Thanks! Please export this month's summary.
-                                    <div class="text-[10px] text-gray-500 mt-1 text-right">10:45 AM</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-</section>
-<!-- Process Timeline -->
-<section class="py-24 bg-surface-container-lowest/50 border-y border-white/5">
-<div class="px-margin-desktop max-w-container-max mx-auto text-center space-y-16">
-<div class="reveal">
-<h2 class="font-headline-lg text-headline-lg">Your Compliance Workflow, Simplified</h2>
-<p class="text-on-surface-variant mt-4">Three steps to peace of mind.</p>
-</div>
-<div class="grid grid-cols-1 md:grid-cols-3 gap-12 relative">
-<!-- Connector Line (Desktop) -->
-<div class="hidden md:block absolute top-12 left-[20%] right-[20%] h-[1px] bg-gradient-to-r from-transparent via-primary/30 to-transparent"></div>
-<!-- Step 1 -->
-<div class="relative z-10 space-y-6 reveal" style="transition-delay: 100ms">
-<div class="w-24 h-24 mx-auto glass-panel rounded-full flex items-center justify-center border-primary/20 bg-primary/5">
-<span class="text-primary font-display-lg text-3xl">01</span>
-</div>
-<h3 class="font-headline-md text-headline-md">Business User Sends</h3>
-<p class="text-on-surface-variant text-body-sm px-4">Upload invoices via WhatsApp or Web App as they arrive. No more end-of-month scramble.</p>
-</div>
-<!-- Step 2 -->
-<div class="relative z-10 space-y-6 reveal" style="transition-delay: 200ms">
-<div class="w-24 h-24 mx-auto glass-panel rounded-full flex items-center justify-center border-tertiary/20 bg-tertiary/5">
-<span class="text-tertiary font-display-lg text-3xl">02</span>
-</div>
-<h3 class="font-headline-md text-headline-md">Fintrack AI Extracts</h3>
-<p class="text-on-surface-variant text-body-sm px-4">Our advanced models digitize records, reconcile bank statements, and flag missing ITC.</p>
-</div>
-<!-- Step 3 -->
-<div class="relative z-10 space-y-6 reveal" style="transition-delay: 300ms">
-<div class="w-24 h-24 mx-auto glass-panel rounded-full flex items-center justify-center border-secondary/20 bg-secondary/5">
-<span class="text-secondary font-display-lg text-3xl">03</span>
-</div>
-<h3 class="font-headline-md text-headline-md">Tax Pro Reviews</h3>
-<p class="text-on-surface-variant text-body-sm px-4">Your CA receives clean, reconciled data in the dashboard and files with one click.</p>
-</div>
-</div>
-</div>
-</section>
-<!-- CTA Section -->
-<section class="py-32 px-margin-desktop">
-<div class="max-w-4xl mx-auto glass-panel rounded-[40px] p-12 md:p-20 text-center relative overflow-hidden reveal">
-<div class="absolute -top-24 -left-24 w-64 h-64 bg-primary/20 blur-[100px]"></div>
-<div class="absolute -bottom-24 -right-24 w-64 h-64 bg-tertiary/20 blur-[100px]"></div>
-<div class="relative z-10 space-y-8">
-<div class="flex justify-center">
-
-</div>
-<h2 class="font-display-lg text-display-lg-mobile md:text-display-lg">Ready to put your taxes on <span class="text-primary italic">Autopilot?</span></h2>
-<p class="text-on-surface-variant text-body-lg max-w-xl mx-auto">Join 500+ forward-thinking businesses and CAs using Fintrack GST to reclaim their time.</p>
-<div class="flex flex-col md:flex-row gap-4 justify-center items-center pt-4">
-<button onclick="window.location.href='/onboarding'" class="w-full md:w-auto bg-primary-container text-on-primary-container px-10 py-5 rounded-full font-headline-md text-body-md font-bold hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary-container/30">
-                            Create Free Account
-                        </button>
-<button class="w-full md:w-auto px-10 py-5 rounded-full font-headline-md text-body-md font-bold text-on-surface hover:bg-white/5 transition-all border border-white/10">
-                            Schedule a Demo
-                        </button>
-</div>
-<p class="text-outline text-label-md">No credit card required. Cancel anytime.</p>
-</div>
-</div>
-</section>
-</main>
-<!-- Footer -->
-<footer class="w-full py-12 border-t border-white/5 bg-surface-container-lowest">
-<div class="grid grid-cols-1 md:grid-cols-4 gap-gutter px-margin-desktop max-w-container-max mx-auto">
-<div class="space-y-4">
-<div class="flex items-center gap-2">
-<img alt="Fintrack GST" class="w-6 h-6 rounded" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA5tWyEjMqWWRnHLx1XJdX9BDqClBMbT8gt0yvTe98mp1WLyAvGg2CE9xVtM8MpXI11hFufMSoYXTUtnGq4jB9kkFfuu8Fg_UHrb0L0lDKfvpcayVR7M1YlYX0gVDeynYZjL-xshuTM-_OIj99FYuRc8rS32MSXnERTUvt91x86wqZar81ty1rhvHcPgkEwSvFtWp4NxHVzMhX9OWr0eVdBm5QOnqg-3e-1giqWKBAicq2AhKl3F9l3mR1RfgZZgWmBcTajQ7oLK64"/>
-<span class="font-headline-md text-headline-md font-bold text-on-surface">Fintrack GST</span>
-</div>
-<p class="text-on-surface-variant font-body-sm text-body-sm leading-relaxed">
-                    © 2024 Fintrack GST. All rights reserved. Precision compliance for modern enterprise.
-                </p>
-<div class="flex gap-4">
-<a class="text-outline hover:text-primary transition-colors" href="#"><span class="material-symbols-outlined">public</span></a>
-<a class="text-outline hover:text-primary transition-colors" href="#"><span class="material-symbols-outlined">mail</span></a>
-</div>
-</div>
-<div class="space-y-4">
-<h4 class="text-on-surface font-label-md text-label-md uppercase tracking-widest">Product</h4>
-<ul class="space-y-2">
-<li><a class="text-on-surface-variant hover:text-tertiary transition-colors font-body-sm text-body-sm" href="#">AI Invoice Reader</a></li>
-<li><a class="text-on-surface-variant hover:text-tertiary transition-colors font-body-sm text-body-sm" href="#">CA Dashboard</a></li>
-<li><a class="text-on-surface-variant hover:text-tertiary transition-colors font-body-sm text-body-sm" href="#">WhatsApp Bot</a></li>
-<li><a class="text-on-surface-variant hover:text-tertiary transition-colors font-body-sm text-body-sm" href="#">ITC Reconciliation</a></li>
-</ul>
-</div>
-<div class="space-y-4">
-<h4 class="text-on-surface font-label-md text-label-md uppercase tracking-widest">Resources</h4>
-<ul class="space-y-2">
-<li><a class="text-on-surface-variant hover:text-tertiary transition-colors font-body-sm text-body-sm" href="#">GST Guide 2024</a></li>
-<li><a class="text-on-surface-variant hover:text-tertiary transition-colors font-body-sm text-body-sm" href="#">API Documentation</a></li>
-<li><a class="text-on-surface-variant hover:text-tertiary transition-colors font-body-sm text-body-sm" href="#">Community Forum</a></li>
-<li><a class="text-on-surface-variant hover:text-tertiary transition-colors font-body-sm text-body-sm" href="#">Support Center</a></li>
-</ul>
-</div>
-<div class="space-y-4">
-<h4 class="text-on-surface font-label-md text-label-md uppercase tracking-widest">Company</h4>
-<ul class="space-y-2">
-<li><a class="text-on-surface-variant hover:text-tertiary transition-colors font-body-sm text-body-sm" href="#">About Us</a></li>
-<li><a class="text-on-surface-variant hover:text-tertiary transition-colors font-body-sm text-body-sm" href="#">Terms of Service</a></li>
-<li><a class="text-on-surface-variant hover:text-tertiary transition-colors font-body-sm text-body-sm" href="#">Privacy Policy</a></li>
-<li><a class="text-on-surface-variant hover:text-tertiary transition-colors font-body-sm text-body-sm" href="#">Security</a></li>
-</ul>
-</div>
-</div>
-</footer>
+<title>Taxova.ai | WhatsApp GST Filing</title>
+<meta name="description" content="Send invoices on WhatsApp. Taxova.ai extracts fields, checks ITC, and helps your CA file returns."/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@450;500;600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms"></script>
 <script>
-        // Intersection Observer for reveal animations
-        const observerOptions = {
-            threshold: 0.1,
-            rootMargin: '0px 0px -50px 0px'
-        };
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        paper: "#F7F9FC",
+        surface: "#FFFFFF",
+        ink: "#0B1220",
+        line: "#D7DEE8",
+        teal: "#0F9F84",
+        "teal-bright": "#12B89A",
+        amber: "#C8892A",
+        mist: "#5A6B80",
+        muted: "#7A8BA0",
+      },
+      fontFamily: {
+        sans: ["Sora", "system-ui", "sans-serif"],
+        mono: ["IBM Plex Mono", "ui-monospace", "monospace"],
+      },
+    },
+  },
+};
+</script>
+<style>
+  :root {
+    --paper: #F7F9FC;
+    --surface: #FFFFFF;
+    --ink: #0B1220;
+    --line: #D7DEE8;
+    --teal: #0F9F84;
+    --amber: #C8892A;
+    --mist: #5A6B80;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    color: var(--ink);
+    font-family: Sora, system-ui, sans-serif;
+    background: var(--paper);
+    overflow-x: hidden;
+  }
+  .material-symbols-outlined {
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+  }
+  .site-bg {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background:
+      radial-gradient(ellipse 70% 45% at 0% -5%, rgba(15, 159, 132, 0.12), transparent 55%),
+      radial-gradient(ellipse 55% 40% at 100% 0%, rgba(200, 137, 42, 0.08), transparent 50%),
+      radial-gradient(ellipse 50% 35% at 80% 100%, rgba(15, 159, 132, 0.06), transparent 55%),
+      linear-gradient(180deg, #FFFFFF 0%, #F7F9FC 45%, #F3F6FA 100%);
+  }
+  .site-bg::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(11, 18, 32, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(11, 18, 32, 0.03) 1px, transparent 1px);
+    background-size: 64px 64px;
+    mask-image: radial-gradient(ellipse 70% 55% at 50% 25%, #000 15%, transparent 75%);
+    pointer-events: none;
+  }
+  .orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(70px);
+    pointer-events: none;
+    animation: drift 14s ease-in-out infinite;
+  }
+  .orb-a {
+    width: 380px; height: 380px;
+    background: rgba(15, 159, 132, 0.16);
+    top: -6%; right: 6%;
+  }
+  .orb-b {
+    width: 260px; height: 260px;
+    background: rgba(200, 137, 42, 0.1);
+    bottom: 10%; left: -3%;
+    animation-delay: -5s;
+    animation-duration: 18s;
+  }
+  @keyframes drift {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(-14px, 18px) scale(1.05); }
+  }
+  .reveal {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1), transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .reveal.active {
+    opacity: 1;
+    transform: none;
+  }
+  .logo-lockup {
+    height: 46px;
+    width: auto;
+    max-width: min(250px, 52vw);
+    object-fit: contain;
+    display: block;
+  }
+  @media (max-width: 640px) {
+    .logo-lockup { height: 38px; max-width: min(200px, 56vw); }
+  }
+  .header-blur {
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(14px) saturate(1.1);
+    -webkit-backdrop-filter: blur(14px) saturate(1.1);
+    border-bottom: 1px solid rgba(215, 222, 232, 0.9);
+  }
+  .accent-word {
+    background: linear-gradient(120deg, #0F9F84 0%, #12B89A 50%, #C8892A 115%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 999px;
+    background: #0F9F84;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.875rem;
+    padding: 0.9rem 1.75rem;
+    transition: transform 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 10px 28px rgba(15, 159, 132, 0.28);
+  }
+  .btn-primary:hover {
+    filter: brightness(1.06);
+    transform: translateY(-1px);
+  }
+  .btn-wa {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 999px;
+    background: #25D366;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.875rem;
+    padding: 0.9rem 1.75rem;
+    transition: transform 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 10px 28px rgba(37, 211, 102, 0.25);
+  }
+  .btn-wa:hover {
+    filter: brightness(1.06);
+    transform: translateY(-1px);
+  }
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    color: var(--ink);
+    font-weight: 600;
+    font-size: 0.875rem;
+    padding: 0.9rem 1.75rem;
+    background: rgba(255,255,255,0.7);
+    transition: border-color 0.2s ease, color 0.2s ease, transform 0.2s ease, background 0.2s ease;
+  }
+  .btn-ghost:hover {
+    border-color: rgba(15, 159, 132, 0.55);
+    color: var(--teal);
+    background: #fff;
+    transform: translateY(-1px);
+  }
+  .phone-shell {
+    position: relative;
+    width: min(100%, 340px);
+    margin-left: auto;
+    border-radius: 36px;
+    padding: 12px;
+    background: linear-gradient(160deg, #E8EEF5 0%, #F8FAFC 100%);
+    border: 1px solid rgba(15, 159, 132, 0.2);
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.8) inset,
+      0 28px 60px rgba(11, 18, 32, 0.12),
+      0 0 40px rgba(15, 159, 132, 0.08);
+    animation: phone-float 7s ease-in-out infinite;
+  }
+  @keyframes phone-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  .phone-notch {
+    width: 96px;
+    height: 8px;
+    border-radius: 999px;
+    background: #0B1220;
+    margin: 4px auto 10px;
+    opacity: 0.85;
+  }
+  .phone-screen {
+    border-radius: 26px;
+    overflow: hidden;
+    background: #0b141a;
+    min-height: 460px;
+    display: flex;
+    flex-direction: column;
+  }
+  .wa-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    background: #1f2c34;
+  }
+  .wa-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #12B89A, #0F9F84);
+    display: grid;
+    place-items: center;
+    font-size: 11px;
+    font-weight: 800;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .bubble {
+    max-width: 86%;
+    padding: 10px 12px;
+    font-size: 12px;
+    line-height: 1.45;
+    animation: bubble-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .bubble-in {
+    align-self: flex-start;
+    background: #202c33;
+    border-radius: 14px 14px 14px 4px;
+    color: #e9edef;
+    border: 1px solid rgba(255,255,255,0.04);
+  }
+  .bubble-out {
+    align-self: flex-end;
+    background: #005c4b;
+    border-radius: 14px 14px 4px 14px;
+    color: #e9edef;
+  }
+  .bubble-delay-1 { animation-delay: 0.15s; }
+  .bubble-delay-2 { animation-delay: 0.45s; }
+  .bubble-delay-3 { animation-delay: 0.85s; }
+  @keyframes bubble-in {
+    from { opacity: 0; transform: translateY(10px) scale(0.98); }
+    to { opacity: 1; transform: none; }
+  }
+  .typing {
+    display: inline-flex;
+    gap: 4px;
+    padding: 4px 2px;
+  }
+  .typing span {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #8696a0;
+    animation: blink 1.2s infinite ease-in-out;
+  }
+  .typing span:nth-child(2) { animation-delay: 0.15s; }
+  .typing span:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes blink {
+    0%, 80%, 100% { opacity: 0.35; transform: translateY(0); }
+    40% { opacity: 1; transform: translateY(-2px); }
+  }
+  .step-num {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--teal);
+    background: rgba(15, 159, 132, 0.1);
+    border: 1px solid rgba(15, 159, 132, 0.28);
+    flex-shrink: 0;
+  }
+  .section-rule {
+    border: none;
+    border-top: 1px solid var(--line);
+  }
+  .card-surface {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    box-shadow: 0 12px 40px rgba(11, 18, 32, 0.06);
+  }
+  .footer-logo { height: 40px; max-width: 200px; }
+  .site-footer {
+    background: #fff;
+    border-top: 1px solid var(--line);
+  }
+  .site-footer a {
+    color: var(--mist);
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+  .site-footer a:hover { color: var(--teal); }
+  .footer-col-title {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink);
+    margin: 0 0 1rem;
+  }
+  .footer-links {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+  .footer-links a { font-size: 0.875rem; }
+  .footer-bottom {
+    border-top: 1px solid var(--line);
+    padding-top: 1.25rem;
+    margin-top: 2.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.5rem;
+    align-items: center;
+    justify-content: space-between;
+  }
+</style>
+</head>
+<body>
+<div class="site-bg" aria-hidden="true"></div>
 
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('active');
-                }
-            });
-        }, observerOptions);
+<header class="fixed top-0 inset-x-0 z-50 header-blur">
+  <div class="mx-auto max-w-6xl px-4 md:px-10 h-[72px] flex items-center justify-between gap-4">
+    <a href="/" class="flex items-center shrink-0" aria-label="Taxova.ai home">
+      <img src="/static/logo-on-light.png?v=1" alt="Taxova.ai" class="logo-lockup"/>
+    </a>
+    <nav class="hidden md:flex items-center gap-8 text-sm text-mist">
+      <a href="#how" class="hover:text-ink transition-colors">How it works</a>
+      <a href="#product" class="hover:text-ink transition-colors">Product</a>
+      <a href="/privacy" class="hover:text-ink transition-colors">Privacy</a>
+      <a href="/dashboard" class="hover:text-ink transition-colors">CA login</a>
+    </nav>
+    <a href="/onboarding" class="btn-primary !py-2.5 !px-4 text-sm shrink-0">
+      Get started
+      <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+    </a>
+  </div>
+</header>
 
-        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+<main>
+  <section class="relative min-h-[100svh] flex items-center pt-[72px] overflow-hidden">
+    <div class="orb orb-a" aria-hidden="true"></div>
+    <div class="orb orb-b" aria-hidden="true"></div>
 
-        // Smooth scroll for nav links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                document.querySelector(this.getAttribute('href')).scrollIntoView({
-                    behavior: 'smooth'
-                });
-            });
-        });
+    <div class="relative z-10 mx-auto max-w-6xl w-full px-4 md:px-10 py-14 md:py-20 grid lg:grid-cols-[1.05fr_0.95fr] gap-12 lg:gap-10 items-center">
+      <div>
+        <img src="/static/logo-on-light.png?v=1" alt="Taxova.ai" class="h-14 md:h-16 w-auto max-w-[320px] object-contain mb-8 reveal"/>
+        <h1 class="max-w-xl text-[2.35rem] sm:text-5xl md:text-[3.4rem] font-extrabold tracking-tight leading-[1.05] text-ink reveal" style="transition-delay:60ms">
+          GST filing on <span class="accent-word">WhatsApp</span>.
+        </h1>
+        <p class="mt-5 max-w-md text-base md:text-lg text-mist leading-relaxed reveal" style="transition-delay:120ms">
+          Snap an invoice, send it in chat. Taxova.ai extracts fields, checks ITC, and prepares clean data for your CA.
+        </p>
+        <div class="mt-9 flex flex-col sm:flex-row gap-3 reveal" style="transition-delay:180ms">
+          <a href="{{WA_ME_URL}}" class="btn-wa" target="_blank" rel="noopener noreferrer">
+            <span class="material-symbols-outlined text-[20px]" style="font-variation-settings:'FILL' 1">chat</span>
+            Start on WhatsApp
+          </a>
+          <a href="/dashboard" class="btn-ghost">
+            <span class="material-symbols-outlined text-[20px]">dashboard</span>
+            Open CA dashboard
+          </a>
+        </div>
+      </div>
 
-        // Hover effects for mockups and cards
-        document.querySelectorAll('.glass-panel').forEach(card => {
-            card.addEventListener('mousemove', (e) => {
-                const rect = card.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                card.style.setProperty('--mouse-x', `${x}px`);
-                card.style.setProperty('--mouse-y', `${y}px`);
-            });
-        });
-    </script>
-</body></html>
+      <div class="reveal relative" style="transition-delay:220ms">
+        <div class="phone-shell" aria-hidden="true">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="wa-top">
+              <div class="wa-avatar">TX</div>
+              <div class="min-w-0">
+                <div class="text-[13px] font-semibold text-white truncate">Taxova.ai</div>
+                <div class="text-[11px] text-[#8696a0]">online</div>
+              </div>
+            </div>
+            <div class="flex-1 p-3.5 flex flex-col gap-2.5 bg-[#0b141a]">
+              <div class="bubble bubble-out bubble-delay-1">
+                📎 Invoice_July.pdf
+                <div class="text-[10px] text-[#8ecc9f] mt-1 text-right">10:42</div>
+              </div>
+              <div class="bubble bubble-in bubble-delay-2">
+                <div class="typing mb-1"><span></span><span></span><span></span></div>
+                Reading invoice…
+              </div>
+              <div class="bubble bubble-in bubble-delay-3">
+                <p class="font-semibold text-[#36D6AE] mb-1">Invoice summary</p>
+                <p class="text-[#aebac1] text-[11.5px] leading-relaxed">
+                  Vendor verified · GSTIN OK<br/>
+                  Taxable ₹42,000 · GST ₹7,560<br/>
+                  ITC eligible · sent to CA queue
+                </p>
+                <div class="text-[10px] text-[#8696a0] mt-2">10:42</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="section-rule max-w-6xl mx-auto"/>
+
+  <section id="how" class="py-20 md:py-28">
+    <div class="mx-auto max-w-6xl px-4 md:px-10">
+      <div class="max-w-xl reveal">
+        <p class="font-mono text-xs uppercase tracking-[0.2em] text-teal mb-3">How it works</p>
+        <h2 class="text-2xl md:text-3xl font-bold tracking-tight text-ink">Photo in. Filing-ready out.</h2>
+        <p class="mt-3 text-mist">Three steps. No portal hopping for every bill.</p>
+      </div>
+
+      <ol class="mt-14 grid md:grid-cols-3 gap-10 md:gap-8">
+        <li class="flex md:flex-col gap-4 reveal">
+          <span class="step-num">01</span>
+          <div>
+            <h3 class="text-lg font-semibold text-ink">Send on WhatsApp</h3>
+            <p class="mt-2 text-sm text-mist leading-relaxed">Clients photograph invoices and message Taxova.ai. No new app to learn.</p>
+          </div>
+        </li>
+        <li class="flex md:flex-col gap-4 reveal" style="transition-delay:80ms">
+          <span class="step-num" style="color:#C8892A;border-color:rgba(200,137,42,0.35);background:rgba(200,137,42,0.1)">02</span>
+          <div>
+            <h3 class="text-lg font-semibold text-ink">AI extracts &amp; checks ITC</h3>
+            <p class="mt-2 text-sm text-mist leading-relaxed">GSTIN, lines, and tax — then Section 17(5) rules before anything reaches your CA.</p>
+          </div>
+        </li>
+        <li class="flex md:flex-col gap-4 reveal" style="transition-delay:140ms">
+          <span class="step-num">03</span>
+          <div>
+            <h3 class="text-lg font-semibold text-ink">CA reviews &amp; exports</h3>
+            <p class="mt-2 text-sm text-mist leading-relaxed">Approve exceptions, reconcile GSTR-2B, export GSTR-1 / 3B drafts when ready.</p>
+          </div>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <hr class="section-rule max-w-6xl mx-auto"/>
+
+  <section id="product" class="py-20 md:py-28">
+    <div class="mx-auto max-w-6xl px-4 md:px-10 grid lg:grid-cols-2 gap-14 items-center">
+      <div class="reveal">
+        <p class="font-mono text-xs uppercase tracking-[0.2em] text-teal mb-3">For CAs &amp; firms</p>
+        <h2 class="text-2xl md:text-3xl font-bold tracking-tight leading-tight text-ink">
+          Month-close without the chase.
+        </h2>
+        <p class="mt-4 text-mist leading-relaxed max-w-md">
+          Taxova.ai flags blocked credits, queues exceptions, and keeps WhatsApp as the client front door — so your team reviews what matters.
+        </p>
+        <ul class="mt-8 space-y-3 text-sm text-ink/90">
+          <li class="flex items-start gap-3">
+            <span class="material-symbols-outlined text-teal text-[20px] mt-0.5">check_circle</span>
+            <span>HITL audit queue with edit, approve, skip</span>
+          </li>
+          <li class="flex items-start gap-3">
+            <span class="material-symbols-outlined text-teal text-[20px] mt-0.5">check_circle</span>
+            <span>GSTR-2B import &amp; reconcile</span>
+          </li>
+          <li class="flex items-start gap-3">
+            <span class="material-symbols-outlined text-teal text-[20px] mt-0.5">check_circle</span>
+            <span>GSTR-1 / 3B draft JSON export</span>
+          </li>
+        </ul>
+        <a href="/onboarding" class="mt-10 inline-flex items-center gap-2 text-teal font-semibold hover:gap-3 transition-all">
+          Create your account
+          <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+        </a>
+      </div>
+
+      <div class="reveal relative" style="transition-delay:100ms">
+        <div class="absolute -inset-4 rounded-[28px] bg-gradient-to-br from-teal/10 via-transparent to-amber/10 blur-xl pointer-events-none"></div>
+        <div class="relative rounded-2xl overflow-hidden card-surface">
+          <div class="px-5 py-4 border-b border-line flex items-center justify-between bg-[#F3F6FA]">
+            <div>
+              <div class="text-[11px] font-mono uppercase tracking-widest text-muted">CA workspace</div>
+              <div class="text-sm font-semibold mt-0.5 text-ink">Needs review · July 2026</div>
+            </div>
+            <span class="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-amber/10 text-amber border border-amber/25">3 pending</span>
+          </div>
+          <div class="divide-y divide-line bg-white">
+            <div class="px-5 py-4 flex items-center justify-between gap-3 hover:bg-[#F7F9FC] transition-colors">
+              <div class="min-w-0">
+                <div class="text-sm font-medium truncate text-ink">INV-2048 · Sharma Traders</div>
+                <div class="text-xs text-mist mt-0.5">ITC check · supplier GSTIN</div>
+              </div>
+              <span class="text-xs font-mono text-teal shrink-0">₹12,480</span>
+            </div>
+            <div class="px-5 py-4 flex items-center justify-between gap-3 hover:bg-[#F7F9FC] transition-colors">
+              <div class="min-w-0">
+                <div class="text-sm font-medium truncate text-ink">INV-2051 · Metro Supplies</div>
+                <div class="text-xs text-mist mt-0.5">Blocked credit · Sec 17(5)</div>
+              </div>
+              <span class="text-xs font-mono text-amber shrink-0">₹3,210</span>
+            </div>
+            <div class="px-5 py-4 flex items-center justify-between gap-3 hover:bg-[#F7F9FC] transition-colors">
+              <div class="min-w-0">
+                <div class="text-sm font-medium truncate text-ink">INV-2055 · Advantage Tuff</div>
+                <div class="text-xs text-mist mt-0.5">2B mismatch · amount</div>
+              </div>
+              <span class="text-xs font-mono text-ink shrink-0">₹28,900</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="section-rule max-w-6xl mx-auto"/>
+
+  <section class="py-20 md:py-28">
+    <div class="mx-auto max-w-3xl px-4 md:px-10 text-center reveal">
+      <img src="/static/logo-on-light.png?v=1" alt="" class="h-12 w-auto max-w-[240px] object-contain mx-auto mb-8"/>
+      <h2 class="text-2xl md:text-4xl font-bold tracking-tight text-ink">Ready to put GST on autopilot?</h2>
+      <p class="mt-4 text-mist max-w-lg mx-auto">Onboard your WhatsApp number, link your CA, and start sending invoices today.</p>
+      <div class="mt-9 flex flex-col sm:flex-row gap-3 justify-center">
+        <a href="/onboarding" class="btn-primary">Get started free</a>
+        <a href="/dashboard" class="btn-ghost">CA dashboard</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="mx-auto max-w-6xl px-4 md:px-10 pt-14 pb-8">
+    <div class="grid grid-cols-2 md:grid-cols-12 gap-10 md:gap-8">
+      <div class="col-span-2 md:col-span-5">
+        <a href="/" aria-label="Taxova.ai home">
+          <img src="/static/logo-on-light.png?v=1" alt="Taxova.ai" class="logo-lockup footer-logo"/>
+        </a>
+        <p class="mt-4 text-sm text-mist leading-relaxed max-w-xs">
+          WhatsApp-native GST compliance for Indian businesses and CA firms — invoice in, filing-ready out.
+        </p>
+        <a href="/onboarding" class="btn-primary !py-2.5 !px-4 text-sm mt-6 inline-flex">
+          Get started
+          <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+        </a>
+      </div>
+
+      <div class="md:col-span-2">
+        <h3 class="footer-col-title">Product</h3>
+        <ul class="footer-links">
+          <li><a href="#how">How it works</a></li>
+          <li><a href="#product">For CAs</a></li>
+          <li><a href="/onboarding">Onboarding</a></li>
+          <li><a href="/simulator">WA Simulator</a></li>
+        </ul>
+      </div>
+
+      <div class="md:col-span-2">
+        <h3 class="footer-col-title">Workspace</h3>
+        <ul class="footer-links">
+          <li><a href="/dashboard">CA dashboard</a></li>
+          <li><a href="/dashboard">Audit queue</a></li>
+          <li><a href="/ca-assign">Assign your CA</a></li>
+          <li><a href="/success">Get started</a></li>
+        </ul>
+      </div>
+
+      <div class="md:col-span-3">
+        <h3 class="footer-col-title">Legal &amp; help</h3>
+        <ul class="footer-links">
+          <li><a href="/privacy">Privacy policy</a></li>
+          <li><a href="/privacy">Data &amp; WhatsApp use</a></li>
+          <li><a href="mailto:hello@taxova.ai">hello@taxova.ai</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <p class="text-xs text-muted m-0">© 2026 Taxova.ai. All rights reserved.</p>
+      <p class="text-xs text-muted m-0">Built for Indian GST · WhatsApp Cloud API</p>
+    </div>
+  </div>
+</footer>
+
+<script>
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) entry.target.classList.add("active");
+    });
+  }, { threshold: 0.12, rootMargin: "0px 0px -36px 0px" });
+  document.querySelectorAll(".reveal").forEach((el) => observer.observe(el));
+</script>
+</body>
+</html>

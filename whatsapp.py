@@ -14,13 +14,11 @@ import logging
 import httpx
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 logger = logging.getLogger(__name__)
 
 # ── Config ────────────────────────────────────────────────────────────────────
-WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN", "")
-WHATSAPP_PHONE_ID = os.getenv("WHATSAPP_PHONE_ID", "")
 GRAPH_API_BASE = "https://graph.facebook.com/v21.0"
 
 # In-memory queue to capture outgoing replies for the browser simulator
@@ -29,8 +27,25 @@ simulated_outbound_messages = []
 # Reusable async HTTP client — connection pooling, timeouts
 _client = httpx.AsyncClient(
     timeout=httpx.Timeout(30.0, connect=10.0),
-    headers={"Authorization": f"Bearer {WHATSAPP_TOKEN}"},
 )
+
+
+def _refresh_credentials() -> tuple[str, str]:
+    """Always re-read token/phone id from env so .env updates apply after restart."""
+    load_dotenv(override=True)
+    token = os.getenv("WHATSAPP_TOKEN", "").strip()
+    phone_id = os.getenv("WHATSAPP_PHONE_ID", "").strip()
+    if token:
+        _client.headers["Authorization"] = f"Bearer {token}"
+    else:
+        _client.headers.pop("Authorization", None)
+    return token, phone_id
+
+
+# Back-compat for code that reads module-level names
+WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN", "")
+WHATSAPP_PHONE_ID = os.getenv("WHATSAPP_PHONE_ID", "")
+_refresh_credentials()
 
 
 # ── Download Media ────────────────────────────────────────────────────────────
@@ -71,6 +86,8 @@ async def download_media(media_id: str) -> tuple[bytes, str]:
             logger.error("Simulator failed to read local file: %s", e)
             raise
 
+    _refresh_credentials()
+
     # Step 1: Get the temporary media URL
     logger.info("Fetching media URL for media_id=%s", media_id)
     meta_response = await _client.get(f"{GRAPH_API_BASE}/{media_id}")
@@ -103,6 +120,7 @@ async def send_text_message(to: str, body: str) -> dict:
     Returns:
         Meta API response as dict
     """
+    token, phone_id = _refresh_credentials()
     payload = {
         "messaging_product": "whatsapp",
         "recipient_type": "individual",
@@ -121,9 +139,13 @@ async def send_text_message(to: str, body: str) -> dict:
         "simulated": True
     })
 
+    if not token or not phone_id:
+        logger.error("WhatsApp send aborted: WHATSAPP_TOKEN or WHATSAPP_PHONE_ID missing")
+        return {"status": "simulated", "messages": [{"id": f"sim_{int(datetime.now().timestamp())}"}]}
+
     try:
         response = await _client.post(
-            f"{GRAPH_API_BASE}/{WHATSAPP_PHONE_ID}/messages",
+            f"{GRAPH_API_BASE}/{phone_id}/messages",
             json=payload,
         )
         response.raise_for_status()
@@ -131,7 +153,10 @@ async def send_text_message(to: str, body: str) -> dict:
         logger.info("Sent text message to %s (msg_id=%s)", to, result.get("messages", [{}])[0].get("id"))
         return result
     except Exception as e:
-        logger.warning("WhatsApp API send skipped or failed: %s (Simulated message preserved)", e)
+        detail = ""
+        if hasattr(e, "response") and e.response is not None:
+            detail = f" body={e.response.text[:300]}"
+        logger.warning("WhatsApp API send skipped or failed: %s%s (Simulated message preserved)", e, detail)
         return {"status": "simulated", "messages": [{"id": f"sim_{int(datetime.now().timestamp())}"}]}
 
 
@@ -147,6 +172,7 @@ async def send_reply(to: str, message_id: str, body: str) -> dict:
     Returns:
         Meta API response as dict
     """
+    token, phone_id = _refresh_credentials()
     payload = {
         "messaging_product": "whatsapp",
         "recipient_type": "individual",
@@ -167,9 +193,13 @@ async def send_reply(to: str, message_id: str, body: str) -> dict:
         "simulated": True
     })
 
+    if not token or not phone_id:
+        logger.error("WhatsApp reply aborted: WHATSAPP_TOKEN or WHATSAPP_PHONE_ID missing")
+        return {"status": "simulated", "messages": [{"id": f"sim_reply_{int(datetime.now().timestamp())}"}]}
+
     try:
         response = await _client.post(
-            f"{GRAPH_API_BASE}/{WHATSAPP_PHONE_ID}/messages",
+            f"{GRAPH_API_BASE}/{phone_id}/messages",
             json=payload,
         )
         response.raise_for_status()
@@ -177,7 +207,10 @@ async def send_reply(to: str, message_id: str, body: str) -> dict:
         logger.info("Sent reply to %s (replying to %s)", to, message_id)
         return result
     except Exception as e:
-        logger.warning("WhatsApp API send reply skipped or failed: %s (Simulated reply preserved)", e)
+        detail = ""
+        if hasattr(e, "response") and e.response is not None:
+            detail = f" body={e.response.text[:300]}"
+        logger.warning("WhatsApp API send reply skipped or failed: %s%s (Simulated reply preserved)", e, detail)
         return {"status": "simulated", "messages": [{"id": f"sim_reply_{int(datetime.now().timestamp())}"}]}
 
 
@@ -187,6 +220,10 @@ async def mark_as_read(message_id: str) -> None:
     Mark a message as read (shows blue ticks to the sender).
     Good UX — the client sees you've received their invoice.
     """
+    _token, phone_id = _refresh_credentials()
+    if not phone_id:
+        return
+
     payload = {
         "messaging_product": "whatsapp",
         "status": "read",
@@ -195,7 +232,7 @@ async def mark_as_read(message_id: str) -> None:
 
     try:
         response = await _client.post(
-            f"{GRAPH_API_BASE}/{WHATSAPP_PHONE_ID}/messages",
+            f"{GRAPH_API_BASE}/{phone_id}/messages",
             json=payload,
         )
         response.raise_for_status()
