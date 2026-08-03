@@ -1,0 +1,4 @@
+# Force Railway to use Dockerfile instead of Nixpacks/mise
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
