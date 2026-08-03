@@ -99,29 +99,38 @@ async def lifespan(app: FastAPI):
     if not DASHBOARD_API_KEY:
         logger.warning("DASHBOARD_API_KEY is empty — dashboard APIs are open (dev mode).")
     
-    # Initialize the database schema on start
+    # Initialize storage + database schema on start
+    storage_dir = os.getenv("STORAGE_DIR", "./storage")
+    os.makedirs(storage_dir, exist_ok=True)
+    logger.info("   STORAGE_DIR=%s", storage_dir)
+
     await db.init_db()
     
-    # Check if knowledge base is empty and trigger startup seed
-    try:
-        chunk_count = rag.collection.count()
-        if chunk_count == 0:
-            logger.info("Knowledge base is empty. Auto-indexing reference docs on startup...")
-            ref_dir = os.path.join(os.getcwd(), "reference_docs")
-            if os.path.exists(ref_dir):
-                files = [f for f in os.listdir(ref_dir) if f.endswith(".md") or f.endswith(".txt")]
-                for filename in files:
-                    filepath = os.path.join(ref_dir, filename)
-                    with open(filepath, "r", encoding="utf-8") as f:
-                        content = f.read()
-                    title = filename
-                    first_line = content.splitlines()[0] if content.splitlines() else ""
-                    if first_line.startswith("# "):
-                        title = first_line.replace("# ", "").strip()
-                    await rag.index_document(title=title, text=content)
-                logger.info("Startup seed indexing completed successfully.")
-    except Exception as e:
-        logger.warning("Startup seed indexing failed: %s", e)
+    # Optional startup seed (can block Railway health checks — off by default)
+    auto_index = os.getenv("RAG_AUTO_INDEX", "").strip().lower() in {"1", "true", "yes"}
+    if auto_index:
+        try:
+            coll = rag.ensure_chroma()
+            chunk_count = coll.count() if coll is not None else -1
+            if chunk_count == 0:
+                logger.info("Knowledge base is empty. Auto-indexing reference docs on startup...")
+                ref_dir = os.path.join(os.getcwd(), "reference_docs")
+                if os.path.exists(ref_dir):
+                    files = [f for f in os.listdir(ref_dir) if f.endswith(".md") or f.endswith(".txt")]
+                    for filename in files:
+                        filepath = os.path.join(ref_dir, filename)
+                        with open(filepath, "r", encoding="utf-8") as f:
+                            content = f.read()
+                        title = filename
+                        first_line = content.splitlines()[0] if content.splitlines() else ""
+                        if first_line.startswith("# "):
+                            title = first_line.replace("# ", "").strip()
+                        await rag.index_document(title=title, text=content)
+                    logger.info("Startup seed indexing completed successfully.")
+        except Exception as e:
+            logger.warning("Startup seed indexing failed: %s", e)
+    else:
+        logger.info("   RAG auto-index skipped (set RAG_AUTO_INDEX=true to enable).")
         
     yield
     logger.info("👋 Webhook server shutting down")

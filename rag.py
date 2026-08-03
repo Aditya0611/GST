@@ -12,33 +12,53 @@ import math
 import asyncio
 import logging
 import uuid
-import chromadb
 from google import genai
 import db
 
 logger = logging.getLogger("rag")
 
-# ── ChromaDB Configuration ────────────────────────────────────────────────────
-CHROMA_DB_DIR = os.getenv("STORAGE_DIR", "./storage") + "/chromadb"
-os.makedirs(CHROMA_DB_DIR, exist_ok=True)
-chroma_client = chromadb.PersistentClient(path=CHROMA_DB_DIR)
+# ── ChromaDB (lazy init — don't crash app import if Chroma fails on Railway) ──
+CHROMA_DB_DIR = os.path.join(os.getenv("STORAGE_DIR", "./storage"), "chromadb")
+chroma_client = None
+collection = None
 
-# Use cosine similarity space for the collection
-collection = chroma_client.get_or_create_collection(
-    name="gst_knowledge_base",
-    metadata={"hnsw:space": "cosine"}
-)
+
+def ensure_chroma():
+    """Initialize ChromaDB on first use. Returns collection or None."""
+    global chroma_client, collection
+    if collection is not None:
+        return collection
+    try:
+        import chromadb
+
+        os.makedirs(CHROMA_DB_DIR, exist_ok=True)
+        chroma_client = chromadb.PersistentClient(path=CHROMA_DB_DIR)
+        collection = chroma_client.get_or_create_collection(
+            name="gst_knowledge_base",
+            metadata={"hnsw:space": "cosine"},
+        )
+        logger.info("ChromaDB ready at %s", CHROMA_DB_DIR)
+        return collection
+    except Exception as e:
+        logger.exception("ChromaDB init failed (RAG disabled until fixed): %s", e)
+        chroma_client = None
+        collection = None
+        return None
+
 
 def clear_knowledge_base():
     """Clears all documents from the ChromaDB collection by dropping and recreating it."""
     global collection
+    coll = ensure_chroma()
+    if coll is None or chroma_client is None:
+        return
     try:
         chroma_client.delete_collection("gst_knowledge_base")
     except Exception:
         pass
     collection = chroma_client.get_or_create_collection(
         name="gst_knowledge_base",
-        metadata={"hnsw:space": "cosine"}
+        metadata={"hnsw:space": "cosine"},
     )
 
 
@@ -140,7 +160,10 @@ async def index_document(title: str, text: str) -> int:
         metadatas.append({"title": title, "chunk_index": idx})
         
     if ids:
-        collection.add(
+        coll = ensure_chroma()
+        if coll is None:
+            raise RuntimeError("ChromaDB is not available")
+        coll.add(
             ids=ids,
             embeddings=embeddings,
             documents=documents,
@@ -154,6 +177,10 @@ async def search_knowledge_base(query: str, limit: int = 3) -> list[dict]:
     """
     Embeds the search query and searches ChromaDB for the top K most relevant matches.
     """
+    coll = ensure_chroma()
+    if coll is None:
+        return []
+
     try:
         query_vector = await get_embedding_async(query)
     except Exception as e:
@@ -162,7 +189,7 @@ async def search_knowledge_base(query: str, limit: int = 3) -> list[dict]:
         
     try:
         # Query chroma
-        results = collection.query(
+        results = coll.query(
             query_embeddings=[query_vector],
             n_results=limit
         )
