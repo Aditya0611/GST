@@ -84,7 +84,7 @@ if GROQ_API_KEY:
 
 EMBEDDING_MODEL = "models/gemini-embedding-2"
 GENERATION_MODEL = "models/gemini-2.5-flash"
-GROQ_GENERATION_MODEL = os.getenv("AGENT_MODEL", "llama-3.3-70b-versatile")
+GROQ_GENERATION_MODEL = os.getenv("AGENT_MODEL", "qwen/qwen3.6-27b")
 
 
 # ── Text Chunking ─────────────────────────────────────────────────────────────

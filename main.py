@@ -487,6 +487,27 @@ async def _handle_text_message(msg: dict, sender: str, message_id: str) -> None:
         await whatsapp.send_reply(to=sender, message_id=message_id, body=status_msg)
         return
 
+    # Greetings should not depend on Groq/Gemini being up
+    greeting_text = re.sub(r"[^\w\s]", "", text_lower).strip()
+    if greeting_text in {
+        "hi", "hii", "hiii", "hello", "hey", "helo", "hola",
+        "namaste", "namaskar", "good morning", "good afternoon", "good evening",
+        "yo", "ok", "okay", "thanks", "thank you", "thx",
+    }:
+        await whatsapp.send_reply(
+            to=sender,
+            message_id=message_id,
+            body=(
+                "👋 Hi! I am your *Taxova.ai* agent.\n\n"
+                "Send invoice photos or PDFs here, or ask:\n"
+                "• How much ITC on invoice #12?\n"
+                "• Can I claim ITC on outdoor catering?\n"
+                "• Show my pending invoices\n\n"
+                "Commands: *summary* · *status*"
+            ),
+        )
+        return
+
     # Agentic reply for everything else
     try:
         result = await agent.run_gst_agent(

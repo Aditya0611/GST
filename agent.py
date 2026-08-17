@@ -37,7 +37,7 @@ AGENT_LLM_PROVIDER = os.getenv("AGENT_LLM_PROVIDER", "groq").lower().strip()
 MAX_TOOL_ROUNDS = int(os.getenv("AGENT_MAX_TOOL_ROUNDS", "6"))
 
 if AGENT_LLM_PROVIDER == "groq":
-    AGENT_MODEL = os.getenv("AGENT_MODEL", "llama-3.3-70b-versatile")
+    AGENT_MODEL = os.getenv("AGENT_MODEL", "qwen/qwen3.6-27b")
 else:
     AGENT_MODEL = os.getenv("AGENT_MODEL", "models/gemini-2.5-flash")
 
@@ -520,8 +520,22 @@ async def run_gst_agent(
     ctx = AgentContext(client_phone=client_phone, channel=channel)
     try:
         if provider == "groq":
-            return await _run_groq_agent(message, ctx)
-        return await _run_gemini_agent(message, ctx)
+            try:
+                return await _run_groq_agent(message, ctx)
+            except Exception as groq_err:
+                err = str(groq_err)
+                model_gone = (
+                    "model_not_found" in err
+                    or "does not exist" in err.lower()
+                    or "404" in err
+                )
+                if model_gone and client:
+                    logger.warning(
+                        "Groq model unavailable (%s) — falling back to Gemini",
+                        err[:180],
+                    )
+                    return await _run_gemini_agent(message, ctx)
+                raise
     except Exception as e:
         logger.exception("Agent run failed:")
         try:
@@ -550,7 +564,7 @@ async def run_gst_agent(
 
 async def _run_groq_agent(message: str, ctx: AgentContext) -> dict:
     steps: list[dict] = []
-    model = os.getenv("AGENT_MODEL", "llama-3.3-70b-versatile")
+    model = os.getenv("AGENT_MODEL", "qwen/qwen3.6-27b")
     user_preamble = (
         f"Channel: {ctx.channel}\n"
         f"Active client_phone: {ctx.client_phone or '(none)'}\n\n"
