@@ -679,6 +679,15 @@ async def get_landing():
     return HTMLResponse(html)
 
 
+@app.get("/favicon.ico", include_in_schema=False)
+async def get_favicon():
+    """Browsers and Google request /favicon.ico for the SERP / tab icon."""
+    path = os.path.join("static", "favicon.ico")
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Favicon not found")
+    return FileResponse(path, media_type="image/x-icon")
+
+
 @app.get("/dashboard", response_class=HTMLResponse)
 async def get_dashboard():
     """Serves the main CA Review Dashboard HTML page."""
