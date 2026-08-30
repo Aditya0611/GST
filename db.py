@@ -265,6 +265,12 @@ async def init_db():
         await _ensure_gstr2b_schema(conn)
         await _ensure_gstin_portal_cache_schema(conn)
         await _ensure_gst_taxpayer_session_schema(conn)
+        await _ensure_security_schema(conn)
+        await _ensure_itr_schema(conn)
+        await _ensure_tenancy_schema(conn)
+        await _ensure_pricing_schema(conn)
+        await _ensure_extraction_edit_schema(conn)
+        await _bootstrap_ca_passwords(conn)
         logger.info("Database initialized successfully.")
     except Exception as e:
         logger.exception("Error creating tables:")
@@ -605,6 +611,733 @@ async def _ensure_gst_taxpayer_session_schema(conn) -> None:
             await conn.commit()
         except Exception:
             pass
+
+
+async def _ensure_security_schema(conn) -> None:
+    """CA passwords, sessions, and security audit log (idempotent)."""
+    # password columns on cas
+    for col, col_type in (
+        ("password_salt", "TEXT"),
+        ("password_hash", "TEXT"),
+    ):
+        try:
+            if IS_POSTGRES:
+                await conn.execute(
+                    f"ALTER TABLE cas ADD COLUMN IF NOT EXISTS {col} {col_type}"
+                )
+            else:
+                await conn.execute(f"ALTER TABLE cas ADD COLUMN {col} {col_type}")
+                await conn.commit()
+        except Exception:
+            pass
+
+    if IS_POSTGRES:
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS ca_sessions (
+                token_hash VARCHAR(64) PRIMARY KEY,
+                ca_invite_code VARCHAR(6) NOT NULL REFERENCES cas(invite_code),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                expires_at TIMESTAMP NOT NULL,
+                last_seen_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS security_audit_logs (
+                id SERIAL PRIMARY KEY,
+                actor VARCHAR(150),
+                action VARCHAR(64) NOT NULL,
+                resource_type VARCHAR(64),
+                resource_id TEXT,
+                detail TEXT,
+                ip VARCHAR(64),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+    else:
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS ca_sessions (
+                token_hash TEXT PRIMARY KEY,
+                ca_invite_code TEXT NOT NULL REFERENCES cas(invite_code),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                expires_at TIMESTAMP NOT NULL,
+                last_seen_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS security_audit_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                actor TEXT,
+                action TEXT NOT NULL,
+                resource_type TEXT,
+                resource_id TEXT,
+                detail TEXT,
+                ip TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        await conn.commit()
+
+
+async def _bootstrap_ca_passwords(conn) -> None:
+    """Set bootstrap password for CAs that have none (from CA_BOOTSTRAP_PASSWORD)."""
+    import security as security_mod
+
+    pwd = os.getenv("CA_BOOTSTRAP_PASSWORD", "Taxova@ChangeMe").strip()
+    if not pwd:
+        return
+    salt_b64, hash_b64 = security_mod.hash_password(pwd)
+    try:
+        if IS_POSTGRES:
+            await conn.execute(
+                """
+                UPDATE cas
+                SET password_salt = $1, password_hash = $2
+                WHERE password_hash IS NULL OR password_hash = ''
+                """,
+                salt_b64,
+                hash_b64,
+            )
+        else:
+            await conn.execute(
+                """
+                UPDATE cas
+                SET password_salt = ?, password_hash = ?
+                WHERE password_hash IS NULL OR password_hash = ''
+                """,
+                (salt_b64, hash_b64),
+            )
+            await conn.commit()
+        logger.info("CA bootstrap passwords applied where missing (change CA_BOOTSTRAP_PASSWORD in prod).")
+    except Exception:
+        logger.exception("Could not bootstrap CA passwords")
+
+
+def _slugify_firm_name(name: str) -> str:
+    import re
+
+    base = re.sub(r"[^a-z0-9]+", "-", (name or "firm").lower()).strip("-") or "firm"
+    return base[:48]
+
+
+async def _ensure_tenancy_schema(conn) -> None:
+    """
+    Multi-tenant firms layer: firms table + firm_id on cas/clients/invoices/etc.
+    Backfills existing rows into a default demo firm.
+    """
+    if IS_POSTGRES:
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS firms (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(150) NOT NULL,
+                slug VARCHAR(64) UNIQUE NOT NULL,
+                status VARCHAR(32) DEFAULT 'active',
+                billing_model VARCHAR(32) DEFAULT 'per_firm',
+                plan_tier VARCHAR(32),
+                seat_limit INTEGER,
+                monthly_invoice_cap INTEGER,
+                client_cap INTEGER,
+                billing_status VARCHAR(32) DEFAULT 'trial',
+                trial_ends_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+    else:
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS firms (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                slug TEXT UNIQUE NOT NULL,
+                status TEXT DEFAULT 'active',
+                billing_model TEXT DEFAULT 'per_firm',
+                plan_tier TEXT,
+                seat_limit INTEGER,
+                monthly_invoice_cap INTEGER,
+                client_cap INTEGER,
+                billing_status TEXT DEFAULT 'trial',
+                trial_ends_at TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        await conn.commit()
+
+    for table in (
+        "cas",
+        "clients",
+        "invoices",
+        "gstr2b_entries",
+        "gst_taxpayer_sessions",
+        "itr_returns",
+    ):
+        try:
+            if IS_POSTGRES:
+                await conn.execute(
+                    f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS firm_id INTEGER"
+                )
+            else:
+                await conn.execute(f"ALTER TABLE {table} ADD COLUMN firm_id INTEGER")
+                await conn.commit()
+        except Exception:
+            pass
+
+    if IS_POSTGRES:
+        firm_count = await conn.fetchval("SELECT COUNT(*) FROM firms")
+    else:
+        cur = await conn.execute("SELECT COUNT(*) FROM firms")
+        firm_count = (await cur.fetchone())[0]
+
+    default_firm_id = None
+    if not firm_count:
+        demo_name = "Taxova Demo Firm"
+        try:
+            if IS_POSTGRES:
+                row = await conn.fetchrow(
+                    "SELECT firm_name FROM cas WHERE invite_code = $1", "123456"
+                )
+                if row and row.get("firm_name"):
+                    demo_name = str(row["firm_name"])
+            else:
+                cur = await conn.execute(
+                    "SELECT firm_name FROM cas WHERE invite_code = ?", ("123456",)
+                )
+                row = await cur.fetchone()
+                if row and row[0]:
+                    demo_name = str(row[0])
+        except Exception:
+            pass
+        slug = _slugify_firm_name(demo_name)
+        if IS_POSTGRES:
+            default_firm_id = await conn.fetchval(
+                """
+                INSERT INTO firms (name, slug, status)
+                VALUES ($1, $2, 'active')
+                ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name
+                RETURNING id
+                """,
+                demo_name,
+                slug,
+            )
+        else:
+            try:
+                await conn.execute(
+                    "INSERT INTO firms (name, slug, status) VALUES (?, ?, 'active')",
+                    (demo_name, slug),
+                )
+                await conn.commit()
+            except Exception:
+                pass
+            cur = await conn.execute("SELECT id FROM firms WHERE slug = ?", (slug,))
+            r = await cur.fetchone()
+            default_firm_id = r[0] if r else None
+        logger.info("Seeded default firm id=%s name=%s", default_firm_id, demo_name)
+    else:
+        if IS_POSTGRES:
+            default_firm_id = await conn.fetchval(
+                "SELECT id FROM firms ORDER BY id ASC LIMIT 1"
+            )
+        else:
+            cur = await conn.execute("SELECT id FROM firms ORDER BY id ASC LIMIT 1")
+            r = await cur.fetchone()
+            default_firm_id = r[0] if r else None
+
+    if default_firm_id is None:
+        return
+
+    if IS_POSTGRES:
+        await conn.execute(
+            "UPDATE cas SET firm_id = $1 WHERE firm_id IS NULL",
+            default_firm_id,
+        )
+        await conn.execute(
+            """
+            UPDATE clients c
+            SET firm_id = ca.firm_id
+            FROM client_ca_links l
+            JOIN cas ca ON ca.invite_code = l.ca_invite_code
+            WHERE c.phone_number = l.client_phone
+              AND c.firm_id IS NULL
+              AND ca.firm_id IS NOT NULL
+            """
+        )
+        await conn.execute(
+            "UPDATE clients SET firm_id = $1 WHERE firm_id IS NULL",
+            default_firm_id,
+        )
+        await conn.execute(
+            """
+            UPDATE invoices i
+            SET firm_id = c.firm_id
+            FROM clients c
+            WHERE i.client_phone = c.phone_number
+              AND i.firm_id IS NULL
+              AND c.firm_id IS NOT NULL
+            """
+        )
+        await conn.execute(
+            "UPDATE invoices SET firm_id = $1 WHERE firm_id IS NULL",
+            default_firm_id,
+        )
+        await conn.execute(
+            """
+            UPDATE gstr2b_entries g
+            SET firm_id = c.firm_id
+            FROM clients c
+            WHERE g.client_phone = c.phone_number
+              AND g.firm_id IS NULL
+              AND c.firm_id IS NOT NULL
+            """
+        )
+        await conn.execute(
+            """
+            UPDATE gst_taxpayer_sessions s
+            SET firm_id = c.firm_id
+            FROM clients c
+            WHERE s.client_phone = c.phone_number
+              AND s.firm_id IS NULL
+              AND c.firm_id IS NOT NULL
+            """
+        )
+        await conn.execute(
+            """
+            UPDATE itr_returns r
+            SET firm_id = c.firm_id
+            FROM clients c
+            WHERE r.client_phone = c.phone_number
+              AND r.firm_id IS NULL
+              AND c.firm_id IS NOT NULL
+            """
+        )
+    else:
+        await conn.execute(
+            "UPDATE cas SET firm_id = ? WHERE firm_id IS NULL",
+            (default_firm_id,),
+        )
+        await conn.execute(
+            """
+            UPDATE clients
+            SET firm_id = (
+                SELECT ca.firm_id FROM client_ca_links l
+                JOIN cas ca ON ca.invite_code = l.ca_invite_code
+                WHERE l.client_phone = clients.phone_number
+                LIMIT 1
+            )
+            WHERE firm_id IS NULL
+              AND phone_number IN (SELECT client_phone FROM client_ca_links)
+            """
+        )
+        await conn.execute(
+            "UPDATE clients SET firm_id = ? WHERE firm_id IS NULL",
+            (default_firm_id,),
+        )
+        await conn.execute(
+            """
+            UPDATE invoices
+            SET firm_id = (
+                SELECT c.firm_id FROM clients c
+                WHERE c.phone_number = invoices.client_phone
+            )
+            WHERE firm_id IS NULL
+            """
+        )
+        await conn.execute(
+            "UPDATE invoices SET firm_id = ? WHERE firm_id IS NULL",
+            (default_firm_id,),
+        )
+        for table in ("gstr2b_entries", "gst_taxpayer_sessions", "itr_returns"):
+            try:
+                await conn.execute(
+                    f"""
+                    UPDATE {table}
+                    SET firm_id = (
+                        SELECT c.firm_id FROM clients c
+                        WHERE c.phone_number = {table}.client_phone
+                    )
+                    WHERE firm_id IS NULL
+                    """
+                )
+            except Exception:
+                pass
+        await conn.commit()
+
+
+async def _ensure_pricing_schema(conn) -> None:
+    """
+    Nullable billing columns on firms — shape decided as per-firm flat by default,
+    with optional seat / invoice / client caps for later enforcement.
+    See docs/PRICING_MODEL.md.
+    """
+    cols = [
+        ("billing_model", "VARCHAR(32)" if IS_POSTGRES else "TEXT", "'per_firm'"),
+        ("plan_tier", "VARCHAR(32)" if IS_POSTGRES else "TEXT", "NULL"),
+        ("seat_limit", "INTEGER", "NULL"),
+        ("monthly_invoice_cap", "INTEGER", "NULL"),
+        ("client_cap", "INTEGER", "NULL"),
+        ("billing_status", "VARCHAR(32)" if IS_POSTGRES else "TEXT", "'trial'"),
+        ("trial_ends_at", "TIMESTAMP" if IS_POSTGRES else "TEXT", "NULL"),
+    ]
+    for name, typ, _default in cols:
+        try:
+            if IS_POSTGRES:
+                await conn.execute(
+                    f"ALTER TABLE firms ADD COLUMN IF NOT EXISTS {name} {typ}"
+                )
+            else:
+                await conn.execute(f"ALTER TABLE firms ADD COLUMN {name} {typ}")
+                await conn.commit()
+        except Exception:
+            pass
+    # Backfill billing_model / billing_status for existing firms
+    try:
+        if IS_POSTGRES:
+            await conn.execute(
+                "UPDATE firms SET billing_model = 'per_firm' WHERE billing_model IS NULL"
+            )
+            await conn.execute(
+                "UPDATE firms SET billing_status = 'trial' WHERE billing_status IS NULL"
+            )
+        else:
+            await conn.execute(
+                "UPDATE firms SET billing_model = 'per_firm' WHERE billing_model IS NULL"
+            )
+            await conn.execute(
+                "UPDATE firms SET billing_status = 'trial' WHERE billing_status IS NULL"
+            )
+            await conn.commit()
+    except Exception:
+        pass
+
+
+# Fields that come from AI extraction — CA edits here = extraction error signal
+EXTRACTION_TRACKED_FIELDS = frozenset(
+    {
+        "supplier_name",
+        "supplier_gstin",
+        "recipient_name",
+        "recipient_gstin",
+        "invoice_number",
+        "invoice_date",
+        "place_of_supply",
+        "total_taxable_value",
+        "total_cgst",
+        "total_sgst",
+        "total_igst",
+        "grand_total",
+        "business_category",
+        "supply_type",
+    }
+)
+
+
+async def _ensure_extraction_edit_schema(conn) -> None:
+    """Production signal: every CA edit of an extraction field before approve."""
+    if IS_POSTGRES:
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS extraction_field_edits (
+                id SERIAL PRIMARY KEY,
+                invoice_id INTEGER NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+                firm_id INTEGER,
+                client_phone VARCHAR(20),
+                field_name VARCHAR(64) NOT NULL,
+                old_value TEXT,
+                new_value TEXT,
+                ca_user VARCHAR(100),
+                ca_invite_code VARCHAR(6),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS invoice_extraction_outcomes (
+                invoice_id INTEGER PRIMARY KEY REFERENCES invoices(id) ON DELETE CASCADE,
+                firm_id INTEGER,
+                client_phone VARCHAR(20),
+                fields_edited_count INTEGER DEFAULT 0,
+                distinct_fields TEXT,
+                had_any_edit BOOLEAN DEFAULT FALSE,
+                ca_user VARCHAR(100),
+                ca_invite_code VARCHAR(6),
+                approved_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        for col, typ in (
+            ("extraction_edit_count", "INTEGER DEFAULT 0"),
+            ("extraction_edited_fields", "TEXT"),
+        ):
+            try:
+                await conn.execute(
+                    f"ALTER TABLE invoices ADD COLUMN IF NOT EXISTS {col} {typ}"
+                )
+            except Exception:
+                pass
+    else:
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS extraction_field_edits (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                invoice_id INTEGER NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+                firm_id INTEGER,
+                client_phone TEXT,
+                field_name TEXT NOT NULL,
+                old_value TEXT,
+                new_value TEXT,
+                ca_user TEXT,
+                ca_invite_code TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS invoice_extraction_outcomes (
+                invoice_id INTEGER PRIMARY KEY REFERENCES invoices(id) ON DELETE CASCADE,
+                firm_id INTEGER,
+                client_phone TEXT,
+                fields_edited_count INTEGER DEFAULT 0,
+                distinct_fields TEXT,
+                had_any_edit INTEGER DEFAULT 0,
+                ca_user TEXT,
+                ca_invite_code TEXT,
+                approved_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        await conn.commit()
+        for col, typ in (
+            ("extraction_edit_count", "INTEGER DEFAULT 0"),
+            ("extraction_edited_fields", "TEXT"),
+        ):
+            try:
+                await conn.execute(f"ALTER TABLE invoices ADD COLUMN {col} {typ}")
+                await conn.commit()
+            except Exception:
+                pass
+
+
+async def get_firm(firm_id: int) -> dict | None:
+    conn = await get_connection()
+    try:
+        if IS_POSTGRES:
+            row = await conn.fetchrow("SELECT * FROM firms WHERE id = $1", firm_id)
+            return dict(row) if row else None
+        conn.row_factory = sqlite3.Row
+        cur = await conn.execute("SELECT * FROM firms WHERE id = ?", (firm_id,))
+        row = await cur.fetchone()
+        return dict(row) if row else None
+    finally:
+        await conn.close()
+
+
+async def create_firm(name: str, slug: str | None = None) -> dict:
+    """Create a firm tenant. Raises ValueError on slug conflict."""
+    clean_name = (name or "").strip()
+    if not clean_name:
+        raise ValueError("Firm name is required")
+    clean_slug = _slugify_firm_name(slug or clean_name)
+    conn = await get_connection()
+    try:
+        if IS_POSTGRES:
+            try:
+                row = await conn.fetchrow(
+                    """
+                    INSERT INTO firms (
+                        name, slug, status, billing_model, billing_status
+                    )
+                    VALUES ($1, $2, 'active', 'per_firm', 'trial')
+                    RETURNING *
+                    """,
+                    clean_name,
+                    clean_slug,
+                )
+                return dict(row)
+            except Exception as e:
+                if "unique" in str(e).lower() or "duplicate" in str(e).lower():
+                    raise ValueError(f"Firm slug already exists: {clean_slug}") from e
+                raise
+        try:
+            await conn.execute(
+                """
+                INSERT INTO firms (name, slug, status, billing_model, billing_status)
+                VALUES (?, ?, 'active', 'per_firm', 'trial')
+                """,
+                (clean_name, clean_slug),
+            )
+            await conn.commit()
+        except Exception as e:
+            if "unique" in str(e).lower():
+                raise ValueError(f"Firm slug already exists: {clean_slug}") from e
+            raise
+        conn.row_factory = sqlite3.Row
+        cur = await conn.execute("SELECT * FROM firms WHERE slug = ?", (clean_slug,))
+        return dict(await cur.fetchone())
+    finally:
+        await conn.close()
+
+
+async def create_ca(
+    *,
+    invite_code: str,
+    name: str,
+    firm_id: int,
+    firm_name: str | None = None,
+    phone: str | None = None,
+    email: str | None = None,
+    password: str | None = None,
+) -> dict:
+    """Create a CA under a firm. Sets password if provided."""
+    import security as security_mod
+
+    code = str(invite_code or "").strip()
+    if len(code) != 6 or not code.isdigit():
+        raise ValueError("invite_code must be 6 digits")
+    ca_name = (name or "").strip()
+    if not ca_name:
+        raise ValueError("CA name is required")
+    firm = await get_firm(firm_id)
+    if not firm:
+        raise ValueError("Firm not found")
+    display_firm = (firm_name or firm.get("name") or "").strip()
+
+    salt_b64 = hash_b64 = None
+    if password:
+        salt_b64, hash_b64 = security_mod.hash_password(password)
+
+    conn = await get_connection()
+    try:
+        if IS_POSTGRES:
+            existing = await conn.fetchrow(
+                "SELECT invite_code FROM cas WHERE invite_code = $1", code
+            )
+            if existing:
+                raise ValueError("Invite code already exists")
+            await conn.execute(
+                """
+                INSERT INTO cas (
+                    invite_code, name, firm_name, phone, email, firm_id,
+                    password_salt, password_hash
+                ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+                """,
+                code,
+                ca_name,
+                display_firm,
+                phone,
+                email,
+                firm_id,
+                salt_b64,
+                hash_b64,
+            )
+        else:
+            cur = await conn.execute(
+                "SELECT invite_code FROM cas WHERE invite_code = ?", (code,)
+            )
+            if await cur.fetchone():
+                raise ValueError("Invite code already exists")
+            await conn.execute(
+                """
+                INSERT INTO cas (
+                    invite_code, name, firm_name, phone, email, firm_id,
+                    password_salt, password_hash
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    code,
+                    ca_name,
+                    display_firm,
+                    phone,
+                    email,
+                    firm_id,
+                    salt_b64,
+                    hash_b64,
+                ),
+            )
+            await conn.commit()
+        return await get_ca_by_invite_code(code)
+    finally:
+        await conn.close()
+
+
+async def set_client_firm(client_phone: str, firm_id: int | None) -> None:
+    """Set client firm and denormalize onto that client's related rows."""
+    conn = await get_connection()
+    try:
+        if IS_POSTGRES:
+            await conn.execute(
+                "UPDATE clients SET firm_id = $1 WHERE phone_number = $2",
+                firm_id,
+                client_phone,
+            )
+            await conn.execute(
+                "UPDATE invoices SET firm_id = $1 WHERE client_phone = $2",
+                firm_id,
+                client_phone,
+            )
+            await conn.execute(
+                "UPDATE gstr2b_entries SET firm_id = $1 WHERE client_phone = $2",
+                firm_id,
+                client_phone,
+            )
+            await conn.execute(
+                "UPDATE gst_taxpayer_sessions SET firm_id = $1 WHERE client_phone = $2",
+                firm_id,
+                client_phone,
+            )
+            await conn.execute(
+                "UPDATE itr_returns SET firm_id = $1 WHERE client_phone = $2",
+                firm_id,
+                client_phone,
+            )
+        else:
+            await conn.execute(
+                "UPDATE clients SET firm_id = ? WHERE phone_number = ?",
+                (firm_id, client_phone),
+            )
+            await conn.execute(
+                "UPDATE invoices SET firm_id = ? WHERE client_phone = ?",
+                (firm_id, client_phone),
+            )
+            for table in ("gstr2b_entries", "gst_taxpayer_sessions", "itr_returns"):
+                try:
+                    await conn.execute(
+                        f"UPDATE {table} SET firm_id = ? WHERE client_phone = ?",
+                        (firm_id, client_phone),
+                    )
+                except Exception:
+                    pass
+            await conn.commit()
+    finally:
+        await conn.close()
+
+
+async def client_in_firm(client_phone: str, firm_id: int) -> bool:
+    conn = await get_connection()
+    try:
+        if IS_POSTGRES:
+            row = await conn.fetchrow(
+                "SELECT 1 FROM clients WHERE phone_number = $1 AND firm_id = $2",
+                client_phone,
+                firm_id,
+            )
+            return row is not None
+        cur = await conn.execute(
+            "SELECT 1 FROM clients WHERE phone_number = ? AND firm_id = ?",
+            (client_phone, firm_id),
+        )
+        return (await cur.fetchone()) is not None
+    finally:
+        await conn.close()
 
 
 def _session_row_public(row: dict) -> dict:
@@ -1095,32 +1828,79 @@ async def get_or_create_client(phone_number: str, name: str = "Unknown Client") 
         await conn.close()
 
 
-async def update_client_profile(phone_number: str, gstin: str, registered: bool, name: str = None):
-    """Updates client registration status and GSTIN."""
+async def update_client_profile(
+    phone_number: str,
+    gstin: str,
+    registered: bool,
+    name: str = None,
+    pan: str = None,
+):
+    """Updates client registration status, GSTIN, and optional PAN."""
     conn = await get_connection()
     try:
+        pan_val = (pan or "").strip().upper() or None
         if IS_POSTGRES:
-            if name:
+            if name and pan_val is not None:
+                await conn.execute(
+                    "UPDATE clients SET gstin = $1, registered = $2, name = $3, pan = $4 WHERE phone_number = $5",
+                    gstin, registered, name, pan_val, phone_number,
+                )
+            elif name:
                 await conn.execute(
                     "UPDATE clients SET gstin = $1, registered = $2, name = $3 WHERE phone_number = $4",
-                    gstin, registered, name, phone_number
+                    gstin, registered, name, phone_number,
+                )
+            elif pan_val is not None:
+                await conn.execute(
+                    "UPDATE clients SET gstin = $1, registered = $2, pan = $3 WHERE phone_number = $4",
+                    gstin, registered, pan_val, phone_number,
                 )
             else:
                 await conn.execute(
                     "UPDATE clients SET gstin = $1, registered = $2 WHERE phone_number = $3",
-                    gstin, registered, phone_number
+                    gstin, registered, phone_number,
                 )
         else:
-            if name:
+            if name and pan_val is not None:
+                await conn.execute(
+                    "UPDATE clients SET gstin = ?, registered = ?, name = ?, pan = ? WHERE phone_number = ?",
+                    (gstin, registered, name, pan_val, phone_number),
+                )
+            elif name:
                 await conn.execute(
                     "UPDATE clients SET gstin = ?, registered = ?, name = ? WHERE phone_number = ?",
-                    (gstin, registered, name, phone_number)
+                    (gstin, registered, name, phone_number),
+                )
+            elif pan_val is not None:
+                await conn.execute(
+                    "UPDATE clients SET gstin = ?, registered = ?, pan = ? WHERE phone_number = ?",
+                    (gstin, registered, pan_val, phone_number),
                 )
             else:
                 await conn.execute(
                     "UPDATE clients SET gstin = ?, registered = ? WHERE phone_number = ?",
-                    (gstin, registered, phone_number)
+                    (gstin, registered, phone_number),
                 )
+            await conn.commit()
+    finally:
+        await conn.close()
+
+
+async def update_client_pan(phone_number: str, pan: str) -> None:
+    """Set or clear client PAN (Income Tax)."""
+    conn = await get_connection()
+    try:
+        pan_val = (pan or "").strip().upper() or None
+        if IS_POSTGRES:
+            await conn.execute(
+                "UPDATE clients SET pan = $1 WHERE phone_number = $2",
+                pan_val, phone_number,
+            )
+        else:
+            await conn.execute(
+                "UPDATE clients SET pan = ? WHERE phone_number = ?",
+                (pan_val, phone_number),
+            )
             await conn.commit()
     finally:
         await conn.close()
@@ -1192,6 +1972,22 @@ async def save_invoice(client_phone: str, file_path: str, result: dict) -> int:
 
     itc_partial = 1 if result.get("itc_partial") else 0
 
+    # Inherit firm from client (may be NULL until CA link)
+    firm_id = None
+    try:
+        if IS_POSTGRES:
+            firm_id = await conn.fetchval(
+                "SELECT firm_id FROM clients WHERE phone_number = $1", client_phone
+            )
+        else:
+            cur = await conn.execute(
+                "SELECT firm_id FROM clients WHERE phone_number = ?", (client_phone,)
+            )
+            row = await cur.fetchone()
+            firm_id = row[0] if row else None
+    except Exception:
+        firm_id = None
+
     try:
         if IS_POSTGRES:
             invoice_id = await conn.fetchval("""
@@ -1202,10 +1998,10 @@ async def save_invoice(client_phone: str, file_path: str, result: dict) -> int:
                     is_calculation_correct, is_itc_eligible, itc_ineligibility_reason, supply_type,
                     review_status, hitl_reason,
                     itc_eligible_cgst, itc_eligible_sgst, itc_eligible_igst, itc_blocked_gst,
-                    itc_partial, itc_line_evaluated
+                    itc_partial, itc_line_evaluated, firm_id
                 ) VALUES (
                     $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,
-                    $22,$23,$24,$25,$26,$27
+                    $22,$23,$24,$25,$26,$27,$28
                 )
                 RETURNING id
             """,
@@ -1216,7 +2012,7 @@ async def save_invoice(client_phone: str, file_path: str, result: dict) -> int:
                 ext["business_category"], result["is_calculation_correct"], result["is_itc_eligible"],
                 result["itc_ineligibility_reason"], result["supply_type"],
                 review_status, hitl_reason,
-                elig_c, elig_s, elig_i, blocked_gst, bool(itc_partial), True,
+                elig_c, elig_s, elig_i, blocked_gst, bool(itc_partial), True, firm_id,
             )
 
             for item in line_items:
@@ -1248,8 +2044,8 @@ async def save_invoice(client_phone: str, file_path: str, result: dict) -> int:
                     is_calculation_correct, is_itc_eligible, itc_ineligibility_reason, supply_type,
                     review_status, hitl_reason,
                     itc_eligible_cgst, itc_eligible_sgst, itc_eligible_igst, itc_blocked_gst,
-                    itc_partial, itc_line_evaluated
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    itc_partial, itc_line_evaluated, firm_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 client_phone, file_path, ext["supplier_name"], ext["supplier_gstin"],
                 ext["recipient_name"], ext["recipient_gstin"], ext["invoice_number"],
@@ -1258,7 +2054,7 @@ async def save_invoice(client_phone: str, file_path: str, result: dict) -> int:
                 ext["business_category"], result["is_calculation_correct"], result["is_itc_eligible"],
                 result["itc_ineligibility_reason"], result["supply_type"],
                 review_status, hitl_reason,
-                elig_c, elig_s, elig_i, blocked_gst, itc_partial, 1,
+                elig_c, elig_s, elig_i, blocked_gst, itc_partial, 1, firm_id,
             ))
             invoice_id = cursor.lastrowid
 
@@ -1295,23 +2091,340 @@ async def save_invoice(client_phone: str, file_path: str, result: dict) -> int:
         await conn.close()
 
 
-async def get_clients() -> list[dict]:
-    """Fetch all clients in the system."""
+async def get_clients(firm_id: int | None = None) -> list[dict]:
+    """Fetch clients. If firm_id set, only that firm's clients (excludes firm_id NULL)."""
     conn = await get_connection()
     try:
         if IS_POSTGRES:
-            rows = await conn.fetch("SELECT * FROM clients ORDER BY name ASC")
+            if firm_id is not None:
+                rows = await conn.fetch(
+                    """
+                    SELECT c.*, l.ca_invite_code
+                    FROM clients c
+                    LEFT JOIN client_ca_links l ON l.client_phone = c.phone_number
+                    WHERE c.firm_id = $1
+                    ORDER BY c.name ASC
+                    """,
+                    firm_id,
+                )
+            else:
+                rows = await conn.fetch(
+                    """
+                    SELECT c.*, l.ca_invite_code
+                    FROM clients c
+                    LEFT JOIN client_ca_links l ON l.client_phone = c.phone_number
+                    ORDER BY c.name ASC
+                    """
+                )
             return [dict(r) for r in rows]
         else:
             conn.row_factory = sqlite3.Row
-            cursor = await conn.execute("SELECT * FROM clients ORDER BY name ASC")
+            if firm_id is not None:
+                cursor = await conn.execute(
+                    """
+                    SELECT c.*, l.ca_invite_code
+                    FROM clients c
+                    LEFT JOIN client_ca_links l ON l.client_phone = c.phone_number
+                    WHERE c.firm_id = ?
+                    ORDER BY c.name ASC
+                    """,
+                    (firm_id,),
+                )
+            else:
+                cursor = await conn.execute(
+                    """
+                    SELECT c.*, l.ca_invite_code
+                    FROM clients c
+                    LEFT JOIN client_ca_links l ON l.client_phone = c.phone_number
+                    ORDER BY c.name ASC
+                    """
+                )
             rows = await cursor.fetchall()
             return [dict(r) for r in rows]
     finally:
         await conn.close()
 
 
-async def get_invoices(client_phone: str = None, status: str = None, month: str = None) -> list[dict]:
+async def get_clients_for_ca(ca_invite_code: str) -> list[dict]:
+    """Clients linked to a specific CA invite code (same firm implied by link)."""
+    conn = await get_connection()
+    try:
+        if IS_POSTGRES:
+            rows = await conn.fetch(
+                """
+                SELECT c.*, l.ca_invite_code
+                FROM clients c
+                INNER JOIN client_ca_links l ON l.client_phone = c.phone_number
+                INNER JOIN cas ca ON ca.invite_code = l.ca_invite_code
+                WHERE l.ca_invite_code = $1
+                  AND (c.firm_id IS NULL OR c.firm_id = ca.firm_id)
+                ORDER BY c.name ASC
+                """,
+                ca_invite_code,
+            )
+            return [dict(r) for r in rows]
+        else:
+            conn.row_factory = sqlite3.Row
+            cursor = await conn.execute(
+                """
+                SELECT c.*, l.ca_invite_code
+                FROM clients c
+                INNER JOIN client_ca_links l ON l.client_phone = c.phone_number
+                INNER JOIN cas ca ON ca.invite_code = l.ca_invite_code
+                WHERE l.ca_invite_code = ?
+                  AND (c.firm_id IS NULL OR c.firm_id = ca.firm_id)
+                ORDER BY c.name ASC
+                """,
+                (ca_invite_code,),
+            )
+            rows = await cursor.fetchall()
+            return [dict(r) for r in rows]
+    finally:
+        await conn.close()
+
+
+async def ca_has_client(ca_invite_code: str, client_phone: str) -> bool:
+    conn = await get_connection()
+    try:
+        if IS_POSTGRES:
+            row = await conn.fetchrow(
+                """
+                SELECT 1 FROM client_ca_links
+                WHERE ca_invite_code = $1 AND client_phone = $2
+                """,
+                ca_invite_code,
+                client_phone,
+            )
+            return row is not None
+        else:
+            cursor = await conn.execute(
+                """
+                SELECT 1 FROM client_ca_links
+                WHERE ca_invite_code = ? AND client_phone = ?
+                """,
+                (ca_invite_code, client_phone),
+            )
+            return (await cursor.fetchone()) is not None
+    finally:
+        await conn.close()
+
+
+async def create_ca_session(ca_invite_code: str, token: str, hours: int = 12) -> None:
+    import security as security_mod
+    from datetime import datetime, timedelta, timezone
+
+    token_hash = security_mod.fingerprint_token(token)
+    expires = datetime.now(timezone.utc) + timedelta(hours=hours)
+    conn = await get_connection()
+    try:
+        if IS_POSTGRES:
+            await conn.execute(
+                """
+                INSERT INTO ca_sessions (token_hash, ca_invite_code, expires_at)
+                VALUES ($1, $2, $3)
+                ON CONFLICT (token_hash) DO UPDATE
+                SET ca_invite_code = EXCLUDED.ca_invite_code,
+                    expires_at = EXCLUDED.expires_at,
+                    last_seen_at = CURRENT_TIMESTAMP
+                """,
+                token_hash,
+                ca_invite_code,
+                expires,
+            )
+        else:
+            await conn.execute(
+                """
+                INSERT OR REPLACE INTO ca_sessions (token_hash, ca_invite_code, expires_at)
+                VALUES (?, ?, ?)
+                """,
+                (token_hash, ca_invite_code, expires.isoformat()),
+            )
+            await conn.commit()
+    finally:
+        await conn.close()
+
+
+async def get_ca_session(token: str) -> dict | None:
+    """Return CA row + session if token is valid and not expired."""
+    import security as security_mod
+    from datetime import datetime, timezone
+
+    token_hash = security_mod.fingerprint_token(token)
+    conn = await get_connection()
+    try:
+        if IS_POSTGRES:
+            row = await conn.fetchrow(
+                """
+                SELECT s.token_hash, s.ca_invite_code, s.expires_at,
+                       c.name, c.email, c.firm_name, c.firm_id,
+                       f.name AS firm_display_name
+                FROM ca_sessions s
+                JOIN cas c ON c.invite_code = s.ca_invite_code
+                LEFT JOIN firms f ON f.id = c.firm_id
+                WHERE s.token_hash = $1
+                """,
+                token_hash,
+            )
+            if not row:
+                return None
+            data = dict(row)
+            exp = data.get("expires_at")
+            if exp and getattr(exp, "tzinfo", None) is None:
+                # asyncpg may return naive UTC
+                from datetime import timezone as tz
+
+                exp = exp.replace(tzinfo=tz.utc)
+            if exp and exp < datetime.now(timezone.utc):
+                await conn.execute("DELETE FROM ca_sessions WHERE token_hash = $1", token_hash)
+                return None
+            await conn.execute(
+                "UPDATE ca_sessions SET last_seen_at = CURRENT_TIMESTAMP WHERE token_hash = $1",
+                token_hash,
+            )
+            return data
+        else:
+            conn.row_factory = sqlite3.Row
+            cursor = await conn.execute(
+                """
+                SELECT s.token_hash, s.ca_invite_code, s.expires_at,
+                       c.name, c.email, c.firm_name, c.firm_id,
+                       f.name AS firm_display_name
+                FROM ca_sessions s
+                JOIN cas c ON c.invite_code = s.ca_invite_code
+                LEFT JOIN firms f ON f.id = c.firm_id
+                WHERE s.token_hash = ?
+                """,
+                (token_hash,),
+            )
+            row = await cursor.fetchone()
+            if not row:
+                return None
+            data = dict(row)
+            exp_raw = data.get("expires_at") or ""
+            try:
+                exp = datetime.fromisoformat(str(exp_raw).replace("Z", "+00:00"))
+                if exp.tzinfo is None:
+                    exp = exp.replace(tzinfo=timezone.utc)
+                if exp < datetime.now(timezone.utc):
+                    await conn.execute(
+                        "DELETE FROM ca_sessions WHERE token_hash = ?", (token_hash,)
+                    )
+                    await conn.commit()
+                    return None
+            except Exception:
+                pass
+            await conn.execute(
+                "UPDATE ca_sessions SET last_seen_at = CURRENT_TIMESTAMP WHERE token_hash = ?",
+                (token_hash,),
+            )
+            await conn.commit()
+            return data
+    finally:
+        await conn.close()
+
+
+async def delete_ca_session(token: str) -> bool:
+    """Delete a CA session by raw token. Returns True if a row was removed."""
+    result = await revoke_ca_session(token)
+    return result is not None
+
+
+async def revoke_ca_session(token: str) -> dict | None:
+    """
+    Invalidate a CA session server-side.
+    Returns session metadata (ca_invite_code, name, firm_id) if it existed; else None.
+    """
+    import security as security_mod
+
+    raw = (token or "").strip()
+    if not raw:
+        return None
+    token_hash = security_mod.fingerprint_token(raw)
+    conn = await get_connection()
+    try:
+        if IS_POSTGRES:
+            row = await conn.fetchrow(
+                """
+                SELECT s.ca_invite_code, c.name, c.firm_id
+                FROM ca_sessions s
+                JOIN cas c ON c.invite_code = s.ca_invite_code
+                WHERE s.token_hash = $1
+                """,
+                token_hash,
+            )
+            if not row:
+                return None
+            meta = dict(row)
+            await conn.execute("DELETE FROM ca_sessions WHERE token_hash = $1", token_hash)
+            return meta
+        conn.row_factory = sqlite3.Row
+        cur = await conn.execute(
+            """
+            SELECT s.ca_invite_code, c.name, c.firm_id
+            FROM ca_sessions s
+            JOIN cas c ON c.invite_code = s.ca_invite_code
+            WHERE s.token_hash = ?
+            """,
+            (token_hash,),
+        )
+        row = await cur.fetchone()
+        if not row:
+            return None
+        meta = dict(row)
+        await conn.execute("DELETE FROM ca_sessions WHERE token_hash = ?", (token_hash,))
+        await conn.commit()
+        return meta
+    finally:
+        await conn.close()
+
+
+async def insert_security_audit_log(
+    *,
+    actor: str,
+    action: str,
+    resource_type: str | None = None,
+    resource_id: str | None = None,
+    detail: str | None = None,
+    ip: str | None = None,
+) -> None:
+    conn = await get_connection()
+    try:
+        if IS_POSTGRES:
+            await conn.execute(
+                """
+                INSERT INTO security_audit_logs
+                    (actor, action, resource_type, resource_id, detail, ip)
+                VALUES ($1, $2, $3, $4, $5, $6)
+                """,
+                actor,
+                action,
+                resource_type,
+                resource_id,
+                detail,
+                ip,
+            )
+        else:
+            await conn.execute(
+                """
+                INSERT INTO security_audit_logs
+                    (actor, action, resource_type, resource_id, detail, ip)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (actor, action, resource_type, resource_id, detail, ip),
+            )
+            await conn.commit()
+    except Exception:
+        logger.exception("Failed to write security_audit_log")
+    finally:
+        await conn.close()
+
+
+async def get_invoices(
+    client_phone: str = None,
+    status: str = None,
+    month: str = None,
+    firm_id: int | None = None,
+) -> list[dict]:
     """
     Fetch list of invoices with filters.
     Args:
@@ -1319,10 +2432,19 @@ async def get_invoices(client_phone: str = None, status: str = None, month: str 
         status: 'approved' | 'pending_review' | 'flagged' | 'hitl' |
                 'needs_review' | 'awaiting_client' | 'client_confirmed' | 'rejected'.
         month: YYYY-MM based on invoice_date.
+        firm_id: When set, only invoices for that firm.
     """
     conn = await get_connection()
     query = "SELECT * FROM invoices WHERE 1=1"
     params = []
+
+    if firm_id is not None:
+        if IS_POSTGRES:
+            params.append(firm_id)
+            query += f" AND firm_id = ${len(params)}"
+        else:
+            params.append(firm_id)
+            query += " AND firm_id = ?"
 
     if client_phone:
         if IS_POSTGRES:
@@ -1429,17 +2551,30 @@ async def get_invoice_detail(invoice_id: int) -> dict | None:
         await conn.close()
 
 
-async def update_invoice(invoice_id: int, updated_fields: dict, ca_user: str = "CA Operator") -> bool:
+async def update_invoice(
+    invoice_id: int,
+    updated_fields: dict,
+    ca_user: str = "CA Operator",
+    *,
+    ca_invite_code: str | None = None,
+    firm_id: int | None = None,
+) -> bool:
     """
     Updates invoice metadata and audits the edits.
     Handles fields like supplier_name, supplier_gstin, grand_total, categories, etc.
+    Extraction-tracked field edits are also written to extraction_field_edits.
     """
+    import json as _json
+
     conn = await get_connection()
     try:
         # Get old values for logging
         old_invoice = await get_invoice_detail(invoice_id)
         if not old_invoice:
             return False
+
+        firm_id = firm_id if firm_id is not None else old_invoice.get("firm_id")
+        client_phone = old_invoice.get("client_phone")
 
         # Build dynamic query
         allowed_extra = {
@@ -1448,10 +2583,12 @@ async def update_invoice(invoice_id: int, updated_fields: dict, ca_user: str = "
         }
         sets = []
         params = []
+        extraction_edits: list[tuple[str, str | None, str | None]] = []
         for key, new_val in updated_fields.items():
             # Basic validation check to ensure key exists in table
             if (key in old_invoice or key in allowed_extra) and key not in [
-                "id", "client_phone", "file_path", "line_items", "calculation_errors", "ca_action_logs"
+                "id", "client_phone", "file_path", "line_items", "calculation_errors",
+                "ca_action_logs", "extraction_edit_count", "extraction_edited_fields",
             ]:
                 old_val = old_invoice.get(key)
                 if old_val != new_val:
@@ -1463,47 +2600,340 @@ async def update_invoice(invoice_id: int, updated_fields: dict, ca_user: str = "
                         sets.append(f"{key} = ?")
 
                     # Log the change
-                    await insert_audit_log(conn, invoice_id, ca_user, "EDIT_FIELD", key, str(old_val), str(new_val))
+                    await insert_audit_log(
+                        conn, invoice_id, ca_user, "EDIT_FIELD", key, str(old_val), str(new_val)
+                    )
+                    if key in EXTRACTION_TRACKED_FIELDS:
+                        extraction_edits.append((key, str(old_val) if old_val is not None else None, str(new_val) if new_val is not None else None))
 
-        if not sets:
+        if not sets and not extraction_edits:
             return True  # No changes detected
 
-        if IS_POSTGRES:
-            params.append(invoice_id)
-            query = f"UPDATE invoices SET {', '.join(sets)} WHERE id = ${len(params)}"
-            await conn.execute(query, *params)
-        else:
-            params.append(invoice_id)
-            query = f"UPDATE invoices SET {', '.join(sets)} WHERE id = ?"
-            await conn.execute(query, params)
+        if sets:
+            if IS_POSTGRES:
+                params.append(invoice_id)
+                query = f"UPDATE invoices SET {', '.join(sets)} WHERE id = ${len(params)}"
+                await conn.execute(query, *params)
+            else:
+                params.append(invoice_id)
+                query = f"UPDATE invoices SET {', '.join(sets)} WHERE id = ?"
+                await conn.execute(query, params)
+
+        for field_name, old_s, new_s in extraction_edits:
+            if IS_POSTGRES:
+                await conn.execute(
+                    """
+                    INSERT INTO extraction_field_edits
+                        (invoice_id, firm_id, client_phone, field_name, old_value, new_value,
+                         ca_user, ca_invite_code)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                    """,
+                    invoice_id,
+                    firm_id,
+                    client_phone,
+                    field_name,
+                    old_s,
+                    new_s,
+                    ca_user,
+                    ca_invite_code,
+                )
+            else:
+                await conn.execute(
+                    """
+                    INSERT INTO extraction_field_edits
+                        (invoice_id, firm_id, client_phone, field_name, old_value, new_value,
+                         ca_user, ca_invite_code)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        invoice_id,
+                        firm_id,
+                        client_phone,
+                        field_name,
+                        old_s,
+                        new_s,
+                        ca_user,
+                        ca_invite_code,
+                    ),
+                )
+
+        if extraction_edits:
+            # Roll up distinct edited extraction fields on the invoice row
+            prev_fields: list[str] = []
+            raw_prev = old_invoice.get("extraction_edited_fields")
+            if raw_prev:
+                try:
+                    prev_fields = list(_json.loads(raw_prev)) if isinstance(raw_prev, str) else list(raw_prev)
+                except Exception:
+                    prev_fields = []
+            for field_name, _, _ in extraction_edits:
+                if field_name not in prev_fields:
+                    prev_fields.append(field_name)
+            count = len(prev_fields)
+            fields_json = _json.dumps(prev_fields)
+            if IS_POSTGRES:
+                await conn.execute(
+                    """
+                    UPDATE invoices
+                    SET extraction_edit_count = $1, extraction_edited_fields = $2
+                    WHERE id = $3
+                    """,
+                    count,
+                    fields_json,
+                    invoice_id,
+                )
+            else:
+                await conn.execute(
+                    """
+                    UPDATE invoices
+                    SET extraction_edit_count = ?, extraction_edited_fields = ?
+                    WHERE id = ?
+                    """,
+                    (count, fields_json, invoice_id),
+                )
+
+        if not IS_POSTGRES:
             await conn.commit()
-            
+
         logger.info("Updated invoice ID: %d fields: %s by %s", invoice_id, list(updated_fields.keys()), ca_user)
         return True
     finally:
         await conn.close()
 
 
-async def approve_invoice(invoice_id: int, ca_user: str = "CA Operator") -> bool:
+async def approve_invoice(
+    invoice_id: int,
+    ca_user: str = "CA Operator",
+    *,
+    ca_invite_code: str | None = None,
+    firm_id: int | None = None,
+) -> bool:
     """Marks an invoice as verified and approved (HITL final gate)."""
+    import json as _json
+
     conn = await get_connection()
     try:
+        detail = await get_invoice_detail(invoice_id)
+        if not detail:
+            return False
+
+        firm_id = firm_id if firm_id is not None else detail.get("firm_id")
+        client_phone = detail.get("client_phone")
+
+        # Distinct extraction fields edited before this approve
+        if IS_POSTGRES:
+            rows = await conn.fetch(
+                """
+                SELECT DISTINCT field_name FROM extraction_field_edits
+                WHERE invoice_id = $1
+                """,
+                invoice_id,
+            )
+            fields = [r["field_name"] for r in rows]
+        else:
+            cur = await conn.execute(
+                "SELECT DISTINCT field_name FROM extraction_field_edits WHERE invoice_id = ?",
+                (invoice_id,),
+            )
+            fields = [r[0] for r in await cur.fetchall()]
+
+        # Also include rolled-up column if present
+        raw_fields = detail.get("extraction_edited_fields")
+        if raw_fields:
+            try:
+                extra = list(_json.loads(raw_fields)) if isinstance(raw_fields, str) else list(raw_fields)
+                for f in extra:
+                    if f not in fields:
+                        fields.append(f)
+            except Exception:
+                pass
+
+        had_edit = len(fields) > 0
+        fields_json = _json.dumps(fields)
+
         if IS_POSTGRES:
             await conn.execute(
                 "UPDATE invoices SET is_approved = TRUE, review_status = 'approved' WHERE id = $1",
-                invoice_id
+                invoice_id,
             )
             await insert_audit_log(conn, invoice_id, ca_user, "APPROVE", "review_status", None, "approved")
+            await conn.execute(
+                """
+                INSERT INTO invoice_extraction_outcomes
+                    (invoice_id, firm_id, client_phone, fields_edited_count, distinct_fields,
+                     had_any_edit, ca_user, ca_invite_code)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                ON CONFLICT (invoice_id) DO UPDATE SET
+                    fields_edited_count = EXCLUDED.fields_edited_count,
+                    distinct_fields = EXCLUDED.distinct_fields,
+                    had_any_edit = EXCLUDED.had_any_edit,
+                    ca_user = EXCLUDED.ca_user,
+                    ca_invite_code = EXCLUDED.ca_invite_code,
+                    approved_at = CURRENT_TIMESTAMP
+                """,
+                invoice_id,
+                firm_id,
+                client_phone,
+                len(fields),
+                fields_json,
+                had_edit,
+                ca_user,
+                ca_invite_code,
+            )
         else:
             await conn.execute(
                 "UPDATE invoices SET is_approved = 1, review_status = 'approved' WHERE id = ?",
-                (invoice_id,)
+                (invoice_id,),
             )
             await insert_audit_log(conn, invoice_id, ca_user, "APPROVE", "review_status", None, "approved")
+            await conn.execute(
+                """
+                INSERT INTO invoice_extraction_outcomes
+                    (invoice_id, firm_id, client_phone, fields_edited_count, distinct_fields,
+                     had_any_edit, ca_user, ca_invite_code)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(invoice_id) DO UPDATE SET
+                    fields_edited_count = excluded.fields_edited_count,
+                    distinct_fields = excluded.distinct_fields,
+                    had_any_edit = excluded.had_any_edit,
+                    ca_user = excluded.ca_user,
+                    ca_invite_code = excluded.ca_invite_code,
+                    approved_at = CURRENT_TIMESTAMP
+                """,
+                (
+                    invoice_id,
+                    firm_id,
+                    client_phone,
+                    len(fields),
+                    fields_json,
+                    1 if had_edit else 0,
+                    ca_user,
+                    ca_invite_code,
+                ),
+            )
             await conn.commit()
 
-        logger.info("Invoice approved: %d by CA %s", invoice_id, ca_user)
+        logger.info(
+            "Invoice approved: %d by CA %s (extraction_edits=%d fields=%s)",
+            invoice_id,
+            ca_user,
+            len(fields),
+            fields,
+        )
         return True
+    finally:
+        await conn.close()
+
+
+async def get_extraction_edit_stats(*, days: int = 30, firm_id: int | None = None) -> dict:
+    """
+    Aggregate CA extraction-field edit rate from production traffic.
+    edit_rate = share of approved invoices that had ≥1 extraction field edit.
+    """
+    days = max(1, min(int(days or 30), 365))
+    conn = await get_connection()
+    try:
+        firm_clause_pg = "AND firm_id = $2" if firm_id is not None else ""
+        firm_clause_sq = "AND firm_id = ?" if firm_id is not None else ""
+
+        if IS_POSTGRES:
+            params: list = [days]
+            if firm_id is not None:
+                params.append(firm_id)
+            outcomes = await conn.fetch(
+                f"""
+                SELECT had_any_edit, fields_edited_count, distinct_fields
+                FROM invoice_extraction_outcomes
+                WHERE approved_at >= NOW() - make_interval(days => $1)
+                {firm_clause_pg}
+                """,
+                *params,
+            )
+            field_rows = await conn.fetch(
+                f"""
+                SELECT field_name, COUNT(*) AS edit_events,
+                       COUNT(DISTINCT invoice_id) AS invoices
+                FROM extraction_field_edits
+                WHERE created_at >= NOW() - make_interval(days => $1)
+                {firm_clause_pg}
+                GROUP BY field_name
+                ORDER BY edit_events DESC
+                """,
+                *params,
+            )
+        else:
+            params = [f"-{days} days"]
+            if firm_id is not None:
+                params.append(firm_id)
+            cur = await conn.execute(
+                f"""
+                SELECT had_any_edit, fields_edited_count, distinct_fields
+                FROM invoice_extraction_outcomes
+                WHERE approved_at >= datetime('now', ?)
+                {firm_clause_sq}
+                """,
+                tuple(params),
+            )
+            outcomes = await cur.fetchall()
+            cur = await conn.execute(
+                f"""
+                SELECT field_name, COUNT(*) AS edit_events,
+                       COUNT(DISTINCT invoice_id) AS invoices
+                FROM extraction_field_edits
+                WHERE created_at >= datetime('now', ?)
+                {firm_clause_sq}
+                GROUP BY field_name
+                ORDER BY edit_events DESC
+                """,
+                tuple(params),
+            )
+            field_rows = await cur.fetchall()
+
+        approved = len(outcomes)
+        with_edits = 0
+        total_fields_touched = 0
+        for row in outcomes:
+            if IS_POSTGRES:
+                had = bool(row["had_any_edit"])
+                total_fields_touched += int(row["fields_edited_count"] or 0)
+            else:
+                had = bool(row[0])
+                total_fields_touched += int(row[1] or 0)
+            if had:
+                with_edits += 1
+
+        by_field = []
+        for row in field_rows:
+            if IS_POSTGRES:
+                by_field.append(
+                    {
+                        "field_name": row["field_name"],
+                        "edit_events": int(row["edit_events"]),
+                        "invoices": int(row["invoices"]),
+                    }
+                )
+            else:
+                by_field.append(
+                    {
+                        "field_name": row[0],
+                        "edit_events": int(row[1]),
+                        "invoices": int(row[2]),
+                    }
+                )
+
+        edit_rate = (with_edits / approved) if approved else None
+        return {
+            "days": days,
+            "firm_id": firm_id,
+            "approved_invoices": approved,
+            "approved_with_extraction_edits": with_edits,
+            "edit_rate": round(edit_rate, 4) if edit_rate is not None else None,
+            "avg_fields_edited_when_touched": (
+                round(total_fields_touched / with_edits, 2) if with_edits else None
+            ),
+            "by_field": by_field,
+            "tracked_fields": sorted(EXTRACTION_TRACKED_FIELDS),
+        }
     finally:
         await conn.close()
 
@@ -2069,7 +3499,7 @@ async def get_ca_by_invite_code(invite_code: str) -> dict | None:
 async def link_client_to_ca(client_phone: str, invite_code: str) -> dict:
     """
     Link a client phone to a CA invite code.
-    Creates the client row if needed, then upserts the link.
+    Creates the client row if needed, then upserts the link and assigns firm_id.
     """
     await get_or_create_client(client_phone, name="Onboarding Client")
     ca = await get_ca_by_invite_code(invite_code)
@@ -2101,9 +3531,13 @@ async def link_client_to_ca(client_phone: str, invite_code: str) -> dict:
                 (client_phone, invite_code)
             )
             await conn.commit()
-        return ca
     finally:
         await conn.close()
+
+    firm_id = ca.get("firm_id")
+    if firm_id is not None:
+        await set_client_firm(client_phone, int(firm_id))
+    return ca
 
 
 # ── WhatsApp message deduplication ────────────────────────────────────────────
@@ -2163,3 +3597,291 @@ async def mark_message_processed(message_id: str) -> None:
     finally:
         await conn.close()
 
+
+
+async def _ensure_itr_schema(conn) -> None:
+    """PAN on clients + ITR returns / Form 16 documents (Phase 1 Income Tax)."""
+    if IS_POSTGRES:
+        await conn.execute(
+            "ALTER TABLE clients ADD COLUMN IF NOT EXISTS pan VARCHAR(10)"
+        )
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS itr_returns (
+                id SERIAL PRIMARY KEY,
+                client_phone VARCHAR(20) NOT NULL REFERENCES clients(phone_number),
+                financial_year VARCHAR(16) NOT NULL,
+                pan VARCHAR(10),
+                status VARCHAR(32) DEFAULT 'draft',
+                gross_salary DOUBLE PRECISION DEFAULT 0,
+                exemptions DOUBLE PRECISION DEFAULT 0,
+                other_income DOUBLE PRECISION DEFAULT 0,
+                deductions_80c DOUBLE PRECISION DEFAULT 0,
+                tds DOUBLE PRECISION DEFAULT 0,
+                advance_tax DOUBLE PRECISION DEFAULT 0,
+                regime_preferred VARCHAR(8),
+                estimate_json TEXT,
+                extracted_json TEXT,
+                ca_notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE (client_phone, financial_year)
+            )
+            """
+        )
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS itr_documents (
+                id SERIAL PRIMARY KEY,
+                itr_return_id INTEGER NOT NULL REFERENCES itr_returns(id) ON DELETE CASCADE,
+                doc_type VARCHAR(32) DEFAULT 'form16',
+                file_path TEXT NOT NULL,
+                original_filename TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+    else:
+        try:
+            await conn.execute("ALTER TABLE clients ADD COLUMN pan TEXT")
+        except Exception:
+            pass
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS itr_returns (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                client_phone TEXT NOT NULL REFERENCES clients(phone_number),
+                financial_year TEXT NOT NULL,
+                pan TEXT,
+                status TEXT DEFAULT 'draft',
+                gross_salary REAL DEFAULT 0,
+                exemptions REAL DEFAULT 0,
+                other_income REAL DEFAULT 0,
+                deductions_80c REAL DEFAULT 0,
+                tds REAL DEFAULT 0,
+                advance_tax REAL DEFAULT 0,
+                regime_preferred TEXT,
+                estimate_json TEXT,
+                extracted_json TEXT,
+                ca_notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE (client_phone, financial_year)
+            )
+            """
+        )
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS itr_documents (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                itr_return_id INTEGER NOT NULL REFERENCES itr_returns(id) ON DELETE CASCADE,
+                doc_type TEXT DEFAULT 'form16',
+                file_path TEXT NOT NULL,
+                original_filename TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        await conn.commit()
+
+
+def _row_to_dict(row) -> dict:
+    if row is None:
+        return None
+    return dict(row)
+
+
+async def list_itr_returns(client_phone: str) -> list[dict]:
+    conn = await get_connection()
+    try:
+        if IS_POSTGRES:
+            rows = await conn.fetch(
+                """
+                SELECT * FROM itr_returns
+                WHERE client_phone = $1
+                ORDER BY financial_year DESC, id DESC
+                """,
+                client_phone,
+            )
+            return [dict(r) for r in rows]
+        conn.row_factory = sqlite3.Row
+        cur = await conn.execute(
+            """
+            SELECT * FROM itr_returns
+            WHERE client_phone = ?
+            ORDER BY financial_year DESC, id DESC
+            """,
+            (client_phone,),
+        )
+        return [dict(r) for r in await cur.fetchall()]
+    finally:
+        await conn.close()
+
+
+async def get_itr_return(itr_id: int) -> dict | None:
+    conn = await get_connection()
+    try:
+        if IS_POSTGRES:
+            row = await conn.fetchrow("SELECT * FROM itr_returns WHERE id = $1", itr_id)
+            return dict(row) if row else None
+        conn.row_factory = sqlite3.Row
+        cur = await conn.execute("SELECT * FROM itr_returns WHERE id = ?", (itr_id,))
+        row = await cur.fetchone()
+        return dict(row) if row else None
+    finally:
+        await conn.close()
+
+
+async def get_or_create_itr_return(
+    client_phone: str,
+    financial_year: str,
+    pan: str | None = None,
+) -> dict:
+    fy = (financial_year or "").strip()
+    pan_val = (pan or "").strip().upper() or None
+    existing_list = await list_itr_returns(client_phone)
+    for r in existing_list:
+        if r.get("financial_year") == fy:
+            if pan_val and not r.get("pan"):
+                await update_itr_return(r["id"], {"pan": pan_val})
+                return await get_itr_return(r["id"])
+            return r
+
+    conn = await get_connection()
+    try:
+        if IS_POSTGRES:
+            row = await conn.fetchrow(
+                """
+                INSERT INTO itr_returns (client_phone, financial_year, pan, status)
+                VALUES ($1, $2, $3, 'draft')
+                ON CONFLICT (client_phone, financial_year) DO UPDATE
+                    SET pan = COALESCE(EXCLUDED.pan, itr_returns.pan),
+                        updated_at = CURRENT_TIMESTAMP
+                RETURNING *
+                """,
+                client_phone,
+                fy,
+                pan_val,
+            )
+            return dict(row)
+        cur = await conn.execute(
+            """
+            INSERT INTO itr_returns (client_phone, financial_year, pan, status)
+            VALUES (?, ?, ?, 'draft')
+            ON CONFLICT(client_phone, financial_year) DO UPDATE SET
+                pan = COALESCE(excluded.pan, itr_returns.pan),
+                updated_at = CURRENT_TIMESTAMP
+            """,
+            (client_phone, fy, pan_val),
+        )
+        await conn.commit()
+        # Fetch the row
+        conn.row_factory = sqlite3.Row
+        cur = await conn.execute(
+            "SELECT * FROM itr_returns WHERE client_phone = ? AND financial_year = ?",
+            (client_phone, fy),
+        )
+        return dict(await cur.fetchone())
+    finally:
+        await conn.close()
+
+
+async def update_itr_return(itr_id: int, fields: dict) -> dict | None:
+    allowed = {
+        "pan",
+        "status",
+        "gross_salary",
+        "exemptions",
+        "other_income",
+        "deductions_80c",
+        "tds",
+        "advance_tax",
+        "regime_preferred",
+        "estimate_json",
+        "extracted_json",
+        "ca_notes",
+        "financial_year",
+    }
+    updates = {k: v for k, v in (fields or {}).items() if k in allowed}
+    if not updates:
+        return await get_itr_return(itr_id)
+
+    conn = await get_connection()
+    try:
+        cols = list(updates.keys())
+        if IS_POSTGRES:
+            sets = ", ".join(f"{c} = ${i+1}" for i, c in enumerate(cols))
+            vals = [updates[c] for c in cols]
+            vals.append(itr_id)
+            await conn.execute(
+                f"UPDATE itr_returns SET {sets}, updated_at = CURRENT_TIMESTAMP WHERE id = ${len(cols)+1}",
+                *vals,
+            )
+        else:
+            sets = ", ".join(f"{c} = ?" for c in cols)
+            vals = [updates[c] for c in cols]
+            vals.append(itr_id)
+            await conn.execute(
+                f"UPDATE itr_returns SET {sets}, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                vals,
+            )
+            await conn.commit()
+    finally:
+        await conn.close()
+    return await get_itr_return(itr_id)
+
+
+async def add_itr_document(
+    itr_return_id: int,
+    file_path: str,
+    doc_type: str = "form16",
+    original_filename: str | None = None,
+) -> dict:
+    conn = await get_connection()
+    try:
+        if IS_POSTGRES:
+            row = await conn.fetchrow(
+                """
+                INSERT INTO itr_documents (itr_return_id, doc_type, file_path, original_filename)
+                VALUES ($1, $2, $3, $4)
+                RETURNING *
+                """,
+                itr_return_id,
+                doc_type,
+                file_path,
+                original_filename,
+            )
+            return dict(row)
+        cur = await conn.execute(
+            """
+            INSERT INTO itr_documents (itr_return_id, doc_type, file_path, original_filename)
+            VALUES (?, ?, ?, ?)
+            """,
+            (itr_return_id, doc_type, file_path, original_filename),
+        )
+        doc_id = cur.lastrowid
+        await conn.commit()
+        conn.row_factory = sqlite3.Row
+        cur = await conn.execute("SELECT * FROM itr_documents WHERE id = ?", (doc_id,))
+        return dict(await cur.fetchone())
+    finally:
+        await conn.close()
+
+
+async def list_itr_documents(itr_return_id: int) -> list[dict]:
+    conn = await get_connection()
+    try:
+        if IS_POSTGRES:
+            rows = await conn.fetch(
+                "SELECT * FROM itr_documents WHERE itr_return_id = $1 ORDER BY id DESC",
+                itr_return_id,
+            )
+            return [dict(r) for r in rows]
+        conn.row_factory = sqlite3.Row
+        cur = await conn.execute(
+            "SELECT * FROM itr_documents WHERE itr_return_id = ? ORDER BY id DESC",
+            (itr_return_id,),
+        )
+        return [dict(r) for r in await cur.fetchall()]
+    finally:
+        await conn.close()

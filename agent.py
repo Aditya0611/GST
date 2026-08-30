@@ -56,7 +56,7 @@ Rules:
 3. Cite tool results clearly. If a tool returns blocked ITC, explain the reason briefly.
 4. Keep WhatsApp-style answers concise; dashboard answers can be slightly more detailed.
 5. Never invent GSTIN validation or invoice totals — use tools.
-6. If the user asks a pure law question, use search_gst_rules.
+6. If the user asks a pure law question, use search_gst_rules and prefer higher-score matches; cite the document/section title. If matches are weak, say the knowledge base may not cover it — do not invent sections.
 7. If client context is missing and the question needs it, say what phone/client is required.
 """
 
@@ -76,7 +76,7 @@ GROQ_TOOLS: list[dict] = [
                     },
                     "limit": {
                         "type": "integer",
-                        "description": "Max chunks to return (1-5). Default 3.",
+                        "description": "Max chunks to return (1-8). Default 5.",
                     },
                 },
                 "required": ["query"],
@@ -213,7 +213,7 @@ def _tool_declarations() -> list[types.Tool]:
                             ),
                             "limit": types.Schema(
                                 type=types.Type.INTEGER,
-                                description="Max chunks to return (1-5). Default 3.",
+                                description="Max chunks to return (1-8). Default 5.",
                             ),
                         },
                         required=["query"],
@@ -332,17 +332,23 @@ async def _exec_tool(name: str, args: dict, ctx: AgentContext) -> Any:
 
     if name == "search_gst_rules":
         query = str(args.get("query", "")).strip()
-        limit = max(1, min(int(args.get("limit") or 3), 5))
+        limit = max(1, min(int(args.get("limit") or 5), 8))
         matches = await rag.search_knowledge_base(query, limit=limit)
         return {
             "matches": [
                 {
                     "title": m.get("title"),
+                    "section": m.get("section") or "",
                     "similarity": round(float(m.get("similarity", 0)), 3),
-                    "content": (m.get("content") or "")[:700],
+                    "score": round(float(m.get("score", m.get("similarity", 0))), 3),
+                    "content": (m.get("content") or "")[:900],
                 }
                 for m in matches
-            ]
+            ],
+            "note": (
+                "Prefer higher score matches. Cite section titles when answering. "
+                "If matches are weak or empty, say the knowledge base did not cover it."
+            ),
         }
 
     if name == "validate_gstin_format":

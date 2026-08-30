@@ -58,8 +58,14 @@ def _get_image_base64(file_path: str) -> tuple[str, str]:
         ".webp": "image/webp",
     }
     mime_type = mime_map.get(ext, "image/jpeg")
-    with open(file_path, "rb") as f:
-        img_bytes = f.read()
+    # Prefer storage decrypt when path is under STORAGE_DIR
+    try:
+        import storage as storage_mod
+
+        img_bytes = storage_mod.read_file_bytes(file_path)
+    except Exception:
+        with open(file_path, "rb") as f:
+            img_bytes = f.read()
     b64_str = base64.b64encode(img_bytes).decode("utf-8")
     return b64_str, mime_type
 
@@ -233,7 +239,7 @@ async def evaluate_itc_eligibility(
 
     query = f"ITC eligibility for category '{category}' with items: {line_items_summary}"
     try:
-        matches = await rag.search_knowledge_base(query, limit=3)
+        matches = await rag.search_knowledge_base(query, limit=5)
     except Exception as e:
         logger.warning("RAG vector search failed, using rule gray decision: %s", e)
         matches = []
@@ -365,6 +371,14 @@ async def process_invoice(file_path: str) -> ProcessingResult:
     Process invoice using either Groq or Gemini (fallback/PDF),
     then validate the calculations and ITC logic.
     """
+    import storage as storage_mod
+
+    # Materialize decrypted bytes to a temp path so Gemini/Pillow/Groq keep working
+    with storage_mod.plaintext_temp_file(file_path) as plain_path:
+        return await _process_invoice_plaintext(plain_path)
+
+
+async def _process_invoice_plaintext(file_path: str) -> ProcessingResult:
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"File not found at: {file_path}")
 

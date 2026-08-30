@@ -17,8 +17,8 @@ import logging
 from datetime import datetime
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request, Response, Query, HTTPException, BackgroundTasks, UploadFile, File, Form, Depends, Security
-from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
+from fastapi import FastAPI, Request, Response, Query, HTTPException, BackgroundTasks, UploadFile, File, Form, Depends, Security, Header
+from fastapi.responses import HTMLResponse, FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.security import APIKeyHeader
 from dotenv import load_dotenv
@@ -32,9 +32,11 @@ import gstr
 import rag
 import agent
 import hitl
+import security
 from processor import process_invoice, evaluate_itc_eligibility, validate_gstin
 import re
 import sandbox
+import itr
 
 # ── Load config ───────────────────────────────────────────────────────────────
 WEBHOOK_VERIFY_TOKEN = os.getenv("WEBHOOK_VERIFY_TOKEN", "")
@@ -65,16 +67,95 @@ logger = logging.getLogger("webhook")
 _api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 
-async def require_dashboard_auth(api_key: str | None = Security(_api_key_header)) -> None:
+async def require_dashboard_auth(
+    request: Request,
+    api_key: str | None = Security(_api_key_header),
+    x_ca_session: str | None = Header(None, alias="X-CA-Session"),
+) -> security.AuthContext:
     """
-    Protect CA dashboard REST APIs with X-API-Key.
-    If DASHBOARD_API_KEY is unset, requests are allowed (local/dev only — logged at startup).
+    Protect CA dashboard REST APIs.
+    Accepts either:
+      - X-API-Key matching DASHBOARD_API_KEY (full admin / scripts), or
+      - X-CA-Session from CA login (scoped to linked clients).
+    If DASHBOARD_API_KEY is unset and no session, open (local/dev only).
     """
-    if not DASHBOARD_API_KEY:
-        return
-    if not api_key or not hmac.compare_digest(api_key, DASHBOARD_API_KEY):
-        raise HTTPException(status_code=401, detail="Invalid or missing X-API-Key header.")
+    # CA session first (so logged-in CAs aren't blocked when API key also sent)
+    session_token = (x_ca_session or "").strip()
+    if not session_token:
+        auth_h = request.headers.get("Authorization") or ""
+        if auth_h.lower().startswith("bearer "):
+            session_token = auth_h[7:].strip()
 
+    if session_token:
+        row = await db.get_ca_session(session_token)
+        if row:
+            firm_id = row.get("firm_id")
+            try:
+                firm_id = int(firm_id) if firm_id is not None else None
+            except (TypeError, ValueError):
+                firm_id = None
+            ctx = security.AuthContext(
+                mode="ca_session",
+                ca_invite_code=row.get("ca_invite_code"),
+                ca_name=row.get("name"),
+                ca_email=row.get("email"),
+                firm_id=firm_id,
+                firm_name=row.get("firm_display_name") or row.get("firm_name"),
+                is_admin_key=False,
+            )
+            security.set_auth_context(ctx)
+            return ctx
+        # Invalid session — fall through to API key / reject
+
+    if DASHBOARD_API_KEY:
+        if api_key and hmac.compare_digest(api_key, DASHBOARD_API_KEY):
+            ctx = security.AuthContext(mode="api_key", is_admin_key=True)
+            security.set_auth_context(ctx)
+            return ctx
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or missing credentials. Log in as CA or send X-API-Key.",
+        )
+
+    # Dev open mode
+    ctx = security.AuthContext(mode="open", is_admin_key=True)
+    security.set_auth_context(ctx)
+    return ctx
+
+
+def effective_ca_user(body: dict | None = None) -> str:
+    auth = security.get_auth_context()
+    if auth.mode == "ca_session":
+        return auth.display_name
+    if body and body.get("ca_user"):
+        return str(body.get("ca_user")).strip() or auth.display_name
+    return auth.display_name
+
+
+async def assert_client_access(client_phone: str) -> None:
+    auth = security.get_auth_context()
+    if auth.can_see_all_clients or not client_phone:
+        return
+    if not auth.ca_invite_code:
+        raise HTTPException(status_code=403, detail="CA session missing invite code.")
+    if auth.firm_id is not None:
+        in_firm = await db.client_in_firm(client_phone, auth.firm_id)
+        if not in_firm:
+            raise HTTPException(status_code=403, detail="Client not in your firm.")
+    ok = await db.ca_has_client(auth.ca_invite_code, client_phone)
+    if not ok:
+        raise HTTPException(status_code=403, detail="Client not linked to this CA.")
+
+
+def require_platform_admin(auth: security.AuthContext | None = None) -> security.AuthContext:
+    """DASHBOARD_API_KEY / open-dev only — not CA sessions."""
+    ctx = auth or security.get_auth_context()
+    if not ctx.is_admin_key:
+        raise HTTPException(
+            status_code=403,
+            detail="Platform admin API key required.",
+        )
+    return ctx
 
 # ── Message deduplication (persisted in DB; see db.processed_messages) ────────
 
@@ -86,6 +167,7 @@ async def lifespan(app: FastAPI):
     logger.info("   Verify token configured: %s", bool(WEBHOOK_VERIFY_TOKEN))
     logger.info("   App secret configured:   %s", bool(APP_SECRET))
     logger.info("   Dashboard API key set:   %s", bool(DASHBOARD_API_KEY))
+    logger.info("   File encryption enabled: %s", security.encryption_enabled())
     _tok, _pid = whatsapp._refresh_credentials()
     logger.info(
         "   WhatsApp token loaded: %s (ends …%s) phone_id=%s",
@@ -98,7 +180,9 @@ async def lifespan(app: FastAPI):
         logger.error("APP_SECRET is empty — webhook POSTs will be rejected until it is set.")
     if not DASHBOARD_API_KEY:
         logger.warning("DASHBOARD_API_KEY is empty — dashboard APIs are open (dev mode).")
-    
+    if not security.encryption_enabled():
+        logger.warning("ENCRYPTION_KEY is empty — invoice files stored in plaintext.")
+
     # Initialize storage + database schema on start
     storage_dir = os.getenv("STORAGE_DIR", "./storage")
     os.makedirs(storage_dir, exist_ok=True)
@@ -125,7 +209,9 @@ async def lifespan(app: FastAPI):
                         first_line = content.splitlines()[0] if content.splitlines() else ""
                         if first_line.startswith("# "):
                             title = first_line.replace("# ", "").strip()
-                        await rag.index_document(title=title, text=content)
+                        await rag.index_document(
+                            title=title, text=content, source_file=filename
+                        )
                     logger.info("Startup seed indexing completed successfully.")
         except Exception as e:
             logger.warning("Startup seed indexing failed: %s", e)
@@ -638,6 +724,24 @@ async def get_privacy():
     return FileResponse(privacy_path)
 
 
+@app.get("/terms", response_class=HTMLResponse)
+async def get_terms():
+    """Public terms of service (Meta app settings)."""
+    terms_path = os.path.join("static", "terms.html")
+    if not os.path.exists(terms_path):
+        return HTMLResponse("<h1>Terms not found.</h1>", status_code=404)
+    return FileResponse(terms_path)
+
+
+@app.get("/data-deletion", response_class=HTMLResponse)
+async def get_data_deletion():
+    """User data deletion instructions (Meta app settings)."""
+    path = os.path.join("static", "data-deletion.html")
+    if not os.path.exists(path):
+        return HTMLResponse("<h1>Data deletion page not found.</h1>", status_code=404)
+    return FileResponse(path)
+
+
 @app.post("/api/ca/link")
 async def api_link_ca(request: Request):
     """Validates a CA invite code and links the CA to the client session."""
@@ -725,11 +829,253 @@ async def api_onboard_client(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/clients")
-async def api_get_clients(_auth: None = Depends(require_dashboard_auth)):
-    """Returns list of all Taxova.ai client profiles."""
+@app.post("/api/auth/login")
+async def api_ca_login(request: Request):
+    """
+    CA login with invite_code + password.
+    Returns a session token to send as X-CA-Session on later requests.
+    """
+    body = await request.json()
+    invite = str(body.get("invite_code") or "").strip()
+    password = str(body.get("password") or "")
+    if len(invite) != 6 or not invite.isdigit():
+        raise HTTPException(status_code=400, detail="invite_code must be 6 digits.")
+    if not password:
+        raise HTTPException(status_code=400, detail="password is required.")
+
+    ca = await db.get_ca_by_invite_code(invite)
+    if not ca or not ca.get("password_hash") or not ca.get("password_salt"):
+        raise HTTPException(status_code=401, detail="Invalid invite code or password.")
+    if not security.verify_password(password, ca["password_salt"], ca["password_hash"]):
+        await db.insert_security_audit_log(
+            actor=invite,
+            action="login_failed",
+            resource_type="ca",
+            resource_id=invite,
+            ip=request.client.host if request.client else None,
+        )
+        raise HTTPException(status_code=401, detail="Invalid invite code or password.")
+
+    token = security.new_session_token()
+    await db.create_ca_session(invite, token)
+    await db.insert_security_audit_log(
+        actor=ca.get("name") or invite,
+        action="login_ok",
+        resource_type="ca",
+        resource_id=invite,
+        ip=request.client.host if request.client else None,
+    )
+    firm_id = ca.get("firm_id")
+    firm = None
+    if firm_id is not None:
+        try:
+            firm = await db.get_firm(int(firm_id))
+        except (TypeError, ValueError):
+            firm = None
+    firm_name = (firm or {}).get("name") or ca.get("firm_name")
+    return {
+        "ok": True,
+        "session_token": token,
+        "ca": {
+            "invite_code": invite,
+            "name": ca.get("name"),
+            "firm_name": firm_name,
+            "firm_id": firm_id,
+            "email": ca.get("email"),
+        },
+        "firm": {
+            "id": firm_id,
+            "name": firm_name,
+            "slug": (firm or {}).get("slug"),
+        }
+        if firm_id is not None
+        else None,
+        "expires_hours": 12,
+    }
+
+
+@app.post("/api/auth/logout")
+async def api_ca_logout(
+    request: Request,
+    x_ca_session: str | None = Header(None, alias="X-CA-Session"),
+):
+    """
+    Invalidate the CA session token server-side (deletes ca_sessions row).
+    Client must also clear CA_SESSION_TOKEN and DASHBOARD_API_KEY from localStorage
+    so logout cannot fall back to admin "see all firms".
+    """
+    token = (x_ca_session or "").strip()
+    if not token:
+        auth_h = request.headers.get("Authorization") or ""
+        if auth_h.lower().startswith("bearer "):
+            token = auth_h[7:].strip()
+
+    if not token:
+        return {
+            "ok": True,
+            "invalidated": False,
+            "detail": "No session token sent. Clear CA_SESSION_TOKEN and DASHBOARD_API_KEY locally.",
+            "clear_local": ["CA_SESSION_TOKEN", "CA_PROFILE", "CA_FIRM", "DASHBOARD_API_KEY"],
+        }
+
+    meta = await db.revoke_ca_session(token)
+    invalidated = meta is not None
+    # Confirm token is dead (defense against soft-delete mistakes)
+    if await db.get_ca_session(token) is not None:
+        logger.error("Logout failed to invalidate session hash for invite=%s", (meta or {}).get("ca_invite_code"))
+        raise HTTPException(status_code=500, detail="Failed to invalidate session.")
+
+    await db.insert_security_audit_log(
+        actor=(meta or {}).get("name") or (meta or {}).get("ca_invite_code") or "ca",
+        action="logout_ok" if invalidated else "logout_noop",
+        resource_type="ca_session",
+        resource_id=(meta or {}).get("ca_invite_code"),
+        detail="invalidated" if invalidated else "token_already_gone",
+        ip=request.client.host if request.client else None,
+    )
+    return {
+        "ok": True,
+        "invalidated": invalidated,
+        "ca_invite_code": (meta or {}).get("ca_invite_code"),
+        "firm_id": (meta or {}).get("firm_id"),
+        "clear_local": ["CA_SESSION_TOKEN", "CA_PROFILE", "CA_FIRM", "DASHBOARD_API_KEY"],
+    }
+
+
+@app.get("/api/auth/me")
+async def api_auth_me(_auth: security.AuthContext = Depends(require_dashboard_auth)):
+    return {
+        "mode": _auth.mode,
+        "is_admin_key": _auth.is_admin_key,
+        "ca_invite_code": _auth.ca_invite_code,
+        "ca_name": _auth.ca_name,
+        "ca_email": _auth.ca_email,
+        "firm_id": _auth.firm_id,
+        "firm_name": _auth.firm_name,
+        "encryption_enabled": security.encryption_enabled(),
+    }
+
+
+@app.get("/api/admin/extraction-edit-stats")
+async def api_extraction_edit_stats(
+    days: int = Query(30, ge=1, le=365),
+    firm_id: int | None = Query(None),
+    _auth: security.AuthContext = Depends(require_dashboard_auth),
+):
+    """
+    Platform admin: CA edit-rate on AI-extracted invoice fields (production precision signal).
+    """
+    require_platform_admin(_auth)
+    return await db.get_extraction_edit_stats(days=days, firm_id=firm_id)
+
+
+@app.post("/api/admin/firms")
+async def api_admin_create_firm(
+    request: Request,
+    _auth: security.AuthContext = Depends(require_dashboard_auth),
+):
+    """
+    Platform admin only (DASHBOARD_API_KEY): create a firm + first CA.
+    Body: {
+      "firm_name": "...", "slug": optional,
+      "ca_name": "...", "invite_code": "123456", "password": "...",
+      "ca_email": optional, "ca_phone": optional
+    }
+    """
+    require_platform_admin(_auth)
     try:
-        clients = await db.get_clients()
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="JSON body required")
+
+    firm_name = str(body.get("firm_name") or "").strip()
+    ca_name = str(body.get("ca_name") or "").strip()
+    invite = str(body.get("invite_code") or "").strip()
+    password = str(body.get("password") or "").strip()
+    if not firm_name or not ca_name or not invite or not password:
+        raise HTTPException(
+            status_code=400,
+            detail="firm_name, ca_name, invite_code, and password are required.",
+        )
+    try:
+        firm = await db.create_firm(firm_name, slug=body.get("slug"))
+        ca = await db.create_ca(
+            invite_code=invite,
+            name=ca_name,
+            firm_id=int(firm["id"]),
+            firm_name=firm_name,
+            phone=(str(body.get("ca_phone") or "").strip() or None),
+            email=(str(body.get("ca_email") or "").strip() or None),
+            password=password,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    await db.insert_security_audit_log(
+        actor=_auth.display_name,
+        action="firm_create",
+        resource_type="firm",
+        resource_id=str(firm.get("id")),
+        detail=f"ca={invite}",
+        ip=request.client.host if request.client else None,
+    )
+    return {
+        "ok": True,
+        "firm": firm,
+        "ca": {
+            "invite_code": ca.get("invite_code"),
+            "name": ca.get("name"),
+            "firm_id": ca.get("firm_id"),
+            "firm_name": ca.get("firm_name"),
+            "email": ca.get("email"),
+        },
+    }
+
+
+@app.get("/api/files/{file_path:path}")
+async def api_get_encrypted_file(
+    file_path: str,
+    request: Request,
+    _auth: security.AuthContext = Depends(require_dashboard_auth),
+):
+    """Decrypt and stream an invoice file (replaces public /storage mount)."""
+    # Prevent path traversal
+    rel = file_path.replace("\\", "/").lstrip("/")
+    if ".." in rel.split("/"):
+        raise HTTPException(status_code=400, detail="Invalid path.")
+    phone = rel.split("/", 1)[0] if "/" in rel else ""
+    if phone:
+        await assert_client_access(phone)
+    try:
+        data = storage.read_file_bytes(rel)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="File not found.")
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+
+    await db.insert_security_audit_log(
+        actor=_auth.display_name,
+        action="file_view",
+        resource_type="file",
+        resource_id=rel,
+        ip=request.client.host if request.client else None,
+    )
+
+    import mimetypes
+
+    mime, _ = mimetypes.guess_type(rel)
+    return Response(content=data, media_type=mime or "application/octet-stream")
+
+
+@app.get("/api/clients")
+async def api_get_clients(_auth: security.AuthContext = Depends(require_dashboard_auth)):
+    """Returns client profiles (scoped to CA / firm when logged in via session)."""
+    try:
+        if _auth.can_see_all_clients:
+            clients = await db.get_clients()
+        elif _auth.ca_invite_code:
+            clients = await db.get_clients_for_ca(_auth.ca_invite_code)
+        else:
+            clients = []
         return clients
     except Exception as e:
         logger.exception("Failed to get clients:")
@@ -738,29 +1084,43 @@ async def api_get_clients(_auth: None = Depends(require_dashboard_auth)):
 
 @app.put("/api/clients/{phone}")
 async def api_update_client(
-    phone: str, request: Request, _auth: None = Depends(require_dashboard_auth)
+    phone: str, request: Request, _auth: security.AuthContext = Depends(require_dashboard_auth)
 ):
-    """Update client GSTIN / name so sales & ITC can be classified."""
+    """Update client GSTIN / name / PAN so sales & ITC / ITR can be classified."""
+    await assert_client_access(phone)
     try:
         body = await request.json()
         gstin = (body.get("gstin") or "").strip().upper()
         name = (body.get("name") or "").strip() or None
+        pan_raw = body.get("pan")
+        pan = (pan_raw or "").strip().upper() if pan_raw is not None else None
 
         if gstin and not validate_gstin(gstin):
             raise HTTPException(
                 status_code=400,
                 detail="Invalid GSTIN. Must be a valid 15-character Indian GSTIN.",
             )
+        if pan and not itr.validate_pan(pan):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid PAN. Must be like ABCDE1234F.",
+            )
 
         clients = await db.get_clients()
         if not any(c.get("phone_number") == phone for c in clients):
             await db.get_or_create_client(phone, name=name or "Client")
+
+        # Preserve existing GSTIN when only PAN/name is sent
+        existing = next((c for c in clients if c.get("phone_number") == phone), None)
+        if not gstin and existing:
+            gstin = (existing.get("gstin") or "").strip().upper()
 
         await db.update_client_profile(
             phone,
             gstin,
             registered=bool(gstin),
             name=name,
+            pan=pan if pan_raw is not None else None,
         )
         updated = next(
             (c for c in await db.get_clients() if c.get("phone_number") == phone),
@@ -785,7 +1145,7 @@ async def api_recompute_client_itc(
             body = await request.json()
         except Exception:
             body = {}
-        ca_user = body.get("ca_user", "CA Operator")
+        ca_user = effective_ca_user(body)
 
         invoices = await db.get_invoices(client_phone=phone)
         updated = 0
@@ -806,24 +1166,52 @@ async def api_get_invoices(
     client_phone: str = Query(None),
     status: str = Query(None),
     month: str = Query(None),
-    _auth: None = Depends(require_dashboard_auth),
+    _auth: security.AuthContext = Depends(require_dashboard_auth),
 ):
     """Fetch invoices based on status, client_phone, or month filters."""
     try:
+        if client_phone:
+            await assert_client_access(client_phone)
+            invoices = await db.get_invoices(
+                client_phone,
+                status,
+                month,
+                firm_id=_auth.firm_id if not _auth.can_see_all_clients else None,
+            )
+            return await _enrich_invoices_with_portal_cache(invoices)
+        if not _auth.can_see_all_clients:
+            linked = await db.get_clients_for_ca(_auth.ca_invite_code)
+            phones = {c.get("phone_number") for c in linked}
+            invoices = await db.get_invoices(
+                None, status, month, firm_id=_auth.firm_id
+            )
+            invoices = [i for i in invoices if i.get("client_phone") in phones]
+            return await _enrich_invoices_with_portal_cache(invoices)
         invoices = await db.get_invoices(client_phone, status, month)
         return await _enrich_invoices_with_portal_cache(invoices)
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Failed to get invoices:")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/invoices/{invoice_id}")
-async def api_get_invoice_detail(invoice_id: int, _auth: None = Depends(require_dashboard_auth)):
+async def api_get_invoice_detail(
+    invoice_id: int, _auth: security.AuthContext = Depends(require_dashboard_auth)
+):
     """Fetch full details, line items, and audit trail of a specific invoice."""
     try:
         detail = await db.get_invoice_detail(invoice_id)
         if not detail:
             raise HTTPException(status_code=404, detail="Invoice not found.")
+        await assert_client_access(detail.get("client_phone") or "")
+        await db.insert_security_audit_log(
+            actor=_auth.display_name,
+            action="invoice_view",
+            resource_type="invoice",
+            resource_id=str(invoice_id),
+        )
         return detail
     except HTTPException:
         raise
@@ -834,18 +1222,20 @@ async def api_get_invoice_detail(invoice_id: int, _auth: None = Depends(require_
 
 @app.put("/api/invoices/{invoice_id}")
 async def api_update_invoice(
-    invoice_id: int, request: Request, _auth: None = Depends(require_dashboard_auth)
+    invoice_id: int, request: Request, _auth: security.AuthContext = Depends(require_dashboard_auth)
 ):
     """Updates invoice metadata fields and records CA modifications."""
     try:
         body = await request.json()
-        ca_user = body.get("ca_user", "CA Operator")
+        ca_user = effective_ca_user(body)
         fields_to_update = body.get("fields", {})
 
         # Get existing invoice to check for category change
         existing_invoice = await db.get_invoice_detail(invoice_id)
         if not existing_invoice:
             raise HTTPException(status_code=404, detail="Invoice not found.")
+
+        await assert_client_access(existing_invoice.get("client_phone") or "")
 
         # ── Auto re-evaluate line-level ITC when category or recipient GSTIN changes ──
         cat_changed = (
@@ -857,7 +1247,13 @@ async def api_update_invoice(
             and (fields_to_update.get("recipient_gstin") or "").strip().upper()
             != (existing_invoice.get("recipient_gstin") or "").strip().upper()
         )
-        success = await db.update_invoice(invoice_id, fields_to_update, ca_user)
+        success = await db.update_invoice(
+            invoice_id,
+            fields_to_update,
+            ca_user,
+            ca_invite_code=_auth.ca_invite_code,
+            firm_id=_auth.firm_id if _auth.firm_id is not None else existing_invoice.get("firm_id"),
+        )
         if not success:
             raise HTTPException(status_code=404, detail="Invoice not found.")
 
@@ -866,6 +1262,8 @@ async def api_update_invoice(
 
         updated_detail = await db.get_invoice_detail(invoice_id)
         return {"status": "success", "invoice": updated_detail}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Failed to update invoice:")
         raise HTTPException(status_code=500, detail=str(e))
@@ -902,7 +1300,7 @@ async def api_recompute_itc(
             body = await request.json()
         except Exception:
             body = {}
-        ca_user = body.get("ca_user", "CA Operator")
+        ca_user = effective_ca_user(body)
 
         updated = await db.apply_line_itc_evaluation(invoice_id, ca_user=ca_user)
         if not updated:
@@ -927,17 +1325,34 @@ async def api_recompute_itc(
 
 @app.post("/api/invoices/{invoice_id}/approve")
 async def api_approve_invoice(
-    invoice_id: int, request: Request, _auth: None = Depends(require_dashboard_auth)
+    invoice_id: int, request: Request, _auth: security.AuthContext = Depends(require_dashboard_auth)
 ):
     """Marks invoice as verified and approved (HITL final gate for GSTR)."""
     try:
         body = await request.json()
-        ca_user = body.get("ca_user", "CA Operator")
+        ca_user = effective_ca_user(body)
 
-        success = await db.approve_invoice(invoice_id, ca_user)
+        existing = await db.get_invoice_detail(invoice_id)
+        if not existing:
+            raise HTTPException(status_code=404, detail="Invoice not found.")
+        await assert_client_access(existing.get("client_phone") or "")
+
+        success = await db.approve_invoice(
+            invoice_id,
+            ca_user,
+            ca_invite_code=_auth.ca_invite_code,
+            firm_id=_auth.firm_id if _auth.firm_id is not None else existing.get("firm_id"),
+        )
         if not success:
             raise HTTPException(status_code=404, detail="Invoice not found.")
-        return {"status": "success", "review_status": "approved"}
+        return {
+            "status": "success",
+            "review_status": "approved",
+            "extraction_edit_count": existing.get("extraction_edit_count") or 0,
+            "extraction_edited_fields": existing.get("extraction_edited_fields"),
+        }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Failed to approve invoice:")
         raise HTTPException(status_code=500, detail=str(e))
@@ -950,7 +1365,7 @@ async def api_reject_invoice(
     """CA rejects an invoice in the HITL queue."""
     try:
         body = await request.json()
-        ca_user = body.get("ca_user", "CA Operator")
+        ca_user = effective_ca_user(body)
         reason = (body.get("reason") or "").strip() or "Rejected by CA"
         success = await db.reject_invoice(invoice_id, reason=reason, actor=ca_user, source="ca")
         if not success:
@@ -973,7 +1388,7 @@ async def api_skip_invoice(
             body = await request.json()
         except Exception:
             body = {}
-        ca_user = body.get("ca_user", "CA Operator")
+        ca_user = effective_ca_user(body)
         reason = (body.get("reason") or "").strip() or "Skipped by CA"
         success = await db.skip_invoice(invoice_id, reason=reason, ca_user=ca_user)
         if not success:
@@ -996,7 +1411,7 @@ async def api_acknowledge_mismatch(
             body = await request.json()
         except Exception:
             body = {}
-        ca_user = body.get("ca_user", "CA Operator")
+        ca_user = effective_ca_user(body)
         note = (body.get("note") or "").strip() or "CA noted GSTR-2B mismatch"
         success = await db.acknowledge_gstr2b_mismatch(invoice_id, note=note, ca_user=ca_user)
         if not success:
@@ -1050,7 +1465,13 @@ async def api_gstin_lookup(
     if not sandbox.configured():
         raise HTTPException(
             status_code=503,
-            detail="Sandbox not configured. Set SANDBOX_API_KEY and SANDBOX_API_SECRET in .env.",
+            detail={
+                "error_code": "sandbox_not_configured",
+                "user_message": (
+                    "GSTN lookup is not configured. Invoice data is fine — "
+                    "you can still review, edit, and approve."
+                ),
+            },
         )
     try:
         profile, from_cache = await _get_gstin_profile_cached(gstin, refresh=refresh)
@@ -1088,11 +1509,26 @@ async def api_gstin_lookup(
         raise HTTPException(status_code=400, detail=str(e))
     except RuntimeError as e:
         logger.warning("Sandbox GSTIN lookup failed: %s", e)
-        raise HTTPException(status_code=502, detail=str(e))
+        classified = sandbox.classify_sandbox_error(e)
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "error_code": classified.get("error_code"),
+                "user_message": classified.get("user_message"),
+                "technical": classified.get("technical"),
+            },
+        )
     except Exception as e:
         logger.exception("Unexpected Sandbox GSTIN lookup error:")
-        raise HTTPException(status_code=500, detail=str(e))
-
+        classified = sandbox.classify_sandbox_error(e)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error_code": classified.get("error_code") or "sandbox_error",
+                "user_message": classified.get("user_message"),
+                "technical": classified.get("technical") or str(e)[:400],
+            },
+        )
 
 @app.post("/api/gstin/cache/warm")
 async def api_gstin_cache_warm(
@@ -1106,7 +1542,13 @@ async def api_gstin_cache_warm(
     if not sandbox.configured():
         raise HTTPException(
             status_code=503,
-            detail="Sandbox not configured. Set SANDBOX_API_KEY and SANDBOX_API_SECRET in .env.",
+            detail={
+                "error_code": "sandbox_not_configured",
+                "user_message": (
+                    "GSTN lookup is not configured. Invoice data is fine — "
+                    "you can still review, edit, and approve."
+                ),
+            },
         )
     try:
         body = await request.json()
@@ -1170,13 +1612,16 @@ async def _get_gstin_profile_cached(gstin: str, *, refresh: bool = False) -> tup
             if row.get("profile"):
                 return row["profile"], True
             if row.get("error_message"):
-                # Cached hard failure — still treat as not found-ish for queue
+                # Cached API failure — mark as portal_outage so UI does not say "not found"
                 return {
                     "gstin": g,
                     "found": False,
                     "message": row.get("error_message"),
                     "legal_name": None,
                     "status": None,
+                    "portal_outage": sandbox.is_portal_api_outage_message(
+                        row.get("error_message")
+                    ),
                 }, True
 
     try:
@@ -1260,14 +1705,14 @@ async def api_import_gstr2b(
                 payload = json.loads(text)
                 period_parsed, entries = gstr2b_mod.parse_gstr2b_json(payload)
             period = period or period_parsed
-            ca_user = str(form.get("ca_user") or "CA Operator")
+            ca_user = effective_ca_user({"ca_user": form.get("ca_user")})
         else:
             body = await request.json()
             if isinstance(body, dict) and body.get("return_period") and not period:
                 period = body.get("return_period")
             period_parsed, entries = gstr2b_mod.parse_gstr2b_json(body)
             period = period or period_parsed
-            ca_user = (body.get("ca_user") if isinstance(body, dict) else None) or "CA Operator"
+            ca_user = effective_ca_user(body if isinstance(body, dict) else None)
 
         return await _ingest_gstr2b_entries(
             client_phone=client_phone,
@@ -1640,6 +2085,313 @@ async def api_get_itc_summary(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ── Income Tax Phase 1 (Form 16 → estimate → CA approve → export draft) ───────
+
+@app.get("/api/itr/returns")
+async def api_list_itr_returns(
+    client_phone: str = Query(...),
+    _auth: security.AuthContext = Depends(require_dashboard_auth),
+):
+    await assert_client_access(client_phone)
+    returns = await db.list_itr_returns(client_phone)
+    for r in returns:
+        if r.get("estimate_json") and isinstance(r["estimate_json"], str):
+            try:
+                r["estimate"] = json.loads(r["estimate_json"])
+            except json.JSONDecodeError:
+                r["estimate"] = None
+        docs = await db.list_itr_documents(r["id"])
+        r["documents"] = docs
+    return returns
+
+
+@app.post("/api/itr/returns")
+async def api_create_itr_return(
+    request: Request,
+    _auth: security.AuthContext = Depends(require_dashboard_auth),
+):
+    body = await request.json()
+    phone = (body.get("client_phone") or "").strip()
+    fy = (body.get("financial_year") or "").strip()
+    pan = (body.get("pan") or "").strip().upper() or None
+    if not phone or not fy:
+        raise HTTPException(status_code=400, detail="client_phone and financial_year are required.")
+    if pan and not itr.validate_pan(pan):
+        raise HTTPException(status_code=400, detail="Invalid PAN.")
+    await assert_client_access(phone)
+    await db.get_or_create_client(phone)
+    row = await db.get_or_create_itr_return(phone, fy, pan=pan)
+    if pan:
+        await db.update_client_pan(phone, pan)
+    return row
+
+
+@app.get("/api/itr/returns/{itr_id}")
+async def api_get_itr_return(
+    itr_id: int,
+    _auth: security.AuthContext = Depends(require_dashboard_auth),
+):
+    row = await db.get_itr_return(itr_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="ITR return not found.")
+    await assert_client_access(row["client_phone"])
+    if row.get("estimate_json"):
+        try:
+            row["estimate"] = json.loads(row["estimate_json"])
+        except (TypeError, json.JSONDecodeError):
+            row["estimate"] = None
+    row["documents"] = await db.list_itr_documents(itr_id)
+    return row
+
+
+@app.put("/api/itr/returns/{itr_id}")
+async def api_update_itr_return(
+    itr_id: int,
+    request: Request,
+    _auth: security.AuthContext = Depends(require_dashboard_auth),
+):
+    row = await db.get_itr_return(itr_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="ITR return not found.")
+    await assert_client_access(row["client_phone"])
+    body = await request.json()
+    pan = (body.get("pan") or "").strip().upper() if body.get("pan") is not None else None
+    if pan and not itr.validate_pan(pan):
+        raise HTTPException(status_code=400, detail="Invalid PAN.")
+
+    fields = {}
+    for key in (
+        "gross_salary", "exemptions", "other_income", "deductions_80c",
+        "tds", "advance_tax", "ca_notes", "financial_year", "regime_preferred",
+    ):
+        if key in body:
+            fields[key] = body[key]
+    if pan is not None:
+        fields["pan"] = pan
+        await db.update_client_pan(row["client_phone"], pan)
+
+    money_keys = {"gross_salary", "exemptions", "other_income", "deductions_80c", "tds", "advance_tax"}
+    if money_keys & set(fields.keys()):
+        merged = {**row, **fields}
+        estimate = itr.compute_estimate(
+            gross_salary=merged.get("gross_salary") or 0,
+            exemptions=merged.get("exemptions") or 0,
+            other_income=merged.get("other_income") or 0,
+            deductions_80c=merged.get("deductions_80c") or 0,
+            tds=merged.get("tds") or 0,
+            advance_tax=merged.get("advance_tax") or 0,
+        )
+        fields["estimate_json"] = json.dumps(estimate)
+        fields["regime_preferred"] = fields.get("regime_preferred") or estimate["regime_preferred"]
+        if row.get("status") in (None, "draft", "exported"):
+            fields["status"] = "needs_review"
+
+    updated = await db.update_itr_return(itr_id, fields)
+    if updated and updated.get("estimate_json"):
+        try:
+            updated["estimate"] = json.loads(updated["estimate_json"])
+        except (TypeError, json.JSONDecodeError):
+            updated["estimate"] = None
+    return updated
+
+
+@app.post("/api/itr/returns/{itr_id}/form16")
+async def api_upload_form16(
+    itr_id: int,
+    file: UploadFile = File(...),
+    extract: bool = Query(True),
+    _auth: security.AuthContext = Depends(require_dashboard_auth),
+):
+    """Upload Form 16 (PDF/image) for an ITR return; optionally AI-extract fields."""
+    row = await db.get_itr_return(itr_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="ITR return not found.")
+    await assert_client_access(row["client_phone"])
+
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Empty file.")
+    if len(content) > 15 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large (max 15 MB).")
+
+    mime = (file.content_type or "").lower() or "application/pdf"
+    if mime not in ("application/pdf", "image/jpeg", "image/png", "image/webp", "image/jpg"):
+        name = (file.filename or "").lower()
+        if name.endswith(".pdf"):
+            mime = "application/pdf"
+        elif name.endswith((".jpg", ".jpeg")):
+            mime = "image/jpeg"
+        elif name.endswith(".png"):
+            mime = "image/png"
+        elif name.endswith(".webp"):
+            mime = "image/webp"
+        else:
+            raise HTTPException(status_code=400, detail="Upload PDF or image (jpg/png/webp).")
+
+    media_type = "document" if mime == "application/pdf" else "image"
+    rel = await storage.save_file(
+        row["client_phone"],
+        content,
+        media_type,
+        mime,
+        original_filename=file.filename or "form16.pdf",
+    )
+    doc = await db.add_itr_document(
+        itr_id, rel, doc_type="form16", original_filename=file.filename
+    )
+
+    extracted = None
+    estimate = None
+    updated = row
+    if extract:
+        try:
+            extracted = await itr.extract_form16_fields(rel)
+            fields = {
+                "gross_salary": extracted.get("gross_salary") or 0,
+                "exemptions": extracted.get("exemptions") or 0,
+                "other_income": extracted.get("other_income") or 0,
+                "deductions_80c": extracted.get("deductions_80c") or 0,
+                "tds": extracted.get("tds") or 0,
+                "extracted_json": json.dumps(extracted),
+                "status": "needs_review",
+            }
+            pan = (extracted.get("pan") or "").strip().upper()
+            if pan and itr.validate_pan(pan):
+                fields["pan"] = pan
+                await db.update_client_pan(row["client_phone"], pan)
+            fy = extracted.get("financial_year")
+            if fy:
+                fields["financial_year"] = fy
+            estimate = itr.compute_estimate(
+                gross_salary=fields["gross_salary"],
+                exemptions=fields["exemptions"],
+                other_income=fields["other_income"],
+                deductions_80c=fields["deductions_80c"],
+                tds=fields["tds"],
+                advance_tax=row.get("advance_tax") or 0,
+            )
+            fields["estimate_json"] = json.dumps(estimate)
+            fields["regime_preferred"] = estimate["regime_preferred"]
+            updated = await db.update_itr_return(itr_id, fields)
+        except Exception as e:
+            logger.exception("Form 16 extraction failed:")
+            return {
+                "status": "uploaded",
+                "document": doc,
+                "itr": updated,
+                "extract_error": str(e),
+                "hint": "File saved. Edit salary / TDS fields manually, then Save estimate.",
+            }
+
+    if updated and updated.get("estimate_json") and not estimate:
+        try:
+            estimate = json.loads(updated["estimate_json"])
+        except (TypeError, json.JSONDecodeError):
+            pass
+    return {
+        "status": "ok",
+        "document": doc,
+        "itr": updated,
+        "extracted": extracted,
+        "estimate": estimate,
+    }
+
+
+@app.post("/api/itr/returns/{itr_id}/estimate")
+async def api_recompute_itr_estimate(
+    itr_id: int,
+    _auth: security.AuthContext = Depends(require_dashboard_auth),
+):
+    row = await db.get_itr_return(itr_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="ITR return not found.")
+    await assert_client_access(row["client_phone"])
+    estimate = itr.compute_estimate(
+        gross_salary=row.get("gross_salary") or 0,
+        exemptions=row.get("exemptions") or 0,
+        other_income=row.get("other_income") or 0,
+        deductions_80c=row.get("deductions_80c") or 0,
+        tds=row.get("tds") or 0,
+        advance_tax=row.get("advance_tax") or 0,
+    )
+    updated = await db.update_itr_return(
+        itr_id,
+        {
+            "estimate_json": json.dumps(estimate),
+            "regime_preferred": estimate["regime_preferred"],
+            "status": "needs_review" if row.get("status") == "draft" else row.get("status"),
+        },
+    )
+    return {"status": "ok", "estimate": estimate, "itr": updated}
+
+
+@app.post("/api/itr/returns/{itr_id}/approve")
+async def api_approve_itr(
+    itr_id: int,
+    request: Request,
+    _auth: security.AuthContext = Depends(require_dashboard_auth),
+):
+    row = await db.get_itr_return(itr_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="ITR return not found.")
+    await assert_client_access(row["client_phone"])
+    body = {}
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    notes = (body.get("ca_notes") or "").strip() or row.get("ca_notes")
+    updated = await db.update_itr_return(
+        itr_id, {"status": "approved", "ca_notes": notes}
+    )
+    return {"status": "ok", "itr": updated}
+
+
+@app.get("/api/itr/returns/{itr_id}/export")
+async def api_export_itr_draft(
+    itr_id: int,
+    _auth: security.AuthContext = Depends(require_dashboard_auth),
+):
+    """HTML prep draft for print / Save as PDF — not a government filing."""
+    row = await db.get_itr_return(itr_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="ITR return not found.")
+    await assert_client_access(row["client_phone"])
+
+    estimate = None
+    if row.get("estimate_json"):
+        try:
+            estimate = json.loads(row["estimate_json"])
+        except (TypeError, json.JSONDecodeError):
+            estimate = None
+    if not estimate:
+        estimate = itr.compute_estimate(
+            gross_salary=row.get("gross_salary") or 0,
+            exemptions=row.get("exemptions") or 0,
+            other_income=row.get("other_income") or 0,
+            deductions_80c=row.get("deductions_80c") or 0,
+            tds=row.get("tds") or 0,
+            advance_tax=row.get("advance_tax") or 0,
+        )
+        await db.update_itr_return(
+            itr_id,
+            {
+                "estimate_json": json.dumps(estimate),
+                "regime_preferred": estimate["regime_preferred"],
+            },
+        )
+
+    clients = await db.get_clients()
+    client = next(
+        (c for c in clients if c.get("phone_number") == row["client_phone"]),
+        {"phone_number": row["client_phone"], "name": "Client", "pan": row.get("pan")},
+    )
+    html = itr.build_export_html(client, row, estimate)
+    new_status = "exported" if row.get("status") == "approved" else (row.get("status") or "needs_review")
+    await db.update_itr_return(itr_id, {"status": new_status})
+    return HTMLResponse(content=html)
+
+
 @app.post("/api/chat")
 async def api_chat_assistant(request: Request, _auth: None = Depends(require_dashboard_auth)):
     """
@@ -1696,7 +2448,9 @@ async def api_reindex_rag(_auth: None = Depends(require_dashboard_auth)):
             if first_line.startswith("# "):
                 title = first_line.replace("# ", "").strip()
                 
-            chunks_indexed = await rag.index_document(title=title, text=content)
+            chunks_indexed = await rag.index_document(
+                title=title, text=content, source_file=filename
+            )
             total_chunks += chunks_indexed
             
         return {"status": "success", "chunks_indexed": total_chunks}
@@ -1880,5 +2634,6 @@ async def api_simulator_clear_messages(phone_number: str = Query("919999999999")
 os.makedirs("static", exist_ok=True)
 os.makedirs(storage.STORAGE_DIR, exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
-app.mount("/storage", StaticFiles(directory=str(storage.STORAGE_DIR)), name="storage")
+# NOTE: Raw /storage mount removed for Phase 1 security.
+# Use authenticated GET /api/files/{path} (decrypts at rest).
 

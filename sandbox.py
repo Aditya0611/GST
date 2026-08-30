@@ -32,6 +32,95 @@ def configured() -> bool:
     return bool(os.getenv("SANDBOX_API_KEY", "").strip() and os.getenv("SANDBOX_API_SECRET", "").strip())
 
 
+def classify_sandbox_error(exc_or_msg: Any) -> dict[str, str]:
+    """
+    Map Sandbox/GSP failures to stable error_code + user-facing message.
+    Full technical text stays in logs / optional 'technical' field.
+    """
+    msg = str(exc_or_msg or "").strip()
+    low = msg.lower()
+    technical = msg[:400] if msg else ""
+
+    if "not configured" in low or "sandbox_api_key" in low or "sandbox_api_secret" in low:
+        return {
+            "error_code": "sandbox_not_configured",
+            "user_message": (
+                "GSTN lookup is not configured. Invoice data is fine — "
+                "you can still review, edit, and approve."
+            ),
+            "technical": technical,
+        }
+    if "subscription has expired" in low or (
+        "401" in low and "subscription" in low
+    ):
+        return {
+            "error_code": "sandbox_subscription_expired",
+            "user_message": (
+                "GSTN lookup is temporarily unavailable because the GST portal API "
+                "subscription needs renewal. Your invoice data is fine — you can still "
+                "review, edit, and approve. Recheck after the API is renewed."
+            ),
+            "technical": technical,
+        }
+    if any(
+        x in low
+        for x in ("timed out", "timeout", "connection", "connecterror", "unreachable", "name or service not known")
+    ):
+        return {
+            "error_code": "sandbox_unreachable",
+            "user_message": (
+                "Could not reach GSTN right now. Try Recheck in a minute. "
+                "Your invoice data is fine — you can still review and approve."
+            ),
+            "technical": technical,
+        }
+    if "401" in low or "403" in low or "authenticate failed" in low:
+        return {
+            "error_code": "sandbox_auth_failed",
+            "user_message": (
+                "GSTN lookup could not authenticate with the portal API. "
+                "Invoice data is fine — you can still review and approve."
+            ),
+            "technical": technical,
+        }
+    return {
+        "error_code": "sandbox_error",
+        "user_message": (
+            "GSTN lookup is temporarily unavailable. Your invoice data is fine — "
+            "you can still review, edit, and approve."
+        ),
+        "technical": technical,
+    }
+
+
+def is_portal_api_outage_message(msg: Optional[str]) -> bool:
+    """True when a cached/live error is an API/config outage, not a bad GSTIN."""
+    if not msg:
+        return False
+    code = classify_sandbox_error(msg).get("error_code") or ""
+    if code in {
+        "sandbox_subscription_expired",
+        "sandbox_auth_failed",
+        "sandbox_unreachable",
+        "sandbox_not_configured",
+    }:
+        return True
+    # Generic classify falls through to sandbox_error — only treat as outage when
+    # the text clearly looks like a Sandbox/GSP transport failure.
+    low = str(msg).lower()
+    return any(
+        x in low
+        for x in (
+            "sandbox authenticate",
+            "sandbox /gst/",
+            "subscription has expired",
+            "api.sandbox",
+            "transaction_id",
+            "returned non-json",
+        )
+    )
+
+
 def indian_financial_year(as_of: Optional[date] = None) -> str:
     """Return e.g. 'FY 2026-27' for Sandbox track-returns API."""
     d = as_of or date.today()
@@ -390,17 +479,36 @@ def assess_portal_party(
     """
     label = "Supplier" if role == "supplier" else "Recipient"
     if error_message and not profile:
+        classified = classify_sandbox_error(error_message)
+        if is_portal_api_outage_message(error_message):
+            return {
+                "role": role,
+                "ok": None,
+                "found": None,
+                "risk_boost": 0,
+                "reason": None,
+                "issues": [],
+                "status": None,
+                "legal_name": None,
+                "name_match": None,
+                "cached": True,
+                "portal_outage": True,
+                "error_code": classified.get("error_code"),
+                "user_message": classified.get("user_message"),
+            }
         return {
             "role": role,
             "ok": False,
             "found": False,
             "risk_boost": 15,
             "reason": f"{label} GSTN check failed",
-            "issues": [error_message],
+            "issues": [classified.get("user_message") or error_message],
             "status": None,
             "legal_name": None,
             "name_match": None,
             "cached": True,
+            "error_code": classified.get("error_code"),
+            "user_message": classified.get("user_message"),
         }
 
     if not profile:
@@ -419,13 +527,34 @@ def assess_portal_party(
 
     if not profile.get("found"):
         msg = profile.get("message") or "No GSTN record"
+        # Cached Sandbox auth failures were previously stored as found=False — do not
+        # treat those as "GSTIN not found" (misleading for CAs).
+        if is_portal_api_outage_message(msg) or profile.get("portal_outage"):
+            classified = classify_sandbox_error(msg)
+            return {
+                "role": role,
+                "ok": None,
+                "found": None,
+                "risk_boost": 0,
+                "reason": None,
+                "issues": [],
+                "status": None,
+                "legal_name": None,
+                "trade_name": None,
+                "name_match": None,
+                "gstin": profile.get("gstin"),
+                "cached": True,
+                "portal_outage": True,
+                "error_code": classified.get("error_code"),
+                "user_message": classified.get("user_message"),
+            }
         return {
             "role": role,
             "ok": False,
             "found": False,
             "risk_boost": 45,
             "reason": f"{label} GSTIN not found on GSTN",
-            "issues": [msg],
+            "issues": ["This GSTIN was not found on GSTN"],
             "status": None,
             "legal_name": None,
             "trade_name": None,

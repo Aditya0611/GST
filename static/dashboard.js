@@ -1,15 +1,162 @@
 // dashboard.js — CA Review Dashboard State Manager & Client Controller
 
-// ── API auth helper ──────────────────────────────────────────────────────────
+// ── API auth helper (Phase 1: CA session + optional API key) ─────────────────
 function getDashboardApiKey() {
     return localStorage.getItem('DASHBOARD_API_KEY') || '';
 }
 
+function getCaSessionToken() {
+    return localStorage.getItem('CA_SESSION_TOKEN') || '';
+}
+
+function getCaProfile() {
+    try {
+        return JSON.parse(localStorage.getItem('CA_PROFILE') || 'null');
+    } catch {
+        return null;
+    }
+}
+
 function apiHeaders(extra = {}) {
     const headers = { ...extra };
+    const session = getCaSessionToken();
+    if (session) {
+        // Firm CA session wins — never also send admin key (avoids "see all clients" confusion)
+        headers['X-CA-Session'] = session;
+        return headers;
+    }
     const key = getDashboardApiKey();
     if (key) headers['X-API-Key'] = key;
     return headers;
+}
+
+async function caLogin(inviteCode, password) {
+    const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invite_code: inviteCode, password }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+        throw new Error(formatApiDetail(data, 'Login failed'));
+    }
+    localStorage.setItem('CA_SESSION_TOKEN', data.session_token);
+    localStorage.setItem('CA_PROFILE', JSON.stringify(data.ca || {}));
+    if (data.firm) {
+        localStorage.setItem('CA_FIRM', JSON.stringify(data.firm));
+    } else {
+        localStorage.removeItem('CA_FIRM');
+    }
+    // Leave admin mode — firm login must not keep seeing all tenants via API key
+    localStorage.removeItem('DASHBOARD_API_KEY');
+    resetClientWorkspace();
+    updateFirmChip();
+    return data;
+}
+
+async def caLogout() {
+    const token = getCaSessionToken();
+    let invalidated = false;
+    try {
+        const res = await fetch('/api/auth/logout', {
+            method: 'POST',
+            headers: token ? { 'X-CA-Session': token } : {},
+        });
+        const data = await res.json().catch(() => ({}));
+        invalidated = !!data.invalidated;
+        // Always clear client credentials listed by server (or our defaults)
+        const keys = Array.isArray(data.clear_local)
+            ? data.clear_local
+            : ['CA_SESSION_TOKEN', 'CA_PROFILE', 'CA_FIRM', 'DASHBOARD_API_KEY'];
+        keys.forEach((k) => {
+            try { localStorage.removeItem(k); } catch (_) { /* ignore */ }
+        });
+    } catch (_) {
+        // Network failure — still wipe local creds so UI cannot keep admin/CA view
+        localStorage.removeItem('CA_SESSION_TOKEN');
+        localStorage.removeItem('CA_PROFILE');
+        localStorage.removeItem('CA_FIRM');
+        localStorage.removeItem('DASHBOARD_API_KEY');
+    }
+    try {
+        localStorage.removeItem('DASHBOARD_CONTEXT');
+    } catch (_) { /* ignore */ }
+    resetClientWorkspace();
+    updateFirmChip();
+    return { invalidated };
+}
+
+/** Sidebar Sign out — must clear session (old link to "/" did not). */
+async function handleSignOutClick(e) {
+    if (e) e.preventDefault();
+    const result = await caLogout();
+    showToast(
+        result && result.invalidated
+            ? 'Signed out — session revoked on server. Log in with another firm invite to switch.'
+            : 'Signed out locally. Use Settings → 1 to log in as another firm.'
+    );
+    if (elements.clientSelect) {
+        elements.clientSelect.innerHTML = '<option value="">Signed out — use Settings → 1 to log in…</option>';
+    }
+}
+
+/** Clear selected client / cached lists so a new firm login cannot show old dropdown data. */
+function resetClientWorkspace() {
+    try {
+        state.selectedClientPhone = '';
+        state.clients = [];
+        state.invoices = [];
+        state.filteredInvoiceIds = [];
+        state.currentInvoice = null;
+        if (elements.clientSelect) {
+            elements.clientSelect.innerHTML = '<option value="">Select a client…</option>';
+        }
+        if (elements.activeClientName) elements.activeClientName.textContent = '—';
+        if (elements.activeClientGstin) elements.activeClientGstin.textContent = '';
+    } catch (_) { /* state/elements may not exist yet */ }
+}
+
+function getCaFirm() {
+    try {
+        return JSON.parse(localStorage.getItem('CA_FIRM') || 'null');
+    } catch {
+        return null;
+    }
+}
+
+function updateFirmChip() {
+    const el = document.getElementById('firm-chip');
+    if (!el) return;
+    const firm = getCaFirm();
+    const profile = getCaProfile();
+    const name = (firm && firm.name) || (profile && profile.firm_name) || '';
+    if (name && getCaSessionToken()) {
+        el.textContent = name;
+        el.style.display = '';
+        el.title = 'Firm workspace — you only see clients linked to your CA in this firm';
+    } else if (getDashboardApiKey() && !getCaSessionToken()) {
+        el.textContent = 'Platform admin';
+        el.style.display = '';
+        el.title = 'DASHBOARD_API_KEY sees all firms (ops only — do not share with customers)';
+    } else {
+        el.textContent = '';
+        el.style.display = 'none';
+    }
+}
+
+async function refreshAuthMe() {
+    try {
+        const res = await apiFetch('/api/auth/me');
+        if (!res.ok) return;
+        const me = await res.json();
+        if (me.firm_id != null || me.firm_name) {
+            localStorage.setItem(
+                'CA_FIRM',
+                JSON.stringify({ id: me.firm_id, name: me.firm_name })
+            );
+        }
+        updateFirmChip();
+    } catch (_) { /* ignore */ }
 }
 
 async function apiFetch(url, options = {}) {
@@ -17,13 +164,39 @@ async function apiFetch(url, options = {}) {
     opts.headers = apiHeaders(opts.headers || {});
     let response = await fetch(url, opts);
     if (response.status === 401) {
-        const key = window.prompt('Enter Dashboard API Key (DASHBOARD_API_KEY from .env):') || '';
-        if (key) {
-            localStorage.setItem('DASHBOARD_API_KEY', key.trim());
-            opts.headers = apiHeaders(options.headers || {});
-            response = await fetch(url, opts);
-        } else if (typeof showToast === 'function') {
-            showToast('Dashboard API key required. Enter DASHBOARD_API_KEY when prompted, or clear auth and reload.', true);
+        // Prefer CA login; fall back to shared API key for admins/scripts
+        const invite = window.prompt(
+            'Log in as CA (firm workspace).\n\n'
+            + 'Enter THIS firm\'s 6-digit invite\n'
+            + '(Demo=123456 · Firm B=574646 · Firm A=574509).\n\n'
+            + 'Leave blank only for platform admin API key:'
+        ) || '';
+        if (invite.trim()) {
+            const password = window.prompt(
+                'CA password\n(default from .env CA_BOOTSTRAP_PASSWORD,\noften: Taxova@ChangeMe):'
+            ) || '';
+            if (!password.trim()) {
+                if (typeof showToast === 'function') {
+                    showToast('Password required for CA login.', true);
+                }
+                return response;
+            }
+            try {
+                await caLogin(invite.trim(), password);
+                opts.headers = apiHeaders(options.headers || {});
+                response = await fetch(url, opts);
+            } catch (e) {
+                if (typeof showToast === 'function') showToast(e.message || 'CA login failed', true);
+            }
+        } else {
+            const key = window.prompt('Enter Dashboard API Key (DASHBOARD_API_KEY from .env):') || '';
+            if (key) {
+                localStorage.setItem('DASHBOARD_API_KEY', key.trim());
+                opts.headers = apiHeaders(options.headers || {});
+                response = await fetch(url, opts);
+            } else if (typeof showToast === 'function') {
+                showToast('Login required: CA invite+password or DASHBOARD_API_KEY.', true);
+            }
         }
     }
     return response;
@@ -31,12 +204,113 @@ async function apiFetch(url, options = {}) {
 
 function formatApiDetail(payload, fallback) {
     if (!payload) return fallback;
-    if (typeof payload.detail === 'string') return payload.detail;
-    if (Array.isArray(payload.detail)) {
-        return payload.detail.map(d => d.msg || JSON.stringify(d)).join('; ') || fallback;
+    const detail = payload.detail;
+    if (detail && typeof detail === 'object' && !Array.isArray(detail)) {
+        if (typeof detail.user_message === 'string' && detail.user_message.trim()) {
+            return detail.user_message.trim();
+        }
+        if (typeof detail.message === 'string' && detail.message.trim()) {
+            return detail.message.trim();
+        }
     }
+    if (typeof detail === 'string') return detail;
+    if (Array.isArray(detail)) {
+        return detail.map(d => d.msg || JSON.stringify(d)).join('; ') || fallback;
+    }
+    if (typeof payload.user_message === 'string') return payload.user_message;
     if (typeof payload.message === 'string') return payload.message;
     return fallback;
+}
+
+/** Plain-language GSTN portal check errors (never dump Sandbox JSON to the CA). */
+function formatPortalCheckError(err) {
+    const raw = String(
+        (err && (err.userMessage || err.message)) || err || ''
+    );
+    const code = (err && err.errorCode) || '';
+    const low = raw.toLowerCase();
+
+    if (
+        code === 'sandbox_subscription_expired' ||
+        low.includes('subscription has expired') ||
+        (low.includes('401') && low.includes('subscription'))
+    ) {
+        return {
+            title: 'Portal check offline (not a Taxova outage)',
+            body: 'The GST portal API plan needs renewal. Your invoice data is fine — you can still review, edit, and approve. Use Import GSTR-2B for file-based matching until lookup is back.',
+            errorCode: 'sandbox_subscription_expired',
+            portalOutage: true,
+        };
+    }
+    if (code === 'sandbox_not_configured' || low.includes('not configured')) {
+        return {
+            title: 'Portal check offline (optional)',
+            body: 'Live GSTIN lookup is not configured. Your invoice data is fine — you can still review, edit, and approve.',
+            errorCode: 'sandbox_not_configured',
+            portalOutage: true,
+        };
+    }
+    if (
+        code === 'sandbox_unreachable' ||
+        low.includes('timed out') ||
+        low.includes('timeout') ||
+        low.includes('failed to fetch') ||
+        low.includes('networkerror')
+    ) {
+        return {
+            title: 'Portal check offline (not a Taxova outage)',
+            body: 'Try Recheck in a minute. Your invoice data is fine — you can still review and approve. Prefer Import GSTR-2B if you need matching today.',
+            errorCode: 'sandbox_unreachable',
+            portalOutage: true,
+        };
+    }
+    if (
+        code === 'sandbox_auth_failed' ||
+        low.includes('authenticate failed') ||
+        low.includes('sandbox authenticate')
+    ) {
+        return {
+            title: 'Portal check offline (not a Taxova outage)',
+            body: 'The portal API could not authenticate. Invoice data is fine — you can still review, edit, and approve.',
+            errorCode: code || 'sandbox_auth_failed',
+            portalOutage: true,
+        };
+    }
+    // Prefer API user_message when present; never show raw JSON blobs
+    const looksTechnical =
+        low.includes('transaction_id') ||
+        low.includes("{'code'") ||
+        low.includes('{"code"') ||
+        low.includes('sandbox /');
+    return {
+        title: 'Portal check offline (not a Taxova outage)',
+        body: looksTechnical
+            ? 'Portal check is offline right now. Your invoice data is fine — you can still review, edit, and approve.'
+            : (raw || 'Portal check is offline right now. Your invoice data is fine — you can still review and approve.'),
+        errorCode: code || 'sandbox_error',
+        portalOutage: true,
+    };
+}
+
+function isPortalOutageAssessment(assessment) {
+    if (!assessment) return false;
+    if (assessment.portal_outage || assessment.portalOutage) return true;
+    const code = assessment.error_code || assessment.errorCode || '';
+    if (String(code).startsWith('sandbox_')) return true;
+    const blob = [
+        assessment.reason,
+        ...(assessment.issues || []),
+        assessment.user_message,
+    ].filter(Boolean).join(' ');
+    if (!blob) return false;
+    const low = blob.toLowerCase();
+    return (
+        low.includes('subscription has expired') ||
+        low.includes('sandbox authenticate') ||
+        low.includes('transaction_id') ||
+        low.includes('portal api') ||
+        low.includes('gstn lookup')
+    );
 }
 
 async function readJsonOrThrow(response, fallbackMsg) {
@@ -47,7 +321,14 @@ async function readJsonOrThrow(response, fallbackMsg) {
         /* non-JSON body */
     }
     if (!response.ok) {
-        throw new Error(formatApiDetail(payload, fallbackMsg || `Request failed (${response.status})`));
+        const err = new Error(formatApiDetail(payload, fallbackMsg || `Request failed (${response.status})`));
+        const detail = payload && payload.detail;
+        if (detail && typeof detail === 'object' && !Array.isArray(detail)) {
+            err.errorCode = detail.error_code || '';
+            err.userMessage = detail.user_message || err.message;
+            err.technical = detail.technical || '';
+        }
+        throw err;
     }
     return payload;
 }
@@ -84,9 +365,9 @@ function scoreExceptionRisk(inv) {
     else if (inv.is_itc_eligible === false || inv.is_itc_eligible === 0) score += 10;
     if (rs === 'awaiting_client' || rs === 'client_confirmed') score += 5;
     const ps = inv.portal_supplier;
-    if (ps && typeof ps.risk_boost === 'number') score += ps.risk_boost;
+    if (ps && typeof ps.risk_boost === 'number' && !isPortalOutageAssessment(ps)) score += ps.risk_boost;
     const pr = inv.portal_recipient;
-    if (pr && typeof pr.risk_boost === 'number') score += pr.risk_boost;
+    if (pr && typeof pr.risk_boost === 'number' && !isPortalOutageAssessment(pr)) score += pr.risk_boost;
     return score;
 }
 
@@ -101,10 +382,10 @@ function truncateExceptionReason(text, maxLen) {
 function getExceptionReasons(inv) {
     const reasons = [];
     if (!inv.is_calculation_correct) reasons.push('Tax math — check amounts');
-    if (inv.portal_supplier && inv.portal_supplier.reason) {
+    if (inv.portal_supplier && inv.portal_supplier.reason && !isPortalOutageAssessment(inv.portal_supplier)) {
         reasons.push(truncateExceptionReason(inv.portal_supplier.reason, 48));
     }
-    if (inv.portal_recipient && inv.portal_recipient.reason) {
+    if (inv.portal_recipient && inv.portal_recipient.reason && !isPortalOutageAssessment(inv.portal_recipient)) {
         reasons.push(truncateExceptionReason(inv.portal_recipient.reason, 48));
     }
     const m2b = (inv.gstr2b_match_status || 'none').toLowerCase();
@@ -145,6 +426,9 @@ function getExceptionReason(inv) {
 const state = {
     clients: [],
     selectedClientPhone: '',
+    activeModule: 'gst',
+    itrReturnId: null,
+    itrEstimate: null,
     selectedMonth: '', // Set on load to latest invoice month / current month (not "all")
     monthCalViewYear: new Date().getFullYear(),
     categoryFilter: '', // Empty = all categories
@@ -330,6 +614,7 @@ const elements = {
     navNewAuditBtn: document.getElementById('nav-new-audit-btn'),
     navDashboardBtn: document.getElementById('nav-dashboard-btn'),
     navSimulatorBtn: document.getElementById('nav-simulator-btn'),
+    navSignoutBtn: document.getElementById('nav-signout-btn'),
     gstrModalOverlay: document.getElementById('gstr-modal-overlay'),
     gstrModal: document.getElementById('gstr-modal'),
     closeGstrModalBtn: document.getElementById('close-gstr-modal-btn'),
@@ -393,8 +678,19 @@ window.addEventListener('DOMContentLoaded', () => {
         }
         setupEventListeners();
         syncMonthPickerDisplay();
+        setupItrModule();
+        updateFirmChip();
+        refreshAuthMe();
     } catch (err) {
         console.error('Dashboard init error:', err);
+    }
+    // Without CA session or admin key, do not load clients (would fail or look like "same firm")
+    if (!getCaSessionToken() && !getDashboardApiKey()) {
+        if (elements.clientSelect) {
+            elements.clientSelect.innerHTML =
+                '<option value="">Not signed in — Settings → 1 (CA login)…</option>';
+        }
+        return;
     }
     fetchClients();
 });
@@ -408,6 +704,7 @@ function setupEventListeners() {
         saveDashContext({ phone: state.selectedClientPhone });
         updateClientGstinLabel();
         refreshGstSessionStatus();
+        resetItrPanelForClient();
         try {
             const month = await resolveMonthForClient(state.selectedClientPhone, { preferSaved: true });
             if (state.selectedMonth === month) {
@@ -999,6 +1296,7 @@ async function fetchClients() {
         });
 
         await applyClientAndMonthDefaults(clients);
+        if (typeof resetItrPanelForClient === 'function') resetItrPanelForClient();
         await fetchData();
     } catch (e) {
         console.error("Failed to load clients:", e);
@@ -2620,21 +2918,89 @@ async function startNewAudit() {
 
 function openDashboardSettings() {
     setSidebarNavActive('settings');
-    const current = getDashboardApiKey();
-    const key = window.prompt(
-        'Dashboard API key (stored in this browser only).\nLeave blank to clear.\n\nCurrent: '
-        + (current ? `${current.slice(0, 4)}…` : '(not set)'),
-        current || ''
+    const profile = getCaProfile();
+    const choice = window.prompt(
+        'Security settings:\n' +
+        '1 = CA login (invite + password)\n' +
+        '2 = Set shared API key (admin)\n' +
+        '3 = Log out CA\n' +
+        '4 = Clear API key\n\n' +
+        (profile && profile.name ? `CA: ${profile.name}` : 'Not logged in as CA'),
+        '1'
     );
-    if (key === null) return;
-    if (!String(key).trim()) {
-        localStorage.removeItem('DASHBOARD_API_KEY');
-        showToast('API key cleared');
+    if (choice === null) return;
+    const c = String(choice).trim();
+    if (c === '1') {
+        const invite = window.prompt(
+            'CA invite code (6 digits) for THIS firm.\n\n'
+            + 'Demo firm: 123456\n'
+            + 'Test Firm B: 574646\n'
+            + 'Test Firm A: 574509\n\n'
+            + 'Do not reuse 123456 if you want another firm.',
+            ''
+        ) || '';
+        if (!invite.trim()) {
+            showToast('Enter a firm invite code to log in as that CA.', true);
+            return;
+        }
+        const password = window.prompt('CA password (often Taxova@ChangeMe):', '') || '';
+        if (!password.trim()) {
+            showToast('Password required.', true);
+            return;
+        }
+        caLogin(invite.trim(), password)
+            .then((data) => {
+                const firmLabel = data.firm?.name || data.ca?.firm_name || '';
+                showToast(
+                    firmLabel
+                        ? `Logged in as ${data.ca?.name || 'CA'} · ${firmLabel}`
+                        : `Logged in as ${data.ca?.name || 'CA'}`
+                );
+                return fetchClients();
+            })
+            .catch((e) => showToast(e.message || 'Login failed', true));
         return;
     }
-    localStorage.setItem('DASHBOARD_API_KEY', String(key).trim());
-    showToast('API key saved — loading clients…');
-    fetchClients();
+    if (c === '2') {
+        const current = getDashboardApiKey();
+        const key = window.prompt(
+            'Platform admin API key only — sees ALL firms.\n'
+            + 'Do NOT use this to test firm isolation.\n'
+            + 'Leave blank to clear.\nCurrent: '
+            + (current ? `${current.slice(0, 4)}…` : '(not set)'),
+            current || ''
+        );
+        if (key === null) return;
+        if (!String(key).trim()) {
+            localStorage.removeItem('DASHBOARD_API_KEY');
+            updateFirmChip();
+            showToast('API key cleared');
+            return;
+        }
+        // Admin mode: drop CA session so key is actually used
+        localStorage.removeItem('CA_SESSION_TOKEN');
+        localStorage.removeItem('CA_PROFILE');
+        localStorage.removeItem('CA_FIRM');
+        localStorage.setItem('DASHBOARD_API_KEY', String(key).trim());
+        updateFirmChip();
+        showToast('Admin API key saved — all firms visible');
+        fetchClients();
+        return;
+    }
+    if (c === '3') {
+        caLogout().then(() => {
+            showToast('Logged out. Use Settings → 1 to log in as another firm.');
+            if (elements.clientSelect) {
+                elements.clientSelect.innerHTML = '<option value="">Log in to load clients…</option>';
+            }
+        });
+        return;
+    }
+    if (c === '4') {
+        localStorage.removeItem('DASHBOARD_API_KEY');
+        updateFirmChip();
+        showToast('API key cleared');
+    }
 }
 
 function showSupportHelp() {
@@ -2679,6 +3045,14 @@ function setupSidebarNavigation() {
     }
     if (elements.navSimulatorBtn) {
         elements.navSimulatorBtn.addEventListener('click', () => setSidebarNavActive('simulator'));
+    }
+    if (elements.navSignoutBtn) {
+        elements.navSignoutBtn.addEventListener('click', (e) => {
+            handleSignOutClick(e).catch((err) => {
+                console.error(err);
+                showToast(err.message || 'Sign out failed', true);
+            });
+        });
     }
 }
 
@@ -3384,10 +3758,33 @@ async function verifyPartyOnPortal(role, gstin, extractedName, forceRefresh) {
         state[stateKey] = assessment;
 
         if (!data.found) {
+            if (data.portal_outage || (data.assessment && data.assessment.portal_outage)) {
+                const friendly = formatPortalCheckError({
+                    errorCode: (data.assessment && data.assessment.error_code) || '',
+                    userMessage: (data.assessment && data.assessment.user_message) || data.message || '',
+                    message: data.message || '',
+                });
+                state[stateKey] = data.assessment || {
+                    ok: null,
+                    portal_outage: true,
+                    error_code: friendly.errorCode,
+                    user_message: friendly.body,
+                    issues: [],
+                    reason: null,
+                    risk_boost: 0,
+                };
+                setPartyPortalCheckUi(
+                    role,
+                    'is-warn',
+                    `<div><strong>${escapeHtml(friendly.title)}</strong></div><div class="spc-meta">${escapeHtml(friendly.body)}</div>`
+                );
+                if (state.currentInvoice) renderAuditAlerts(state.currentInvoice);
+                return;
+            }
             setPartyPortalCheckUi(
                 role,
                 'is-bad',
-                `<div><strong>Not found on GSTN</strong></div><div class="spc-meta">${escapeHtml(data.message || 'No records')} · ${escapeHtml(g)}</div>`
+                `<div><strong>This GSTIN was not found on GSTN</strong></div><div class="spc-meta">${escapeHtml(g)}</div>`
             );
             if (state.currentInvoice) renderAuditAlerts(state.currentInvoice);
             return;
@@ -3414,16 +3811,21 @@ async function verifyPartyOnPortal(role, gstin, extractedName, forceRefresh) {
         if (state.currentInvoice) renderAuditAlerts(state.currentInvoice);
     } catch (err) {
         if (seq !== state[seqKey]) return;
+        const friendly = formatPortalCheckError(err);
         state[stateKey] = {
-            ok: false,
-            reason: 'error',
+            ok: null,
+            reason: null,
             gstin: g,
-            issues: [err.message || String(err)],
+            issues: [],
+            portal_outage: true,
+            error_code: friendly.errorCode,
+            user_message: friendly.body,
+            risk_boost: 0,
         };
         setPartyPortalCheckUi(
             role,
             'is-warn',
-            `<div><strong>Portal check unavailable</strong></div><div class="spc-meta">${escapeHtml(err.message || String(err))}</div>`
+            `<div><strong>${escapeHtml(friendly.title)}</strong></div><div class="spc-meta">${escapeHtml(friendly.body)}</div>`
         );
         if (state.currentInvoice) renderAuditAlerts(state.currentInvoice);
     }
@@ -3535,7 +3937,7 @@ function renderAuditAlerts(invoice) {
     }
 
     for (const portal of [state.supplierPortalCheck, state.recipientPortalCheck]) {
-        if (!portal) continue;
+        if (!portal || isPortalOutageAssessment(portal)) continue;
         if (Array.isArray(portal.issues) && portal.issues.length) {
             portal.issues.forEach((msg) => alerts.push(`GSTN portal: ${msg}`));
         } else if (portal.reason === 'invalid_format') {
@@ -3551,7 +3953,7 @@ function renderAuditAlerts(invoice) {
     }
     if (elements.drawerFoldPortal) {
         const portalIssues = [state.supplierPortalCheck, state.recipientPortalCheck].some((p) =>
-            p && ((Array.isArray(p.issues) && p.issues.length) || p.reason === 'invalid_format')
+            p && !isPortalOutageAssessment(p) && ((Array.isArray(p.issues) && p.issues.length) || p.reason === 'invalid_format')
         );
         elements.drawerFoldPortal.classList.toggle('has-attention', portalIssues);
         if (portalIssues) elements.drawerFoldPortal.open = true;
@@ -3655,8 +4057,7 @@ function closeAuditDrawer() {
 
 // ── Document preview (image / PDF) ──
 
-function setDocumentPreview(filePath) {
-    const url = filePath ? `/storage/${filePath}` : '';
+async function setDocumentPreview(filePath) {
     const isPdf = /\.pdf$/i.test(filePath || '');
     state.previewIsPdf = isPdf;
 
@@ -3664,6 +4065,27 @@ function setDocumentPreview(filePath) {
     const pdf = elements.invoiceDocPdf;
     const fallback = elements.invoiceDocFallback;
     const download = elements.invoiceDocDownload;
+
+    // Revoke previous blob URL
+    if (state._previewObjectUrl) {
+        try { URL.revokeObjectURL(state._previewObjectUrl); } catch (_) {}
+        state._previewObjectUrl = null;
+    }
+
+    let url = '';
+    if (filePath) {
+        try {
+            const res = await apiFetch(`/api/files/${filePath}`);
+            if (!res.ok) throw new Error('Unable to load document');
+            const blob = await res.blob();
+            url = URL.createObjectURL(blob);
+            state._previewObjectUrl = url;
+        } catch (e) {
+            if (typeof showToast === 'function') {
+                showToast(e.message || 'Document preview failed', true);
+            }
+        }
+    }
 
     if (img) {
         img.style.display = isPdf || !url ? 'none' : 'block';
@@ -4040,3 +4462,288 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+
+// --- Income Tax Phase 1 module ---
+function inr(n) {
+    const v = Number(n || 0);
+    return "\u20B9" + v.toLocaleString("en-IN", { maximumFractionDigits: 2 });
+}
+
+function setModule(module) {
+    state.activeModule = module === "itr" ? "itr" : "gst";
+    document.body.classList.toggle("module-itr", state.activeModule === "itr");
+    const gstBtn = document.getElementById("module-btn-gst");
+    const itrBtn = document.getElementById("module-btn-itr");
+    if (gstBtn) {
+        gstBtn.classList.toggle("is-active", state.activeModule === "gst");
+        gstBtn.setAttribute("aria-selected", state.activeModule === "gst" ? "true" : "false");
+    }
+    if (itrBtn) {
+        itrBtn.classList.toggle("is-active", state.activeModule === "itr");
+        itrBtn.setAttribute("aria-selected", state.activeModule === "itr" ? "true" : "false");
+    }
+    try { localStorage.setItem("DASHBOARD_MODULE", state.activeModule); } catch (_) {}
+    if (state.activeModule === "itr") {
+        const c = getSelectedClient();
+        const panEl = document.getElementById("itr-pan-input");
+        if (panEl && c && c.pan && !panEl.value) panEl.value = c.pan;
+    }
+}
+
+function resetItrPanelForClient() {
+    state.itrReturnId = null;
+    state.itrEstimate = null;
+    const badge = document.getElementById("itr-status-badge");
+    if (badge) { badge.style.display = "none"; badge.textContent = ""; }
+    ["itr-gross","itr-exemptions","itr-other","itr-80c","itr-tds","itr-advance"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = "0";
+    });
+    const notes = document.getElementById("itr-notes");
+    if (notes) notes.value = "";
+    const panEl = document.getElementById("itr-pan-input");
+    const c = getSelectedClient();
+    if (panEl) panEl.value = (c && c.pan) || "";
+    renderItrEstimate(null);
+    renderItrDocs([]);
+    setItrActionsEnabled(false);
+    const hint = document.getElementById("itr-upload-hint");
+    if (hint) hint.textContent = state.selectedClientPhone
+        ? "Open / create a return for the selected FY."
+        : "Select a client and open a FY first.";
+}
+
+function setItrActionsEnabled(on) {
+    ["itr-upload-btn","itr-save-btn","itr-approve-btn","itr-export-btn"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.disabled = !on;
+    });
+}
+
+function renderItrEstimate(est) {
+    state.itrEstimate = est || null;
+    const empty = document.getElementById("itr-estimate-empty");
+    const body = document.getElementById("itr-estimate-body");
+    const pref = document.getElementById("itr-preferred");
+    if (!est) {
+        if (empty) empty.style.display = "";
+        if (body) body.style.display = "none";
+        if (pref) pref.textContent = "\u2014";
+        return;
+    }
+    if (empty) empty.style.display = "none";
+    if (body) body.style.display = "";
+    const map = {
+        "itr-e-taxable-old": est.taxable_old,
+        "itr-e-taxable-new": est.taxable_new,
+        "itr-e-net-old": est.net_tax_old,
+        "itr-e-net-new": est.net_tax_new,
+        "itr-e-pay-old": est.payable_or_refund_old,
+        "itr-e-pay-new": est.payable_or_refund_new,
+    };
+    Object.entries(map).forEach(([id, val]) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = inr(val);
+    });
+    if (pref) pref.textContent = "Preferred: " + String(est.regime_preferred || "\u2014").toUpperCase();
+    const disc = document.getElementById("itr-disclaimer");
+    if (disc) disc.textContent = est.disclaimer || "";
+}
+
+function renderItrDocs(docs) {
+    const el = document.getElementById("itr-docs-list");
+    if (!el) return;
+    if (!docs || !docs.length) {
+        el.textContent = "No Form 16 uploaded yet.";
+        return;
+    }
+    el.innerHTML = '<div class="font-semibold mb-1">Documents</div>' + docs.map(d => {
+        const name = d.original_filename || d.file_path || "file";
+        return "<div>" + (d.doc_type || "form16") + ": " + name + "</div>";
+    }).join("");
+}
+
+function fillItrFormFromReturn(row) {
+    if (!row) return;
+    state.itrReturnId = row.id;
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v ?? 0; };
+    set("itr-gross", row.gross_salary || 0);
+    set("itr-exemptions", row.exemptions || 0);
+    set("itr-other", row.other_income || 0);
+    set("itr-80c", row.deductions_80c || 0);
+    set("itr-tds", row.tds || 0);
+    set("itr-advance", row.advance_tax || 0);
+    const notes = document.getElementById("itr-notes");
+    if (notes) notes.value = row.ca_notes || "";
+    const panEl = document.getElementById("itr-pan-input");
+    if (panEl && row.pan) panEl.value = row.pan;
+    const fyEl = document.getElementById("itr-fy-select");
+    if (fyEl && row.financial_year) {
+        if (![...fyEl.options].some(o => o.value === row.financial_year)) {
+            const opt = document.createElement("option");
+            opt.value = row.financial_year;
+            opt.textContent = row.financial_year;
+            fyEl.appendChild(opt);
+        }
+        fyEl.value = row.financial_year;
+    }
+    const badge = document.getElementById("itr-status-badge");
+    if (badge) {
+        badge.style.display = "";
+        badge.textContent = row.status || "draft";
+    }
+    let est = row.estimate || null;
+    if (!est && row.estimate_json) {
+        try { est = JSON.parse(row.estimate_json); } catch (_) { est = null; }
+    }
+    renderItrEstimate(est);
+    renderItrDocs(row.documents || []);
+    setItrActionsEnabled(true);
+    const hint = document.getElementById("itr-upload-hint");
+    if (hint) hint.textContent = "PDF or image \u00B7 AI extract with manual edit fallback.";
+}
+
+async function openOrCreateItrReturn() {
+    if (!state.selectedClientPhone) {
+        showToast("Select a client first", true);
+        return;
+    }
+    const fy = (document.getElementById("itr-fy-select") || {}).value || "2025-26";
+    const pan = ((document.getElementById("itr-pan-input") || {}).value || "").trim().toUpperCase();
+    const response = await apiFetch("/api/itr/returns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            client_phone: state.selectedClientPhone,
+            financial_year: fy,
+            pan: pan || null,
+        }),
+    });
+    const row = await readJsonOrThrow(response, "Could not open ITR return");
+    const detail = await apiFetch("/api/itr/returns/" + row.id);
+    const full = await readJsonOrThrow(detail, "Could not load ITR return");
+    fillItrFormFromReturn(full);
+    showToast("Opened FY " + full.financial_year);
+}
+
+async function saveItrEstimate() {
+    if (!state.itrReturnId) return;
+    const num = (id) => Number((document.getElementById(id) || {}).value || 0);
+    const pan = ((document.getElementById("itr-pan-input") || {}).value || "").trim().toUpperCase();
+    const body = {
+        gross_salary: num("itr-gross"),
+        exemptions: num("itr-exemptions"),
+        other_income: num("itr-other"),
+        deductions_80c: num("itr-80c"),
+        tds: num("itr-tds"),
+        advance_tax: num("itr-advance"),
+        ca_notes: ((document.getElementById("itr-notes") || {}).value || "").trim(),
+        pan: pan || null,
+        financial_year: (document.getElementById("itr-fy-select") || {}).value,
+    };
+    const response = await apiFetch("/api/itr/returns/" + state.itrReturnId, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+    });
+    const updated = await readJsonOrThrow(response, "Save failed");
+    fillItrFormFromReturn(updated);
+    showToast("Estimate updated");
+}
+
+async function uploadForm16() {
+    if (!state.itrReturnId) {
+        showToast("Open a return first", true);
+        return;
+    }
+    const input = document.getElementById("itr-form16-input");
+    if (!input || !input.files || !input.files[0]) {
+        if (input) input.click();
+        return;
+    }
+    const form = new FormData();
+    form.append("file", input.files[0]);
+    showToast("Uploading Form 16\u2026");
+    const response = await apiFetch("/api/itr/returns/" + state.itrReturnId + "/form16?extract=true", {
+        method: "POST",
+        body: form,
+    });
+    const data = await readJsonOrThrow(response, "Form 16 upload failed");
+    input.value = "";
+    const detail = await apiFetch("/api/itr/returns/" + state.itrReturnId);
+    const full = await readJsonOrThrow(detail, "Reload failed");
+    fillItrFormFromReturn(full);
+    if (data.extract_error) {
+        showToast(data.hint || data.extract_error, true);
+    } else {
+        showToast("Form 16 processed");
+    }
+}
+
+async function approveItrReturn() {
+    if (!state.itrReturnId) return;
+    const notes = ((document.getElementById("itr-notes") || {}).value || "").trim();
+    const response = await apiFetch("/api/itr/returns/" + state.itrReturnId + "/approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ca_notes: notes }),
+    });
+    const data = await readJsonOrThrow(response, "Approve failed");
+    if (data.itr) fillItrFormFromReturn(Object.assign({}, data.itr, { estimate: state.itrEstimate }));
+    showToast("ITR prep approved");
+}
+
+async function exportItrDraft() {
+    if (!state.itrReturnId) return;
+    const headers = apiHeaders();
+    const response = await fetch("/api/itr/returns/" + state.itrReturnId + "/export", { headers });
+    if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(formatApiDetail(err, "Export failed"));
+    }
+    const html = await response.text();
+    const w = window.open("", "_blank");
+    if (!w) {
+        showToast("Allow pop-ups to view the export draft", true);
+        return;
+    }
+    w.document.write(html);
+    w.document.close();
+    showToast("Draft opened \u2014 use Print / Save PDF");
+}
+
+function setupItrModule() {
+    const gstBtn = document.getElementById("module-btn-gst");
+    const itrBtn = document.getElementById("module-btn-itr");
+    if (gstBtn) gstBtn.addEventListener("click", () => setModule("gst"));
+    if (itrBtn) itrBtn.addEventListener("click", () => setModule("itr"));
+    const openBtn = document.getElementById("itr-open-btn");
+    if (openBtn) openBtn.addEventListener("click", () => {
+        openOrCreateItrReturn().catch(e => showToast(e.message || "Failed", true));
+    });
+    const saveBtn = document.getElementById("itr-save-btn");
+    if (saveBtn) saveBtn.addEventListener("click", () => {
+        saveItrEstimate().catch(e => showToast(e.message || "Save failed", true));
+    });
+    const uploadBtn = document.getElementById("itr-upload-btn");
+    if (uploadBtn) uploadBtn.addEventListener("click", () => {
+        const input = document.getElementById("itr-form16-input");
+        if (input) input.click();
+    });
+    const fileInput = document.getElementById("itr-form16-input");
+    if (fileInput) fileInput.addEventListener("change", () => {
+        uploadForm16().catch(e => showToast(e.message || "Upload failed", true));
+    });
+    const approveBtn = document.getElementById("itr-approve-btn");
+    if (approveBtn) approveBtn.addEventListener("click", () => {
+        approveItrReturn().catch(e => showToast(e.message || "Approve failed", true));
+    });
+    const exportBtn = document.getElementById("itr-export-btn");
+    if (exportBtn) exportBtn.addEventListener("click", () => {
+        exportItrDraft().catch(e => showToast(e.message || "Export failed", true));
+    });
+    let saved = "gst";
+    try { saved = localStorage.getItem("DASHBOARD_MODULE") || "gst"; } catch (_) {}
+    setModule(saved);
+    resetItrPanelForClient();
+}

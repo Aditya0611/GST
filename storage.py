@@ -17,8 +17,12 @@ import os
 import time
 import logging
 import json
+import tempfile
+from contextlib import contextmanager
 from pathlib import Path
 from dotenv import load_dotenv
+
+import security
 
 load_dotenv()
 
@@ -99,16 +103,76 @@ async def save_file(
     filename = _build_filename(original_filename, media_type, extension)
     file_path = client_dir / filename
 
-    # Write the file
-    file_path.write_bytes(file_bytes)
+    # Encrypt at rest when ENCRYPTION_KEY is configured
+    to_write = security.encrypt_bytes(file_bytes)
+    file_path.write_bytes(to_write)
     relative_path = f"{phone_number}/{year_month}/{filename}"
 
     file_size_kb = len(file_bytes) / 1024
     logger.info(
-        "Saved file: %s (%.1f KB, type=%s)", relative_path, file_size_kb, mime_type
+        "Saved file: %s (%.1f KB, type=%s, encrypted=%s)",
+        relative_path,
+        file_size_kb,
+        mime_type,
+        security.encryption_enabled(),
     )
 
     return relative_path
+
+
+def resolve_path(relative_or_absolute: str) -> Path:
+    """Resolve a storage-relative or absolute path under STORAGE_DIR when possible."""
+    raw = (relative_or_absolute or "").strip().replace("\\", "/")
+    p = Path(relative_or_absolute)
+    if p.is_absolute():
+        return p
+    # Avoid storage/storage/... when callers pass "./storage/..." or already-resolved paths
+    storage_name = STORAGE_DIR.resolve().name  # usually "storage"
+    parts = Path(raw).parts
+    if parts and parts[0] in (storage_name, ".", ".."):
+        # "./storage/phone/..." or "storage/phone/..."
+        cleaned = Path(*[x for x in parts if x not in (".",)])
+        try:
+            cleaned_resolved = cleaned if cleaned.is_absolute() else (Path.cwd() / cleaned)
+            storage_resolved = STORAGE_DIR.resolve()
+            if str(cleaned_resolved.resolve()).startswith(str(storage_resolved)):
+                return cleaned_resolved.resolve()
+        except OSError:
+            pass
+        if parts[0] == storage_name:
+            return STORAGE_DIR / Path(*parts[1:])
+    return STORAGE_DIR / relative_or_absolute
+
+
+def read_file_bytes(relative_or_absolute: str) -> bytes:
+    """Read file bytes and decrypt if encrypted at rest."""
+    path = resolve_path(relative_or_absolute)
+    if not path.exists():
+        raise FileNotFoundError(f"File not found: {path}")
+    return security.decrypt_bytes(path.read_bytes())
+
+
+@contextmanager
+def plaintext_temp_file(relative_or_absolute: str):
+    """
+    Yield a temporary plaintext file path for processors that need a filesystem path
+    (Pillow, Gemini upload). Deletes the temp file on exit.
+    """
+    path = resolve_path(relative_or_absolute)
+    if not path.exists():
+        raise FileNotFoundError(f"File not found: {path}")
+    data = security.decrypt_bytes(path.read_bytes())
+    suffix = path.suffix or ".bin"
+    fd, tmp_name = tempfile.mkstemp(suffix=suffix, prefix="taxova_")
+    os.close(fd)
+    try:
+        Path(tmp_name).write_bytes(data)
+        yield tmp_name
+    finally:
+        try:
+            os.unlink(tmp_name)
+        except OSError:
+            pass
 
 
 async def save_json(
@@ -118,19 +182,19 @@ async def save_json(
 ) -> str:
     """
     Save invoice extraction metadata (JSON) next to the saved invoice file.
-
-    Args:
-        phone_number: Client's phone number
-        invoice_path_str: The relative path of the saved invoice (returned by save_file)
-        data: The dictionary/JSON data to save
+    Encrypted at rest when ENCRYPTION_KEY is set.
     """
     invoice_path = STORAGE_DIR / invoice_path_str
     json_path = invoice_path.with_name(f"{invoice_path.stem}_extracted.json")
 
-    with open(json_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+    raw = json.dumps(data, indent=2, ensure_ascii=False).encode("utf-8")
+    json_path.write_bytes(security.encrypt_bytes(raw))
 
     relative_json_path = f"{phone_number}/{invoice_path.parent.name}/{json_path.name}"
-    logger.info("Saved extraction metadata: %s", relative_json_path)
+    logger.info(
+        "Saved extraction metadata: %s (encrypted=%s)",
+        relative_json_path,
+        security.encryption_enabled(),
+    )
     return relative_json_path
 

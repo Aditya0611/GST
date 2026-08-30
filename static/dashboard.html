@@ -848,6 +848,94 @@
             line-height: 1.15;
             padding-top: 1px;
         }
+        .module-switch {
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+            padding: 3px;
+            border-radius: 10px;
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            background: rgba(14, 19, 26, 0.65);
+            flex-shrink: 0;
+        }
+        .module-switch-btn {
+            appearance: none;
+            border: none;
+            background: transparent;
+            color: #94a3b8;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            padding: 7px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s;
+        }
+        .module-switch-btn:hover { color: #e2e8f0; }
+        .module-switch-btn.is-active {
+            background: rgba(54, 214, 174, 0.18);
+            color: #36D6AE;
+        }
+        #module-itr { display: none; }
+        body.module-itr #module-gst { display: none; }
+        body.module-itr #module-itr { display: block; }
+        body.module-itr #month-picker-wrap,
+        body.module-itr #global-search { display: none !important; }
+        .itr-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+        @media (min-width: 1024px) {
+            .itr-grid { grid-template-columns: 1.1fr 0.9fr; }
+        }
+        .itr-field-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+        .itr-field label {
+            display: block;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #94a3b8;
+            margin-bottom: 0.35rem;
+        }
+        .itr-field input, .itr-field select, .itr-field textarea {
+            width: 100%;
+            background: #0E131A;
+            border: 1px solid rgba(148,163,184,0.25);
+            border-radius: 8px;
+            color: #e1e1ef;
+            padding: 0.55rem 0.75rem;
+            font-size: 13px;
+        }
+        .itr-field input:focus, .itr-field select:focus, .itr-field textarea:focus {
+            outline: none;
+            border-color: #36D6AE;
+        }
+        .itr-estimate-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .itr-estimate-table th, .itr-estimate-table td {
+            border-bottom: 1px solid rgba(148,163,184,0.15);
+            padding: 0.55rem 0.4rem;
+            text-align: left;
+        }
+        .itr-estimate-table th { color: #94a3b8; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; }
+        .itr-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.25rem 0.55rem;
+            border-radius: 6px;
+            background: rgba(54,214,174,0.12);
+            color: #36D6AE;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
         .header-actions {
             display: flex; align-items: center; gap: 10px;
             flex-shrink: 0;
@@ -1600,6 +1688,7 @@
             <div class="brand-text">
                 <div class="brand-name">Taxova.ai</div>
                 <div class="brand-sub">CA Workspace</div>
+                <div id="firm-chip" class="brand-sub" style="opacity:0.85;margin-top:2px;display:none;" title="Your firm workspace"></div>
             </div>
         </div>
         <button type="button" class="sidebar-client-card is-empty" id="nav-clients-btn" data-nav="clients" title="Switch client">
@@ -1640,10 +1729,10 @@
                 <span class="material-symbols-outlined nav-ico">help</span>
                 <span class="nav-label">Support</span>
             </button>
-            <a class="nav-link" href="/" id="nav-signout-btn" title="Back to home">
+            <button type="button" class="nav-link" id="nav-signout-btn" title="Sign out of this firm">
                 <span class="material-symbols-outlined nav-ico">logout</span>
                 <span class="nav-label">Sign out</span>
-            </a>
+            </button>
         </div>
         <button type="button" id="nav-new-audit-btn" class="sidebar-cta" title="Jump to Needs review and open the next bill">
             <span class="material-symbols-outlined text-[18px]">add</span>
@@ -1661,6 +1750,10 @@
             <div class="hidden xl:block shrink-0 pr-2 workspace-label">
                 <div class="text-[10px] font-bold uppercase tracking-[0.14em] text-primary">Workspace</div>
                 <div class="text-[13px] font-semibold text-on-surface leading-tight whitespace-nowrap">CA Review Queue</div>
+            </div>
+            <div class="module-switch" role="tablist" aria-label="Tax module">
+                <button type="button" class="module-switch-btn is-active" id="module-btn-gst" data-module="gst" role="tab" aria-selected="true">GST</button>
+                <button type="button" class="module-switch-btn" id="module-btn-itr" data-module="itr" role="tab" aria-selected="false">Income Tax</button>
             </div>
             <div class="hidden xl:block h-8 w-px bg-outline-variant shrink-0"></div>
 
@@ -1723,7 +1816,7 @@
      MAIN CONTENT
 ══════════════════════════════════════════════ -->
 <main class="dashboard-main pt-16 min-h-screen" style="margin-left: 272px;">
-    <div class="p-6 md:p-8 space-y-5 max-w-container-max mx-auto">
+    <div id="module-gst" class="p-6 md:p-8 space-y-5 max-w-container-max mx-auto">
 
         <!-- ── Page Header ── -->
         <div class="fade-up space-y-4">
@@ -2148,6 +2241,114 @@
             </div>
         </div>
     </div>
+
+    <!-- ── Income Tax Phase 1 ── -->
+    <div id="module-itr" class="p-6 md:p-8 space-y-5 max-w-container-max mx-auto">
+        <div class="fade-up space-y-2">
+            <nav class="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-widest text-on-surface-variant mb-2">
+                <a href="/" class="hover:text-primary transition-colors">Home</a>
+                <span class="material-symbols-outlined text-[12px]">chevron_right</span>
+                <span class="text-on-surface">Income Tax</span>
+            </nav>
+            <h2 class="text-[28px] md:text-[32px] font-extrabold tracking-tight page-title-accent">ITR prep (Form 16)</h2>
+            <p class="text-[14px] text-on-surface-variant max-w-2xl">
+                Upload Form 16, review the AI extract (or edit manually), compare old vs new regime, approve, then export a prep draft.
+                <span class="text-secondary font-semibold">Not e-filing — print/save PDF for portal use.</span>
+            </p>
+        </div>
+
+        <div class="panel p-4 md:p-5 space-y-4">
+            <div class="flex flex-wrap items-end gap-3">
+                <div class="itr-field" style="min-width:140px;">
+                    <label for="itr-fy-select">Financial year</label>
+                    <select id="itr-fy-select">
+                        <option value="2025-26">2025-26</option>
+                        <option value="2024-25">2024-25</option>
+                        <option value="2023-24">2023-24</option>
+                    </select>
+                </div>
+                <div class="itr-field" style="min-width:160px;">
+                    <label for="itr-pan-input">PAN</label>
+                    <input id="itr-pan-input" type="text" maxlength="10" placeholder="ABCDE1234F" autocomplete="off"/>
+                </div>
+                <button type="button" id="itr-open-btn" class="h-[38px] px-4 rounded-[10px] bg-primary text-on-primary text-[13px] font-bold hover:brightness-110">
+                    Open / create return
+                </button>
+                <span id="itr-status-badge" class="itr-badge" style="display:none;">draft</span>
+            </div>
+            <div class="flex flex-wrap items-center gap-3">
+                <input type="file" id="itr-form16-input" accept=".pdf,image/jpeg,image/png,image/webp,application/pdf" class="hidden"/>
+                <button type="button" id="itr-upload-btn" class="h-[38px] px-4 rounded-[10px] border border-outline-variant text-[13px] font-bold text-on-surface hover:border-primary/50 disabled:opacity-40" disabled>
+                    Upload Form 16
+                </button>
+                <span id="itr-upload-hint" class="text-[12px] text-on-surface-variant">Select a client and open a FY first.</span>
+            </div>
+        </div>
+
+        <div class="itr-grid">
+            <div class="panel p-4 md:p-5 space-y-4">
+                <h3 class="text-[15px] font-bold text-white">Income &amp; deductions</h3>
+                <div class="itr-field-grid">
+                    <div class="itr-field">
+                        <label for="itr-gross">Gross salary</label>
+                        <input id="itr-gross" type="number" min="0" step="0.01" value="0"/>
+                    </div>
+                    <div class="itr-field">
+                        <label for="itr-exemptions">Exemptions (u/s 10)</label>
+                        <input id="itr-exemptions" type="number" min="0" step="0.01" value="0"/>
+                    </div>
+                    <div class="itr-field">
+                        <label for="itr-other">Other income</label>
+                        <input id="itr-other" type="number" min="0" step="0.01" value="0"/>
+                    </div>
+                    <div class="itr-field">
+                        <label for="itr-80c">80C deductions</label>
+                        <input id="itr-80c" type="number" min="0" step="0.01" value="0"/>
+                    </div>
+                    <div class="itr-field">
+                        <label for="itr-tds">TDS</label>
+                        <input id="itr-tds" type="number" min="0" step="0.01" value="0"/>
+                    </div>
+                    <div class="itr-field">
+                        <label for="itr-advance">Advance tax</label>
+                        <input id="itr-advance" type="number" min="0" step="0.01" value="0"/>
+                    </div>
+                </div>
+                <div class="itr-field">
+                    <label for="itr-notes">CA notes</label>
+                    <textarea id="itr-notes" rows="2" placeholder="Optional review notes"></textarea>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" id="itr-save-btn" class="h-[38px] px-4 rounded-[10px] bg-primary text-on-primary text-[13px] font-bold disabled:opacity-40" disabled>Save &amp; estimate</button>
+                    <button type="button" id="itr-approve-btn" class="h-[38px] px-4 rounded-[10px] border border-secondary/40 text-secondary text-[13px] font-bold disabled:opacity-40" disabled>Approve</button>
+                    <button type="button" id="itr-export-btn" class="h-[38px] px-4 rounded-[10px] border border-outline-variant text-[13px] font-bold disabled:opacity-40" disabled>Export draft</button>
+                </div>
+            </div>
+            <div class="panel p-4 md:p-5 space-y-3">
+                <div class="flex items-center justify-between gap-2">
+                    <h3 class="text-[15px] font-bold text-white">Tax estimate</h3>
+                    <span id="itr-preferred" class="text-[12px] text-on-surface-variant">—</span>
+                </div>
+                <div id="itr-estimate-empty" class="text-[13px] text-on-surface-variant py-6">
+                    Open a return and save fields (or upload Form 16) to see old vs new regime.
+                </div>
+                <div id="itr-estimate-body" style="display:none;">
+                    <table class="itr-estimate-table">
+                        <thead>
+                            <tr><th>Item</th><th>Old</th><th>New</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Taxable</td><td id="itr-e-taxable-old">—</td><td id="itr-e-taxable-new">—</td></tr>
+                            <tr><td>Net tax</td><td id="itr-e-net-old">—</td><td id="itr-e-net-new">—</td></tr>
+                            <tr><td>Payable/(Refund)</td><td id="itr-e-pay-old">—</td><td id="itr-e-pay-new">—</td></tr>
+                        </tbody>
+                    </table>
+                    <p id="itr-disclaimer" class="text-[11px] text-on-surface-variant mt-3 leading-relaxed"></p>
+                </div>
+                <div id="itr-docs-list" class="text-[12px] text-on-surface-variant pt-2 border-t border-outline-variant"></div>
+            </div>
+        </div>
+    </div>
 </main>
 
 <!-- ══════════════════════════════════════════════
@@ -2354,11 +2555,16 @@
                             GSTN portal checks
                         </summary>
                         <div class="drawer-fold-body flex flex-col gap-3">
+                            <p class="text-[12px] text-on-surface-variant leading-snug m-0">
+                                Optional live check of supplier/buyer GSTIN. If this shows
+                                <strong>Portal check offline</strong>, Taxova is fine — keep reviewing;
+                                use <strong>Import GSTR-2B</strong> for file-based matching.
+                            </p>
                             <div id="supplier-portal-check" class="supplier-portal-check" aria-live="polite">
                                 <div class="spc-head">
                                     <span class="material-symbols-outlined text-[14px]">travel_explore</span>
                                     Supplier GSTN
-                                    <button type="button" id="supplier-portal-recheck-btn" class="spc-recheck" title="Re-check supplier GSTIN on GSTN">Recheck</button>
+                                    <button type="button" id="supplier-portal-recheck-btn" class="spc-recheck" title="Try GSTN lookup again">Recheck</button>
                                 </div>
                                 <div id="supplier-portal-check-body" class="spc-body">Waiting…</div>
                             </div>
@@ -2366,7 +2572,7 @@
                                 <div class="spc-head">
                                     <span class="material-symbols-outlined text-[14px]">travel_explore</span>
                                     Recipient GSTN
-                                    <button type="button" id="recipient-portal-recheck-btn" class="spc-recheck" title="Re-check recipient GSTIN on GSTN">Recheck</button>
+                                    <button type="button" id="recipient-portal-recheck-btn" class="spc-recheck" title="Try GSTN lookup again">Recheck</button>
                                 </div>
                                 <div id="recipient-portal-check-body" class="spc-body">Waiting…</div>
                             </div>

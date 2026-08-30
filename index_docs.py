@@ -64,7 +64,11 @@ async def main():
             if first_line.startswith("# "):
                 title = first_line.replace("# ", "").strip()
 
-            chunks_indexed = await rag.index_document(title=title, text=content)
+            chunks_indexed = await rag.index_document(
+                title=title,
+                text=content,
+                source_file=filename,
+            )
             logger.info("Successfully indexed %d chunks for document '%s'", chunks_indexed, title)
             total_chunks += chunks_indexed
         except Exception as e:
