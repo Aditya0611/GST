@@ -390,6 +390,22 @@ tailwind.config = {
     height: 16px;
     flex-shrink: 0;
   }
+  .footer-wa {
+    color: #128C7E !important;
+    border-color: rgba(18, 140, 126, 0.35);
+  }
+  .footer-wa:hover {
+    border-color: rgba(18, 140, 126, 0.55);
+    background: rgba(37, 211, 102, 0.1);
+    color: #075E54 !important;
+  }
+  .footer-phone {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--ink);
+    letter-spacing: 0.02em;
+  }
   .footer-brand-actions {
     display: flex;
     flex-wrap: wrap;
@@ -612,7 +628,7 @@ tailwind.config = {
 <footer class="site-footer">
   <div class="mx-auto max-w-6xl px-4 md:px-10 pt-14 pb-8">
     <div class="grid grid-cols-2 md:grid-cols-12 gap-10 md:gap-8">
-      <div class="col-span-2 md:col-span-5">
+      <div class="col-span-2 md:col-span-4">
         <a href="/" aria-label="Taxova.ai home">
           <img src="/static/logo-on-light.png?v=1" alt="Taxova.ai" class="logo-lockup footer-logo"/>
         </a>
@@ -659,13 +675,39 @@ tailwind.config = {
         </ul>
       </div>
 
-      <div class="md:col-span-3">
-        <h3 class="footer-col-title">Legal &amp; help</h3>
+      <div class="md:col-span-2">
+        <h3 class="footer-col-title">Contact us</h3>
+        <ul class="footer-links">
+          <li>
+            <a
+              class="footer-social footer-wa"
+              href="https://wa.me/917050674803?text=Hi%20Taxova.ai%20%E2%80%94%20I%20have%20a%20question"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Chat with Taxova on WhatsApp"
+            >
+              <span class="material-symbols-outlined" style="font-size:18px;color:inherit;" aria-hidden="true">chat</span>
+              WhatsApp us
+            </a>
+          </li>
+          <li>
+            <a
+              class="footer-phone"
+              href="https://wa.me/917050674803?text=Hi%20Taxova.ai%20%E2%80%94%20I%20have%20a%20question"
+              target="_blank"
+              rel="noopener noreferrer"
+            >+91 70506 74803</a>
+          </li>
+          <li><a href="mailto:hello@taxova.ai">hello@taxova.ai</a></li>
+        </ul>
+      </div>
+
+      <div class="md:col-span-2">
+        <h3 class="footer-col-title">Legal</h3>
         <ul class="footer-links">
           <li><a href="/privacy">Privacy policy</a></li>
           <li><a href="/terms">Terms of service</a></li>
           <li><a href="/data-deletion">Data deletion</a></li>
-          <li><a href="mailto:hello@taxova.ai">hello@taxova.ai</a></li>
           <li>
             <a href="https://www.linkedin.com/company/taxova-ai/" target="_blank" rel="noopener noreferrer">
               LinkedIn
@@ -678,8 +720,14 @@ tailwind.config = {
     <div class="footer-bottom">
       <p class="text-xs text-muted m-0">© 2026 Taxova.ai. All rights reserved.</p>
       <p class="text-xs text-muted m-0">
+        <a
+          href="https://wa.me/917050674803?text=Hi%20Taxova.ai%20%E2%80%94%20I%20have%20a%20question"
+          target="_blank"
+          rel="noopener noreferrer"
+        >WhatsApp +91 70506 74803</a>
+        ·
         <a href="https://www.linkedin.com/company/taxova-ai/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
-        · Built for Indian GST · WhatsApp Cloud API
+        · Built for Indian GST
       </p>
     </div>
   </div>
