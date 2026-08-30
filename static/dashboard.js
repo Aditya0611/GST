@@ -54,7 +54,7 @@ async function caLogin(inviteCode, password) {
     return data;
 }
 
-async def caLogout() {
+async function caLogout() {
     const token = getCaSessionToken();
     let invalidated = false;
     try {
@@ -157,6 +157,104 @@ async function refreshAuthMe() {
         }
         updateFirmChip();
     } catch (_) { /* ignore */ }
+}
+
+/**
+ * Force CA login (or admin API key) when the dashboard opens with no valid session.
+ * Returns true if credentials are available afterward.
+ */
+async function promptCaLoginOrAdminKey({ reason } = {}) {
+    const invite = window.prompt(
+        (reason ? reason + '\n\n' : '')
+            + 'CA login required.\n\n'
+            + 'Enter your 6-digit firm invite code.\n'
+            + '(Demo firm: 123456)\n\n'
+            + 'Leave blank only for platform admin API key:',
+        ''
+    );
+    if (invite === null) return false;
+    if (invite.trim()) {
+        const password = window.prompt(
+            'CA password\n(from CA_BOOTSTRAP_PASSWORD / your firm password):',
+            ''
+        );
+        if (password === null || !String(password).trim()) {
+            showToast('Password required for CA login.', true);
+            return false;
+        }
+        try {
+            const data = await caLogin(invite.trim(), password);
+            const firmLabel = data.firm?.name || data.ca?.firm_name || '';
+            showToast(
+                firmLabel
+                    ? `Logged in as ${data.ca?.name || 'CA'} · ${firmLabel}`
+                    : `Logged in as ${data.ca?.name || 'CA'}`
+            );
+            return true;
+        } catch (e) {
+            showToast(e.message || 'CA login failed', true);
+            return false;
+        }
+    }
+    const key = window.prompt(
+        'Platform admin API key (DASHBOARD_API_KEY).\n'
+            + 'Do not use this for a normal CA firm login.\n'
+            + 'Leave blank to cancel:',
+        ''
+    );
+    if (key === null || !String(key).trim()) {
+        showToast('Sign in required to use the dashboard.', true);
+        return false;
+    }
+    localStorage.removeItem('CA_SESSION_TOKEN');
+    localStorage.removeItem('CA_PROFILE');
+    localStorage.removeItem('CA_FIRM');
+    localStorage.setItem('DASHBOARD_API_KEY', String(key).trim());
+    updateFirmChip();
+    showToast('Admin API key saved');
+    return true;
+}
+
+async function ensureDashboardAuth() {
+    // Validate existing CA session
+    if (getCaSessionToken()) {
+        try {
+            const res = await fetch('/api/auth/me', { headers: apiHeaders() });
+            if (res.ok) {
+                const me = await res.json();
+                if (me.firm_id != null || me.firm_name) {
+                    localStorage.setItem(
+                        'CA_FIRM',
+                        JSON.stringify({ id: me.firm_id, name: me.firm_name })
+                    );
+                }
+                updateFirmChip();
+                return true;
+            }
+            // Stale / revoked session
+            localStorage.removeItem('CA_SESSION_TOKEN');
+            localStorage.removeItem('CA_PROFILE');
+            localStorage.removeItem('CA_FIRM');
+            updateFirmChip();
+        } catch (_) {
+            /* network — fall through to prompt */
+        }
+    }
+    // Admin key path: confirm /api/clients accepts it
+    if (getDashboardApiKey() && !getCaSessionToken()) {
+        try {
+            const res = await fetch('/api/clients', { headers: apiHeaders() });
+            if (res.ok) {
+                updateFirmChip();
+                return true;
+            }
+            localStorage.removeItem('DASHBOARD_API_KEY');
+            updateFirmChip();
+        } catch (_) { /* fall through */ }
+    }
+    return promptCaLoginOrAdminKey({
+        reason: 'Welcome to the CA workspace — sign in to continue.',
+    });
 }
 
 async function apiFetch(url, options = {}) {
@@ -670,29 +768,38 @@ let caFormSubmitHandler = null;
 
 // ── App Init ──
 window.addEventListener('DOMContentLoaded', () => {
-    try {
-        // Never show "All months" while clients load — seed a real period immediately
-        if (!state.selectedMonth || state.selectedMonth === 'all') {
-            const saved = (loadDashContext().month || '').trim();
-            state.selectedMonth = /^\d{4}-\d{2}$/.test(saved) ? saved : currentYearMonth();
+    (async () => {
+        try {
+            // Never show "All months" while clients load — seed a real period immediately
+            if (!state.selectedMonth || state.selectedMonth === 'all') {
+                const saved = (loadDashContext().month || '').trim();
+                state.selectedMonth = /^\d{4}-\d{2}$/.test(saved) ? saved : currentYearMonth();
+            }
+            setupEventListeners();
+            syncMonthPickerDisplay();
+            setupItrModule();
+            updateFirmChip();
+        } catch (err) {
+            console.error('Dashboard init error:', err);
         }
-        setupEventListeners();
-        syncMonthPickerDisplay();
-        setupItrModule();
-        updateFirmChip();
-        refreshAuthMe();
-    } catch (err) {
-        console.error('Dashboard init error:', err);
-    }
-    // Without CA session or admin key, do not load clients (would fail or look like "same firm")
-    if (!getCaSessionToken() && !getDashboardApiKey()) {
-        if (elements.clientSelect) {
-            elements.clientSelect.innerHTML =
-                '<option value="">Not signed in — Settings → 1 (CA login)…</option>';
+
+        const ok = await ensureDashboardAuth();
+        if (!ok) {
+            if (elements.clientSelect) {
+                elements.clientSelect.innerHTML =
+                    '<option value="">Not signed in — open Settings → 1 (CA login)…</option>';
+            }
+            showToast('Sign in required: Settings → 1 = CA invite + password.', true);
+            return;
         }
-        return;
-    }
-    fetchClients();
+        try {
+            await refreshAuthMe();
+        } catch (_) { /* ignore */ }
+        await fetchClients();
+    })().catch((err) => {
+        console.error('Dashboard auth/init failed:', err);
+        showToast(err.message || 'Could not start dashboard', true);
+    });
 });
 
 // ── Event Handlers Hookup ──
