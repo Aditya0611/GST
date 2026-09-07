@@ -111,7 +111,7 @@
             <div class="wa-messages" id="wa-messages">
                 <div style="text-align:center;margin:8px 0;"><span style="display:inline-block;padding:4px 10px;border-radius:99px;background:rgba(0,168,132,0.12);font-size:10px;color:#8ecc9f;">Simulator Started</span></div>
                 <div class="wa-bubble-wrap in"><div class="wa-bubble in">
-                    👋 <strong>Welcome to Taxova.ai!</strong><br>Send an invoice image or try a command like <em>summary</em>.
+                    👋 <strong>Welcome to Taxova.ai!</strong><br>Send a <em>GST invoice</em> or <em>Form 16</em> PDF, or try <em>summary</em>.
                     <div class="meta">Bot • now</div>
                 </div></div>
                 <div class="wa-bubble-wrap in" id="typing-indicator" style="display:none;">
@@ -162,6 +162,9 @@
                         <button class="sample-pill" onclick="selectSample('sample_invoice_sharma.png',this)">
                             <span class="material-symbols-outlined" style="font-size:14px;">description</span>Sharma Office
                         </button>
+                        <button class="sample-pill" onclick="selectSample('scratch/dummy_form16.pdf',this)">
+                            <span class="material-symbols-outlined" style="font-size:14px;">description</span>Dummy Form 16
+                        </button>
                     </div>
                     <div style="font-size:10px;color:var(--text-dim);margin-top:6px;" id="sample-selected-hint">No sample selected</div>
                 </div>
@@ -169,6 +172,7 @@
                     <label class="ctrl-label">Text Message / Command</label>
                     <input class="ctrl-input" id="text-cmd-input" type="text" placeholder='e.g. "summary" or "help"' value="summary"/>
                     <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">
+                        <button class="sample-pill" onclick="document.getElementById('text-cmd-input').value='Form 16'">Form 16</button>
                         <button class="sample-pill" onclick="document.getElementById('text-cmd-input').value='summary'">summary</button>
                         <button class="sample-pill" onclick="document.getElementById('text-cmd-input').value='help'">help</button>
                     </div>
@@ -244,11 +248,13 @@
                 formData.append('text_body', textCmd);
                 addWAChatBubble('out', null, textCmd);
             } else if (currentTab==='invoice' && selectedFile) {
-                formData.append('message_type','image');
+                const isPdf = selectedFile.name && selectedFile.name.toLowerCase().endsWith('.pdf');
+                formData.append('message_type', isPdf ? 'document' : 'image');
                 formData.append('file', selectedFile, selectedFile.name);
-                addWAChatBubble('out', selectedFile, null);
+                addWAChatBubble('out', isPdf ? null : selectedFile, isPdf ? '📎 '+selectedFile.name : null);
             } else if (currentTab==='sample' && selectedSample) {
-                formData.append('message_type','image');
+                const isPdf = selectedSample.toLowerCase().endsWith('.pdf');
+                formData.append('message_type', isPdf ? 'document' : 'image');
                 formData.append('sample_file', selectedSample);
                 addWAChatBubble('out', null, '📎 '+selectedSample);
             } else {
@@ -297,11 +303,14 @@
         const wrap = document.createElement('div'); wrap.className = 'wa-bubble-wrap '+direction;
         const bubble = document.createElement('div'); bubble.className = 'wa-bubble '+direction;
         if (fileObj) {
-            const img = document.createElement('img');
-            const reader = new FileReader();
-            reader.onload = e=>{ img.src = e.target.result; };
-            reader.readAsDataURL(fileObj);
-            bubble.appendChild(img);
+            const isPdf = fileObj.name && fileObj.name.toLowerCase().endsWith('.pdf');
+            if (!isPdf) {
+                const img = document.createElement('img');
+                const reader = new FileReader();
+                reader.onload = e=>{ img.src = e.target.result; };
+                reader.readAsDataURL(fileObj);
+                bubble.appendChild(img);
+            }
         }
         if (text) {
             const formatted = text.replace(/\*(.*?)\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');

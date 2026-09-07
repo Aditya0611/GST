@@ -476,6 +476,71 @@ function truncateExceptionReason(text, maxLen) {
     return s.slice(0, max - 1) + '…';
 }
 
+/** Bill has ITC-specific attention (Sec 17(5), partial, or 2B). */
+function hasItcIssue(inv) {
+    const rs = inv.review_status || (inv.is_approved ? 'approved' : 'needs_review');
+    if (rs === 'rejected' || rs === 'skipped') return false;
+    if (inv.itc_partial) return true;
+    if (inv.is_itc_eligible === false || inv.is_itc_eligible === 0) return true;
+    const blocked = parseFloat(inv.itc_blocked_gst) || 0;
+    if (blocked > 0) return true;
+    const m2b = (inv.gstr2b_match_status || 'none').toLowerCase();
+    return m2b === 'unmatched' || m2b === 'mismatch';
+}
+
+function scoreItcIssue(inv) {
+    let score = 0;
+    const m2b = (inv.gstr2b_match_status || 'none').toLowerCase();
+    if (m2b === 'mismatch') score += 40;
+    else if (m2b === 'unmatched') score += 30;
+    if (inv.itc_partial) score += 25;
+    else if (inv.is_itc_eligible === false || inv.is_itc_eligible === 0) score += 20;
+    const blocked = parseFloat(inv.itc_blocked_gst) || 0;
+    score += Math.min(20, blocked / 500);
+    return score;
+}
+
+function getItcIssueSummary(inv) {
+    const m2b = (inv.gstr2b_match_status || 'none').toLowerCase();
+    if (m2b === 'mismatch') {
+        return {
+            badge: '2B mismatch',
+            badgeClass: 'is-2b',
+            reason: inv.gstr2b_mismatch_reason || 'Amount or date differs from GSTR-2B',
+            amount: parseFloat(inv.itc_eligible_cgst || 0) + parseFloat(inv.itc_eligible_sgst || 0) + parseFloat(inv.itc_eligible_igst || 0),
+            amountClass: 'is-warn',
+        };
+    }
+    if (m2b === 'unmatched') {
+        return {
+            badge: 'Not in 2B',
+            badgeClass: 'is-2b',
+            reason: 'Invoice missing from imported GSTR-2B — Sec 16(2)(aa)',
+            amount: parseFloat(inv.itc_eligible_cgst || 0) + parseFloat(inv.itc_eligible_sgst || 0) + parseFloat(inv.itc_eligible_igst || 0),
+            amountClass: 'is-warn',
+        };
+    }
+    if (inv.itc_partial) {
+        const blocked = parseFloat(inv.itc_blocked_gst) || 0;
+        const elig = parseFloat(inv.itc_eligible_cgst || 0) + parseFloat(inv.itc_eligible_sgst || 0) + parseFloat(inv.itc_eligible_igst || 0);
+        return {
+            badge: 'Partial ITC',
+            badgeClass: 'is-partial',
+            reason: inv.itc_ineligibility_reason || 'Mixed bill — some lines blocked under Sec 17(5)',
+            amount: blocked > 0 ? blocked : elig,
+            amountClass: blocked > 0 ? 'is-blocked' : 'is-warn',
+        };
+    }
+    const blocked = parseFloat(inv.itc_blocked_gst) || 0;
+    return {
+        badge: 'Blocked',
+        badgeClass: 'is-blocked',
+        reason: inv.itc_ineligibility_reason || 'Ineligible under Sec 17(5)',
+        amount: blocked || (parseFloat(inv.total_cgst || 0) + parseFloat(inv.total_sgst || 0) + parseFloat(inv.total_igst || 0)),
+        amountClass: 'is-blocked',
+    };
+}
+
 /** Why this bill is in the CA queue (rules / 2B / HITL — not AI confidence). */
 function getExceptionReasons(inv) {
     const reasons = [];
@@ -527,6 +592,9 @@ const state = {
     activeModule: 'gst',
     itrReturnId: null,
     itrEstimate: null,
+    itrExtracted: null,
+    itrLastDocuments: [],
+    itrLatestForm16Path: null,
     selectedMonth: '', // Set on load to latest invoice month / current month (not "all")
     monthCalViewYear: new Date().getFullYear(),
     categoryFilter: '', // Empty = all categories
@@ -612,6 +680,12 @@ const elements = {
     sparklineTotalLabel: document.getElementById('sparkline-total-label'),
     sparklineTrendLabel: document.getElementById('sparkline-trend-label'),
     sparklineCanvas: document.getElementById('itc-sparkline-chart'),
+    itcSectionPanel: document.getElementById('itc-section-panel'),
+    itcIssuesPanel: document.getElementById('itc-issues-panel'),
+    itcIssuesList: document.getElementById('itc-issues-list'),
+    itcIssuesSubtitle: document.getElementById('itc-issues-subtitle'),
+    itcIssuesViewAll: document.getElementById('itc-issues-view-all'),
+    kpiItcCard: document.getElementById('kpi-itc-card'),
     
     // Filing list
     filingStatusTitle: document.getElementById('filing-status-title'),
@@ -812,6 +886,7 @@ function setupEventListeners() {
         updateClientGstinLabel();
         refreshGstSessionStatus();
         resetItrPanelForClient();
+        tryLoadItrReturnForFy(true).catch(() => {});
         try {
             const month = await resolveMonthForClient(state.selectedClientPhone, { preferSaved: true });
             if (state.selectedMonth === month) {
@@ -954,19 +1029,32 @@ function setupEventListeners() {
         });
     });
 
-    // Collapse/expand period totals (kept off by default for CA focus)
-    const togglePeriod = document.getElementById('toggle-period-summary');
-    const periodPanel = document.getElementById('period-summary-panel');
-    const periodChevron = document.getElementById('period-summary-chevron');
-    if (togglePeriod && periodPanel) {
-        togglePeriod.addEventListener('click', () => {
-            const open = periodPanel.style.display !== 'none';
-            periodPanel.style.display = open ? 'none' : 'block';
-            if (periodChevron) periodChevron.textContent = open ? 'expand_more' : 'expand_less';
-            if (!open) {
-                // Chart needs a visible canvas to size correctly
-                renderITCSparkline();
+    // ITC trend chart (collapsed — canvas must be visible to size)
+    const toggleItcTrends = document.getElementById('toggle-itc-trends');
+    const itcTrendsPanel = document.getElementById('itc-trends-panel');
+    const itcTrendsChevron = document.getElementById('itc-trends-chevron');
+    if (toggleItcTrends && itcTrendsPanel) {
+        toggleItcTrends.addEventListener('click', () => {
+            const open = itcTrendsPanel.style.display !== 'none';
+            itcTrendsPanel.style.display = open ? 'none' : 'block';
+            if (itcTrendsChevron) itcTrendsChevron.textContent = open ? 'expand_more' : 'expand_less';
+            if (!open) renderITCSparkline();
+        });
+    }
+
+    if (elements.kpiItcCard) {
+        elements.kpiItcCard.addEventListener('click', () => {
+            if (elements.itcSectionPanel) {
+                elements.itcSectionPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
+        });
+    }
+    if (elements.itcIssuesViewAll) {
+        elements.itcIssuesViewAll.addEventListener('click', () => {
+            const tab = document.querySelector('.tab-btn[data-filter="itc"]');
+            if (tab) tab.click();
+            const table = document.querySelector('.queue-table');
+            if (table) table.scrollIntoView({ behavior: 'smooth', block: 'start' });
         });
     }
 
@@ -2339,6 +2427,7 @@ async function fetchData() {
 
         // 3. Populate widgets
         updateDashboardMetrics(metrics);
+        renderItcIssuesList();
         renderInvoiceTable();
         refreshMonthScopeBanner();
 
@@ -3298,6 +3387,10 @@ function updateDashboardMetrics(metrics) {
         elements.itcUtilisationPct.textContent = `${utilisationPct.toFixed(1)}%`;
     }
 
+    if (elements.itcSectionPanel) {
+        elements.itcSectionPanel.style.display = state.selectedClientPhone ? 'block' : 'none';
+    }
+
     elements.filingStatusTitle.textContent = `REVIEW READINESS — ${periodLabel}`;
 
     const pending = metrics.pending_review ?? 0;
@@ -3455,6 +3548,8 @@ function getFilteredInvoices() {
         filtered = filtered.filter(inv => !inv.is_calculation_correct);
     } else if (state.activeFilter === "hitl" || state.activeFilter === "exceptions") {
         filtered = filtered.filter(isExceptionInvoice);
+    } else if (state.activeFilter === "itc") {
+        filtered = filtered.filter(hasItcIssue);
     }
 
     if (state.categoryFilter) {
@@ -3473,13 +3568,57 @@ function getFilteredInvoices() {
     }
 
     const isExceptionTab = state.activeFilter === 'exceptions' || state.activeFilter === 'hitl';
-    if (isExceptionTab) {
+    const isItcTab = state.activeFilter === 'itc';
+    if (isExceptionTab || isItcTab) {
         filtered.sort((a, b) => {
-            const d = scoreExceptionRisk(b) - scoreExceptionRisk(a);
+            const scoreFn = isItcTab ? scoreItcIssue : scoreExceptionRisk;
+            const d = scoreFn(b) - scoreFn(a);
             return d !== 0 ? d : (b.id || 0) - (a.id || 0);
         });
     }
     return filtered;
+}
+
+function renderItcIssuesList() {
+    if (!elements.itcIssuesList) return;
+
+    const issues = (state.invoices || []).filter(hasItcIssue);
+    issues.sort((a, b) => scoreItcIssue(b) - scoreItcIssue(a));
+
+    const periodLabel = formatYearMonthLabel(state.selectedMonth);
+    if (elements.itcIssuesSubtitle) {
+        elements.itcIssuesSubtitle.textContent = issues.length
+            ? `${issues.length} bill(s) with blocked, partial, or 2B flags · ${periodLabel}`
+            : `No ITC flags in ${periodLabel}`;
+    }
+    if (elements.itcIssuesViewAll) {
+        elements.itcIssuesViewAll.style.display = issues.length > 5 ? 'inline' : 'none';
+    }
+
+    if (!issues.length) {
+        elements.itcIssuesList.innerHTML = '<div class="itc-issues-empty">All clear — no blocked, partial, or 2B ITC issues in this view.</div>';
+        return;
+    }
+
+    elements.itcIssuesList.innerHTML = '';
+    issues.slice(0, 5).forEach((inv) => {
+        const summary = getItcIssueSummary(inv);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'itc-issue-row';
+        btn.innerHTML = `
+            <div class="itc-issue-main">
+                <div class="itc-issue-supplier">
+                    <span class="itc-issue-badge ${summary.badgeClass}">${summary.badge}</span>
+                    ${(inv.supplier_name || 'Unknown supplier').replace(/</g, '&lt;')}
+                </div>
+                <div class="itc-issue-reason">${summary.reason.replace(/</g, '&lt;')}</div>
+            </div>
+            <div class="itc-issue-amt ${summary.amountClass}">${formatCurrency(summary.amount)}</div>
+        `;
+        btn.addEventListener('click', () => openInvoiceAudit(inv.id));
+        elements.itcIssuesList.appendChild(btn);
+    });
 }
 
 function updateBulkBar() {
@@ -3572,14 +3711,20 @@ function renderInvoiceTable() {
     });
 
     const isExceptionTab = state.activeFilter === 'exceptions' || state.activeFilter === 'hitl';
+    const isItcTab = state.activeFilter === 'itc';
     const pendingCount = state.invoices.filter(isPendingReview).length;
     const exceptionCount = state.invoices.filter(isExceptionInvoice).length;
-    if (isExceptionTab) {
+    const itcIssueCount = state.invoices.filter(hasItcIssue).length;
+    if (isItcTab) {
+        elements.recordCountTxt.textContent = `${itcIssueCount} ITC flags · ${filtered.length} shown · ${formatYearMonthLabel(state.selectedMonth)}`;
+        elements.recordCountTxt.style.color = itcIssueCount > 0 ? '#F0B35A' : '#2BB896';
+    } else if (isExceptionTab) {
         elements.recordCountTxt.textContent = `${exceptionCount} need review · highest risk first · ${formatYearMonthLabel(state.selectedMonth)}`;
+        elements.recordCountTxt.style.color = exceptionCount > 0 ? '#F0B35A' : '#2BB896';
     } else {
         elements.recordCountTxt.textContent = `${pendingCount} pending · ${filtered.length} shown · ${formatYearMonthLabel(state.selectedMonth)}`;
+        elements.recordCountTxt.style.color = exceptionCount > 0 ? '#F0B35A' : '#2BB896';
     }
-    elements.recordCountTxt.style.color = exceptionCount > 0 ? '#F0B35A' : '#2BB896';
     if (elements.queueViewCount) {
         elements.queueViewCount.textContent = `${filtered.length} in this view`;
     }
@@ -3628,6 +3773,18 @@ function renderInvoiceTable() {
                    <button type="button" class="empty-btn" data-empty-action="close">
                      <span class="material-symbols-outlined text-[16px]">event_available</span> Month close
                    </button>`;
+        } else if (isItcTab) {
+            emptyClass += ' is-clear';
+            icon = 'verified_user';
+            emptyTitle = 'No ITC issues';
+            emptySub = 'No blocked, partial, or 2B mismatches in this period.';
+            actions = `
+                <button type="button" class="empty-btn" data-empty-action="exceptions">
+                    <span class="material-symbols-outlined text-[16px]">fact_check</span> Needs review
+                </button>
+                <button type="button" class="empty-btn" data-empty-action="all-bills">
+                    <span class="material-symbols-outlined text-[16px]">receipt_long</span> All bills
+                </button>`;
         } else if (!isExceptionTab) {
             emptyClass += ' is-muted';
             icon = 'filter_alt';
@@ -3687,13 +3844,15 @@ function renderInvoiceTable() {
             statusBadge = `<span class="badge badge-pending"><span class="material-symbols-outlined" style="font-size:13px;">person_search</span> Review</span>`;
         }
 
-        const exceptionReasons = isExceptionTab ? getExceptionReasons(inv) : [];
-        const reasonTitle = exceptionReasons.join(' · ').replace(/"/g, '&quot;');
-        const reasonHtml = exceptionReasons.length
-            ? `<div class="exception-reasons" title="${reasonTitle}">${exceptionReasons.slice(0, 2).map((r) =>
+        const rowReasons = isItcTab
+            ? [getItcIssueSummary(inv).reason]
+            : (isExceptionTab ? getExceptionReasons(inv) : []);
+        const reasonTitle = rowReasons.join(' · ').replace(/"/g, '&quot;');
+        const reasonHtml = rowReasons.length
+            ? `<div class="exception-reasons" title="${reasonTitle}">${rowReasons.slice(0, 2).map((r) =>
                 `<span class="exception-chip">${r.replace(/</g, '&lt;')}</span>`
-              ).join('')}${exceptionReasons.length > 2
-                ? `<span class="exception-chip is-more">+${exceptionReasons.length - 2}</span>`
+              ).join('')}${rowReasons.length > 2
+                ? `<span class="exception-chip is-more">+${rowReasons.length - 2}</span>`
                 : ''}</div>`
             : '';
 
@@ -4100,21 +4259,23 @@ function renderLineItcBreakdown(invoice) {
     lines.forEach(line => {
         const gst = (parseFloat(line.cgst) || 0) + (parseFloat(line.sgst) || 0) + (parseFloat(line.igst) || 0);
         const eligible = line.is_itc_eligible === true || line.is_itc_eligible === 1;
+        const claimGst = eligible ? gst : 0;
+        const reason = line.itc_ineligibility_reason
+            || (line.itc_rule_code ? `Rule ${line.itc_rule_code}` : '');
         const tr = document.createElement('tr');
         tr.style.borderTop = '1px solid rgba(255,255,255,0.04)';
         tr.innerHTML = `
             <td class="py-2 pr-2 text-on-surface">${(line.description || '—').slice(0, 42)}</td>
             <td class="py-2 pr-2 text-on-surface-variant">${line.inferred_category || '—'}</td>
             <td class="py-2 pr-2 text-right font-semibold" style="font-variant-numeric:tabular-nums;">${formatCurrency(gst)}</td>
-            <td class="py-2">
+            <td class="py-2 pr-2 text-right font-semibold ${eligible ? 'text-secondary' : 'text-on-surface-variant'}" style="font-variant-numeric:tabular-nums;">${eligible ? formatCurrency(claimGst) : '—'}</td>
+            <td class="py-2 pr-2">
                 <span class="text-[11px] font-bold ${eligible ? 'text-secondary' : 'text-error'}">
                     ${eligible ? 'Eligible' : 'Blocked'}
                 </span>
             </td>
+            <td class="py-2 line-itc-reason">${eligible ? '—' : (reason || 'Sec 17(5)').replace(/</g, '&lt;')}</td>
         `;
-        if (!eligible && line.itc_ineligibility_reason) {
-            tr.title = line.itc_ineligibility_reason;
-        }
         elements.lineItcBody.appendChild(tr);
     });
 
@@ -4571,9 +4732,313 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 // --- Income Tax Phase 1 module ---
+const ITR_REVIEW_FIELDS = [
+    { key: 'gross_salary', label: 'Gross salary', inputId: 'itr-gross', money: true },
+    { key: 'exemptions', label: 'Exemptions (u/s 10)', inputId: 'itr-exemptions', money: true },
+    { key: 'other_income', label: 'Other income', inputId: 'itr-other', money: true },
+    { key: 'deductions_80c', label: '80C deductions', inputId: 'itr-80c', money: true },
+    { key: 'tds', label: 'TDS', inputId: 'itr-tds', money: true },
+    { key: 'pan', label: 'PAN', inputId: 'itr-pan-input', money: false },
+];
+
+function itrNumInput(id) {
+    return Number((document.getElementById(id) || {}).value || 0);
+}
+
+function itrAmountsClose(a, b, tol = 1) {
+    return Math.abs(Number(a || 0) - Number(b || 0)) <= tol;
+}
+
+function parseItrExtracted(row) {
+    if (!row) return null;
+    if (row.extracted && typeof row.extracted === 'object') return row.extracted;
+    if (row.extracted_json) {
+        try { return JSON.parse(row.extracted_json); } catch (_) { return null; }
+    }
+    return null;
+}
+
+function getItrSavedFieldValues() {
+    const pan = ((document.getElementById('itr-pan-input') || {}).value || '').trim().toUpperCase();
+    return {
+        gross_salary: itrNumInput('itr-gross'),
+        exemptions: itrNumInput('itr-exemptions'),
+        other_income: itrNumInput('itr-other'),
+        deductions_80c: itrNumInput('itr-80c'),
+        tds: itrNumInput('itr-tds'),
+        pan,
+    };
+}
+
+function formatItrReviewValue(field, value) {
+    if (value === null || value === undefined || value === '') return '—';
+    if (field.money) return inr(value);
+    return String(value);
+}
+
+function compareItrField(field, extracted, saved) {
+    const exVal = extracted ? extracted[field.key] : null;
+    const hasExtract = exVal !== null && exVal !== undefined && exVal !== '';
+    if (!hasExtract) return { status: 'missing', label: 'Not in extract' };
+    if (field.money) {
+        if (itrAmountsClose(exVal, saved[field.key])) return { status: 'match', label: 'Match' };
+        return { status: 'diff', label: 'Mismatch' };
+    }
+    const a = String(exVal || '').trim().toUpperCase();
+    const b = String(saved[field.key] || '').trim().toUpperCase();
+    if (!a && !b) return { status: 'missing', label: 'Not in extract' };
+    if (a === b) return { status: 'match', label: 'Match' };
+    return { status: 'diff', label: 'Mismatch' };
+}
+
+function clearItrFieldHighlights() {
+    document.querySelectorAll('.itr-field[data-itr-field]').forEach((el) => {
+        el.classList.remove('is-extract-diff');
+    });
+}
+
+function updateItrFieldHighlights(extracted) {
+    clearItrFieldHighlights();
+    if (!extracted) return;
+    const saved = getItrSavedFieldValues();
+    ITR_REVIEW_FIELDS.forEach((field) => {
+        const cmp = compareItrField(field, extracted, saved);
+        if (cmp.status !== 'diff') return;
+        const wrap = document.querySelector(`.itr-field[data-itr-field="${field.key}"]`);
+        if (wrap) wrap.classList.add('is-extract-diff');
+    });
+}
+
+function renderForm16Review(row) {
+    const panel = document.getElementById('itr-form16-review');
+    const body = document.getElementById('itr-review-body');
+    const meta = document.getElementById('itr-review-meta');
+    const summaryBadge = document.getElementById('itr-review-summary-badge');
+    const viewLink = document.getElementById('itr-view-form16-link');
+
+    const extracted = parseItrExtracted(row);
+    state.itrExtracted = extracted;
+
+    const docs = row && row.documents ? row.documents : [];
+    const form16Doc = docs.find((d) => (d.doc_type || '').toLowerCase() === 'form16') || docs[0];
+    state.itrLatestForm16Path = form16Doc && form16Doc.file_path ? form16Doc.file_path : null;
+
+    if (!panel || !body) return;
+
+    if (!extracted) {
+        panel.style.display = 'none';
+        clearItrFieldHighlights();
+        if (viewLink) viewLink.style.display = 'none';
+        updateItrOnboardingUI();
+        return;
+    }
+
+    panel.style.display = '';
+    panel.classList.toggle('is-verified', (row.status || '') === 'approved');
+
+    if (meta) {
+        const bits = [];
+        if (extracted.employee_name) bits.push(`Employee: <strong>${extracted.employee_name}</strong>`);
+        if (extracted.employer_name) bits.push(`Employer: ${extracted.employer_name}`);
+        if (extracted.financial_year) bits.push(`FY on Form 16: ${extracted.financial_year}`);
+        if (form16Doc && form16Doc.original_filename) bits.push(`File: ${form16Doc.original_filename}`);
+        meta.innerHTML = bits.length ? bits.join(' · ') : 'Form 16 uploaded — verify amounts below.';
+    }
+
+    if (viewLink) {
+        viewLink.style.display = state.itrLatestForm16Path ? '' : 'none';
+    }
+
+    const saved = getItrSavedFieldValues();
+    let diffCount = 0;
+    body.innerHTML = '';
+
+    ITR_REVIEW_FIELDS.forEach((field) => {
+        const cmp = compareItrField(field, extracted, saved);
+        if (cmp.status === 'diff') diffCount += 1;
+
+        const tr = document.createElement('tr');
+        const exDisplay = formatItrReviewValue(field, extracted[field.key]);
+        const savedDisplay = field.money ? inr(saved[field.key]) : (saved[field.key] || '—');
+
+        const useBtn = cmp.status === 'diff'
+            ? `<button type="button" class="itr-review-btn is-secondary" style="height:28px;padding:0 8px;font-size:11px;" data-itr-use="${field.key}">Use extracted</button>`
+            : '';
+
+        tr.innerHTML = `
+            <td>${field.label}</td>
+            <td class="num">${exDisplay}</td>
+            <td class="num">${savedDisplay}</td>
+            <td><span class="itr-review-status is-${cmp.status}">${cmp.label}</span></td>
+            <td class="text-right">${useBtn}</td>
+        `;
+        body.appendChild(tr);
+    });
+
+    if (summaryBadge) {
+        if (diffCount === 0) {
+            summaryBadge.className = 'itr-review-status is-match';
+            summaryBadge.textContent = 'All fields match';
+        } else {
+            summaryBadge.className = 'itr-review-status is-diff';
+            summaryBadge.textContent = `${diffCount} mismatch${diffCount === 1 ? '' : 'es'} — review`;
+        }
+    }
+
+    body.querySelectorAll('[data-itr-use]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            applyForm16ExtractedField(btn.getAttribute('data-itr-use'));
+        });
+    });
+
+    updateItrFieldHighlights(extracted);
+    updateItrOnboardingUI();
+}
+
+function itrReviewContext(status) {
+    return {
+        extracted: state.itrExtracted,
+        documents: state.itrLatestForm16Path ? [{ file_path: state.itrLatestForm16Path }] : [],
+        status: status || ((document.getElementById('itr-status-badge') || {}).textContent || ''),
+    };
+}
+
+function applyForm16ExtractedField(key) {
+    const ex = state.itrExtracted;
+    if (!ex || !key) return;
+    const field = ITR_REVIEW_FIELDS.find((f) => f.key === key);
+    if (!field) return;
+    const el = document.getElementById(field.inputId);
+    if (!el) return;
+    const val = ex[key];
+    if (val === null || val === undefined || val === '') return;
+    el.value = field.money ? Number(val) : String(val).toUpperCase();
+    renderForm16Review(itrReviewContext());
+    showToast(`Applied extracted ${field.label.toLowerCase()}`);
+}
+
+function applyForm16ExtractedAll() {
+    const ex = state.itrExtracted;
+    if (!ex) {
+        showToast('No Form 16 extraction to apply', true);
+        return;
+    }
+    ITR_REVIEW_FIELDS.forEach((field) => {
+        const val = ex[field.key];
+        if (val === null || val === undefined || val === '') return;
+        const el = document.getElementById(field.inputId);
+        if (!el) return;
+        el.value = field.money ? Number(val) : String(val).toUpperCase();
+    });
+    const fy = ex.financial_year;
+    const fyEl = document.getElementById('itr-fy-select');
+    if (fy && fyEl) {
+        if (![...fyEl.options].some((o) => o.value === fy)) {
+            const opt = document.createElement('option');
+            opt.value = fy;
+            opt.textContent = fy;
+            fyEl.appendChild(opt);
+        }
+        fyEl.value = fy;
+    }
+    renderForm16Review(itrReviewContext());
+    showToast('Applied all extracted values — click Save & estimate to confirm');
+}
+
+async function openForm16Document() {
+    const path = state.itrLatestForm16Path;
+    if (!path) {
+        showToast('No Form 16 file on this return', true);
+        return;
+    }
+    try {
+        const res = await apiFetch(`/api/files/${path}`);
+        if (!res.ok) throw new Error('Unable to load Form 16');
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const w = window.open(url, '_blank');
+        if (!w) showToast('Allow pop-ups to view Form 16', true);
+        setTimeout(() => { try { URL.revokeObjectURL(url); } catch (_) {} }, 60000);
+    } catch (e) {
+        showToast(e.message || 'Could not open Form 16', true);
+    }
+}
+
 function inr(n) {
     const v = Number(n || 0);
     return "\u20B9" + v.toLocaleString("en-IN", { maximumFractionDigits: 2 });
+}
+
+function updateItrOnboardingUI() {
+    const onboarding = document.getElementById('itr-onboarding-panel');
+    const banner = document.getElementById('itr-return-banner');
+    const bannerText = document.getElementById('itr-return-banner-text');
+    const stepOpen = document.getElementById('itr-step-open');
+    const stepUpload = document.getElementById('itr-step-upload');
+    const stepReview = document.getElementById('itr-step-review');
+    const hasReturn = !!state.itrReturnId;
+    const hasExtract = !!state.itrExtracted;
+    const hasEstimate = !!state.itrEstimate;
+
+    if (onboarding) onboarding.style.display = hasReturn && hasExtract ? 'none' : '';
+    if (banner) banner.style.display = hasReturn ? 'flex' : 'none';
+    if (bannerText && hasReturn) {
+        const fy = (document.getElementById('itr-fy-select') || {}).value || '';
+        bannerText.textContent = hasExtract
+            ? `FY ${fy} return open — review extraction below, then Save & estimate.`
+            : `FY ${fy} return open — upload Form 16 or enter amounts manually.`;
+    }
+
+    const setStep = (el, mode) => {
+        if (!el) return;
+        el.classList.remove('is-active', 'is-done');
+        if (mode) el.classList.add(mode);
+    };
+    if (!hasReturn) {
+        setStep(stepOpen, 'is-active');
+        setStep(stepUpload, '');
+        setStep(stepReview, '');
+    } else if (!hasExtract) {
+        setStep(stepOpen, 'is-done');
+        setStep(stepUpload, 'is-active');
+        setStep(stepReview, '');
+    } else if (!hasEstimate) {
+        setStep(stepOpen, 'is-done');
+        setStep(stepUpload, 'is-done');
+        setStep(stepReview, 'is-active');
+    } else {
+        setStep(stepOpen, 'is-done');
+        setStep(stepUpload, 'is-done');
+        setStep(stepReview, 'is-done');
+    }
+}
+
+async function tryLoadItrReturnForFy(silent = true) {
+    if (!state.selectedClientPhone || state.activeModule !== 'itr') {
+        updateItrOnboardingUI();
+        return false;
+    }
+    const fy = (document.getElementById('itr-fy-select') || {}).value || '2025-26';
+    try {
+        const response = await apiFetch(
+            `/api/itr/returns?client_phone=${encodeURIComponent(state.selectedClientPhone)}`
+        );
+        const list = await readJsonOrThrow(response, 'Could not list ITR returns');
+        const match = (list || []).find((r) => r.financial_year === fy);
+        if (!match) {
+            updateItrOnboardingUI();
+            return false;
+        }
+        const detail = await apiFetch(`/api/itr/returns/${match.id}`);
+        const full = await readJsonOrThrow(detail, 'Could not load ITR return');
+        fillItrFormFromReturn(full);
+        if (!silent) showToast(`Loaded FY ${fy} return`);
+        return true;
+    } catch (e) {
+        if (!silent) showToast(e.message || 'Could not load ITR return', true);
+        updateItrOnboardingUI();
+        return false;
+    }
 }
 
 function setModule(module) {
@@ -4594,12 +5059,16 @@ function setModule(module) {
         const c = getSelectedClient();
         const panEl = document.getElementById("itr-pan-input");
         if (panEl && c && c.pan && !panEl.value) panEl.value = c.pan;
+        tryLoadItrReturnForFy(true).catch(() => updateItrOnboardingUI());
     }
 }
 
 function resetItrPanelForClient() {
     state.itrReturnId = null;
     state.itrEstimate = null;
+    state.itrExtracted = null;
+    state.itrLastDocuments = [];
+    state.itrLatestForm16Path = null;
     const badge = document.getElementById("itr-status-badge");
     if (badge) { badge.style.display = "none"; badge.textContent = ""; }
     ["itr-gross","itr-exemptions","itr-other","itr-80c","itr-tds","itr-advance"].forEach(id => {
@@ -4613,11 +5082,13 @@ function resetItrPanelForClient() {
     if (panEl) panEl.value = (c && c.pan) || "";
     renderItrEstimate(null);
     renderItrDocs([]);
+    renderForm16Review(null);
     setItrActionsEnabled(false);
+    updateItrOnboardingUI();
     const hint = document.getElementById("itr-upload-hint");
     if (hint) hint.textContent = state.selectedClientPhone
-        ? "Open / create a return for the selected FY."
-        : "Select a client and open a FY first.";
+        ? "Step 1: Click Open / create return above."
+        : "Select a client in the sidebar first.";
 }
 
 function setItrActionsEnabled(on) {
@@ -4660,13 +5131,17 @@ function renderItrEstimate(est) {
 function renderItrDocs(docs) {
     const el = document.getElementById("itr-docs-list");
     if (!el) return;
-    if (!docs || !docs.length) {
+    const list = docs && docs.length ? docs : (state.itrLastDocuments || []);
+    if (!list.length) {
         el.textContent = "No Form 16 uploaded yet.";
         return;
     }
-    el.innerHTML = '<div class="font-semibold mb-1">Documents</div>' + docs.map(d => {
+    state.itrLastDocuments = list;
+    const latest = list.find((d) => (d.doc_type || '').toLowerCase() === 'form16') || list[0];
+    if (latest && latest.file_path) state.itrLatestForm16Path = latest.file_path;
+    el.innerHTML = '<div class="font-semibold mb-1">Documents</div>' + list.map((d) => {
         const name = d.original_filename || d.file_path || "file";
-        return "<div>" + (d.doc_type || "form16") + ": " + name + "</div>";
+        return "<div>form16: " + name + "</div>";
     }).join("");
 }
 
@@ -4704,8 +5179,10 @@ function fillItrFormFromReturn(row) {
         try { est = JSON.parse(row.estimate_json); } catch (_) { est = null; }
     }
     renderItrEstimate(est);
-    renderItrDocs(row.documents || []);
+    renderItrDocs(row.documents || state.itrLastDocuments || []);
+    renderForm16Review(row);
     setItrActionsEnabled(true);
+    updateItrOnboardingUI();
     const hint = document.getElementById("itr-upload-hint");
     if (hint) hint.textContent = "PDF or image \u00B7 AI extract with manual edit fallback.";
 }
@@ -4715,22 +5192,42 @@ async function openOrCreateItrReturn() {
         showToast("Select a client first", true);
         return;
     }
-    const fy = (document.getElementById("itr-fy-select") || {}).value || "2025-26";
-    const pan = ((document.getElementById("itr-pan-input") || {}).value || "").trim().toUpperCase();
-    const response = await apiFetch("/api/itr/returns", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            client_phone: state.selectedClientPhone,
-            financial_year: fy,
-            pan: pan || null,
-        }),
-    });
-    const row = await readJsonOrThrow(response, "Could not open ITR return");
-    const detail = await apiFetch("/api/itr/returns/" + row.id);
-    const full = await readJsonOrThrow(detail, "Could not load ITR return");
+    const openBtn = document.getElementById("itr-open-btn");
+    if (openBtn) {
+        openBtn.disabled = true;
+        openBtn.textContent = "Opening…";
+    }
+    try {
+        const fy = (document.getElementById("itr-fy-select") || {}).value || "2025-26";
+        const pan = ((document.getElementById("itr-pan-input") || {}).value || "").trim().toUpperCase();
+        const response = await apiFetch("/api/itr/returns", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                client_phone: state.selectedClientPhone,
+                financial_year: fy,
+                pan: pan || null,
+            }),
+        });
+        const row = await readJsonOrThrow(response, "Could not open ITR return");
+        const detail = await apiFetch("/api/itr/returns/" + row.id);
+        const full = await readJsonOrThrow(detail, "Could not load ITR return");
+        fillItrFormFromReturn(full);
+        showToast("Return ready for FY " + full.financial_year + " — upload Form 16 or edit fields");
+    } finally {
+        if (openBtn) {
+            openBtn.disabled = false;
+            openBtn.textContent = "Open / create return";
+        }
+    }
+}
+
+async function reloadItrReturnFull() {
+    if (!state.itrReturnId) return null;
+    const detail = await apiFetch("/api/itr/returns/" + state.itrReturnId);
+    const full = await readJsonOrThrow(detail, "Reload failed");
     fillItrFormFromReturn(full);
-    showToast("Opened FY " + full.financial_year);
+    return full;
 }
 
 async function saveItrEstimate() {
@@ -4753,8 +5250,8 @@ async function saveItrEstimate() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
     });
-    const updated = await readJsonOrThrow(response, "Save failed");
-    fillItrFormFromReturn(updated);
+    await readJsonOrThrow(response, "Save failed");
+    await reloadItrReturnFull();
     showToast("Estimate updated");
 }
 
@@ -4782,8 +5279,10 @@ async function uploadForm16() {
     fillItrFormFromReturn(full);
     if (data.extract_error) {
         showToast(data.hint || data.extract_error, true);
+    } else if (parseItrExtracted(full)) {
+        showToast("Form 16 extracted — review fields before saving");
     } else {
-        showToast("Form 16 processed");
+        showToast("Form 16 uploaded");
     }
 }
 
@@ -4796,7 +5295,7 @@ async function approveItrReturn() {
         body: JSON.stringify({ ca_notes: notes }),
     });
     const data = await readJsonOrThrow(response, "Approve failed");
-    if (data.itr) fillItrFormFromReturn(Object.assign({}, data.itr, { estimate: state.itrEstimate }));
+    await reloadItrReturnFull();
     showToast("ITR prep approved");
 }
 
@@ -4849,8 +5348,40 @@ function setupItrModule() {
     if (exportBtn) exportBtn.addEventListener("click", () => {
         exportItrDraft().catch(e => showToast(e.message || "Export failed", true));
     });
+    const applyExtractedBtn = document.getElementById("itr-apply-extracted-btn");
+    if (applyExtractedBtn) applyExtractedBtn.addEventListener("click", applyForm16ExtractedAll);
+    const reviewSaveBtn = document.getElementById("itr-review-save-btn");
+    if (reviewSaveBtn) reviewSaveBtn.addEventListener("click", () => {
+        saveItrEstimate().catch(e => showToast(e.message || "Save failed", true));
+    });
+    const viewForm16Link = document.getElementById("itr-view-form16-link");
+    if (viewForm16Link) {
+        viewForm16Link.addEventListener("click", (e) => {
+            e.preventDefault();
+            openForm16Document().catch(err => showToast(err.message || "Open failed", true));
+        });
+    }
+    ITR_REVIEW_FIELDS.forEach((field) => {
+        const el = document.getElementById(field.inputId);
+        if (!el) return;
+        el.addEventListener("input", () => {
+            if (!state.itrExtracted) return;
+            renderForm16Review(itrReviewContext());
+        });
+    });
+    const fySelect = document.getElementById("itr-fy-select");
+    if (fySelect) {
+        fySelect.addEventListener("change", () => {
+            resetItrPanelForClient();
+            const c = getSelectedClient();
+            const panEl = document.getElementById("itr-pan-input");
+            if (panEl && c && c.pan) panEl.value = c.pan;
+            tryLoadItrReturnForFy(true).catch(() => updateItrOnboardingUI());
+        });
+    }
     let saved = "gst";
     try { saved = localStorage.getItem("DASHBOARD_MODULE") || "gst"; } catch (_) {}
     setModule(saved);
     resetItrPanelForClient();
+    updateItrOnboardingUI();
 }

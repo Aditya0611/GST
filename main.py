@@ -37,6 +37,7 @@ from processor import process_invoice, evaluate_itc_eligibility, validate_gstin
 import re
 import sandbox
 import itr
+import document_router
 
 # ── Load config ───────────────────────────────────────────────────────────────
 WEBHOOK_VERIFY_TOKEN = os.getenv("WEBHOOK_VERIFY_TOKEN", "")
@@ -45,6 +46,15 @@ DASHBOARD_API_KEY = os.getenv("DASHBOARD_API_KEY", "")
 WHATSAPP_DISPLAY_NUMBER = "".join(
     ch for ch in os.getenv("WHATSAPP_DISPLAY_NUMBER", "") if ch.isdigit()
 )
+
+
+def _webhook_internal_url() -> str:
+    """URL for simulator → local /webhook (same process, correct port)."""
+    explicit = os.getenv("WEBHOOK_INTERNAL_URL", "").strip()
+    if explicit:
+        return explicit if explicit.endswith("/webhook") else explicit.rstrip("/") + "/webhook"
+    base = os.getenv("ITR_TEST_BASE", "http://127.0.0.1:8001").strip().rstrip("/")
+    return f"{base}/webhook"
 
 
 def whatsapp_me_url(prefill: str = "Hi Taxova.ai — I want to start GST filing") -> str:
@@ -335,7 +345,7 @@ async def handle_webhook(request: Request, background_tasks: BackgroundTasks):
             if msg_type in ("image", "document"):
                 await _handle_media_message(msg, sender, message_id, msg_type, background_tasks)
             elif msg_type == "text":
-                await _handle_text_message(msg, sender, message_id)
+                await _handle_text_message(msg, sender, message_id, background_tasks)
             elif msg_type == "audio":
                 await _handle_audio_message(msg, sender, message_id)
             else:
@@ -347,6 +357,106 @@ async def handle_webhook(request: Request, background_tasks: BackgroundTasks):
 
 
 # ── Message Handlers ──────────────────────────────────────────────────────────
+def _default_itr_fy() -> str:
+    """Indian financial year (Apr–Mar) as YYYY-YY."""
+    now = datetime.now()
+    y = now.year
+    if now.month >= 4:
+        return f"{y}-{str(y + 1)[-2:]}"
+    return f"{y - 1}-{str(y)[-2:]}"
+
+
+async def _dispatch_wa_document(
+    sender: str,
+    message_id: str,
+    saved_path: str,
+    doc_type: str,
+    file_label: str,
+    background_tasks: BackgroundTasks,
+) -> None:
+    """Acknowledge and schedule GST invoice or Form 16 background processing."""
+    if doc_type == document_router.DOC_FORM16:
+        await whatsapp.send_reply(
+            to=sender,
+            message_id=message_id,
+            body=(
+                f"✅ Got your Form 16 ({file_label})!\n"
+                "We are reading salary and TDS details now.\n\n"
+                "We'll send a tax estimate summary in a moment. ⏳"
+            ),
+        )
+        background_tasks.add_task(
+            _background_process_form16_wa,
+            sender=sender,
+            message_id=message_id,
+            saved_path=saved_path,
+        )
+    else:
+        await whatsapp.send_reply(
+            to=sender,
+            message_id=message_id,
+            body=(
+                f"✅ Got your {file_label}! "
+                "We are analyzing the invoice details right now.\n\n"
+                "We'll send you a summary of the extracted data in a moment. ⏳"
+            ),
+        )
+        background_tasks.add_task(
+            _background_process_invoice,
+            sender=sender,
+            message_id=message_id,
+            saved_path=saved_path,
+            file_label=file_label,
+        )
+    await db.clear_client_wa_routing(sender)
+
+
+async def _route_incoming_wa_media(
+    sender: str,
+    message_id: str,
+    saved_path: str,
+    file_label: str,
+    background_tasks: BackgroundTasks,
+    *,
+    original_filename: str | None = None,
+    hint: str | None = None,
+) -> None:
+    """Classify upload and dispatch, or ask user to choose GST vs Form 16."""
+    result = document_router.classify_incoming_document(
+        saved_path,
+        original_filename=original_filename,
+        hint=hint,
+    )
+    doc_type = result["doc_type"]
+    logger.info(
+        "Document classify: type=%s confidence=%s method=%s scores=%s path=%s",
+        doc_type,
+        result.get("confidence"),
+        result.get("method"),
+        result.get("scores"),
+        saved_path,
+    )
+
+    if doc_type == document_router.DOC_UNKNOWN:
+        await db.set_pending_media_route(sender, saved_path, message_id)
+        await whatsapp.send_reply(
+            to=sender,
+            message_id=message_id,
+            body=(
+                f"✅ Got your {file_label}!\n\n"
+                "What kind of document is this?\n"
+                "• Reply *1* — GST purchase bill / invoice (ITC)\n"
+                "• Reply *2* — Form 16 (salary / ITR)\n\n"
+                "_Tip: you can also say \"GST bill\" or \"Form 16\" before sending the file._"
+            ),
+        )
+        return
+
+    await _dispatch_wa_document(
+        sender, message_id, saved_path, doc_type, file_label, background_tasks
+    )
+
+
 async def _handle_media_message(
     msg: dict, sender: str, message_id: str, msg_type: str, background_tasks: BackgroundTasks
 ) -> None:
@@ -383,25 +493,17 @@ async def _handle_media_message(
     await whatsapp.mark_as_read(message_id)
 
     file_label = "document" if msg_type == "document" else "photo"
+    routing = await db.get_client_wa_routing(sender)
+    hint = routing.get("pending_doc_intent")
 
-    # Send immediate acknowledgment reply
-    await whatsapp.send_reply(
-        to=sender,
-        message_id=message_id,
-        body=(
-            f"✅ Got your {file_label}! "
-            f"We are analyzing the invoice details right now.\n\n"
-            f"We'll send you a summary of the extracted data in a moment. ⏳"
-        ),
-    )
-
-    # Schedule background processing task
-    background_tasks.add_task(
-        _background_process_invoice,
-        sender=sender,
-        message_id=message_id,
-        saved_path=saved_path,
-        file_label=file_label,
+    await _route_incoming_wa_media(
+        sender,
+        message_id,
+        saved_path,
+        file_label,
+        background_tasks,
+        original_filename=original_filename,
+        hint=hint,
     )
 
 
@@ -495,13 +597,154 @@ async def _background_process_invoice(
         )
 
 
-async def _handle_text_message(msg: dict, sender: str, message_id: str) -> None:
+async def _background_process_form16_wa(
+    sender: str, message_id: str, saved_path: str
+) -> None:
+    """Extract Form 16 from WhatsApp upload, save to ITR return, send estimate summary."""
+    try:
+        extracted = await itr.extract_form16_fields(saved_path)
+        fy = (extracted.get("financial_year") or "").strip() or _default_itr_fy()
+        pan = (extracted.get("pan") or "").strip().upper()
+        pan_valid = pan if pan and itr.validate_pan(pan) else None
+
+        row = await db.get_or_create_itr_return(sender, fy, pan=pan_valid)
+        itr_id = row["id"]
+        if pan_valid:
+            await db.update_client_pan(sender, pan)
+
+        basename = os.path.basename(saved_path)
+        await db.add_itr_document(
+            itr_id,
+            saved_path,
+            doc_type="form16",
+            original_filename=basename,
+        )
+
+        fields = {
+            "gross_salary": extracted.get("gross_salary") or 0,
+            "exemptions": extracted.get("exemptions") or 0,
+            "other_income": extracted.get("other_income") or 0,
+            "deductions_80c": extracted.get("deductions_80c") or 0,
+            "tds": extracted.get("tds") or 0,
+            "extracted_json": json.dumps(extracted),
+            "status": "needs_review",
+        }
+        if pan_valid:
+            fields["pan"] = pan_valid
+
+        estimate = itr.compute_estimate(
+            gross_salary=fields["gross_salary"],
+            exemptions=fields["exemptions"],
+            other_income=fields["other_income"],
+            deductions_80c=fields["deductions_80c"],
+            tds=fields["tds"],
+            advance_tax=row.get("advance_tax") or 0,
+        )
+        fields["estimate_json"] = json.dumps(estimate)
+        fields["regime_preferred"] = estimate["regime_preferred"]
+        updated = await db.update_itr_return(itr_id, fields) or row
+
+        gross = fields["gross_salary"]
+        tds = fields["tds"]
+        regime = estimate.get("regime_preferred") or "new"
+        if regime == "old":
+            net_tax = estimate.get("net_tax_old") or 0
+            payable = estimate.get("payable_or_refund_old") or 0
+        else:
+            net_tax = estimate.get("net_tax_new") or 0
+            payable = estimate.get("payable_or_refund_new") or 0
+
+        summary_lines = [
+            "📋 *Form 16 received*",
+            f"• *FY:* {fy}",
+            f"• *PAN:* {pan or updated.get('pan') or '—'}",
+            f"• *Gross salary:* ₹{gross:,.0f}",
+            f"• *TDS deducted:* ₹{tds:,.0f}",
+            "",
+            f"📊 *Tax estimate ({regime} regime)*",
+            f"• *Net tax:* ₹{net_tax:,.0f}",
+        ]
+        if payable < 0:
+            summary_lines.append(f"• *Estimated refund:* ₹{abs(payable):,.0f}")
+        elif payable > 0:
+            summary_lines.append(f"• *Tax payable:* ₹{payable:,.0f}")
+        summary_lines.extend(
+            [
+                "",
+                "Your CA will verify this in the dashboard before filing.",
+                "Send more Form 16s or GST bills anytime. Commands: *summary* · *status*",
+            ]
+        )
+
+        await whatsapp.send_reply(
+            to=sender,
+            message_id=message_id,
+            body="\n".join(summary_lines),
+        )
+    except Exception:
+        logger.exception("Error in background Form 16 processing for %s", saved_path)
+        await whatsapp.send_reply(
+            to=sender,
+            message_id=message_id,
+            body=(
+                "⚠️ We saved your Form 16 but could not read all fields automatically.\n"
+                "Your CA can review it in the dashboard, or try a clearer PDF scan."
+            ),
+        )
+
+
+async def _handle_text_message(
+    msg: dict, sender: str, message_id: str, background_tasks: BackgroundTasks
+) -> None:
     """Handle a text message via the GST agent (with lightweight command shortcuts)."""
     text_body = msg.get("text", {}).get("body", "").strip()
     text_lower = text_body.lower()
     logger.info("💬 Text from %s: %s", sender, text_body[:100])
 
     await whatsapp.mark_as_read(message_id)
+
+    routing = await db.get_client_wa_routing(sender)
+    pending_path = routing.get("pending_media_path")
+    if pending_path:
+        choice = document_router.parse_doc_choice_reply(text_body)
+        if choice:
+            await _dispatch_wa_document(
+                sender,
+                routing.get("pending_media_message_id") or message_id,
+                pending_path,
+                choice,
+                "document",
+                background_tasks,
+            )
+            return
+        await whatsapp.send_reply(
+            to=sender,
+            message_id=message_id,
+            body=(
+                "I still need to know what you uploaded.\n"
+                "• Reply *1* — GST purchase bill / invoice\n"
+                "• Reply *2* — Form 16 (salary / ITR)"
+            ),
+        )
+        return
+
+    intent = document_router.parse_doc_intent_from_text(text_body)
+    if intent and not pending_path:
+        await db.set_client_doc_intent(sender, intent)
+        label = (
+            "Form 16 (salary / ITR)"
+            if intent == document_router.DOC_FORM16
+            else "GST bill / invoice"
+        )
+        await whatsapp.send_reply(
+            to=sender,
+            message_id=message_id,
+            body=(
+                f"👍 Got it — send your *{label}* photo or PDF next.\n\n"
+                "_I'll route it to the right workflow automatically._"
+            ),
+        )
+        return
 
     # ── HITL commands: CONFIRM 12 / REJECT 12 wrong gstin ──
     confirm_match = re.match(r"^(?:confirm|#?confirm)\s*#?(\d+)\s*$", text_lower)
@@ -585,7 +828,8 @@ async def _handle_text_message(msg: dict, sender: str, message_id: str) -> None:
             message_id=message_id,
             body=(
                 "👋 Hi! I am your *Taxova.ai* agent.\n\n"
-                "Send invoice photos or PDFs here, or ask:\n"
+                "Send *GST invoice* photos/PDFs or your *Form 16* for ITR prep.\n"
+                "You can also ask:\n"
                 "• How much ITC on invoice #12?\n"
                 "• Can I claim ITC on outdoor catering?\n"
                 "• Show my pending invoices\n\n"
@@ -614,7 +858,8 @@ async def _handle_text_message(msg: dict, sender: str, message_id: str) -> None:
             message_id=message_id,
             body=(
                 "👋 Hi! I am your *Taxova.ai* agent.\n\n"
-                "Send invoice photos/PDFs, or ask things like:\n"
+                "Send *GST invoice* photos/PDFs or your *Form 16* for ITR prep.\n"
+                "Or ask things like:\n"
                 "• How much ITC on invoice #12?\n"
                 "• Can I claim ITC on outdoor catering?\n"
                 "• Show my pending invoices\n\n"
@@ -661,7 +906,11 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "gst-autopilot-webhook",
-        "version": "0.2.0",
+        "version": "0.2.1",
+        "features": {
+            "wa_document_routing": True,
+            "form16_whatsapp_pipeline": True,
+        },
     }
 
 
@@ -2096,6 +2345,21 @@ async def api_get_itc_summary(
 
 # ── Income Tax Phase 1 (Form 16 → estimate → CA approve → export draft) ───────
 
+def _enrich_itr_return_row(row: dict) -> dict:
+    """Parse JSON blobs on an itr_returns row for dashboard consumption."""
+    if row.get("estimate_json") and isinstance(row["estimate_json"], str):
+        try:
+            row["estimate"] = json.loads(row["estimate_json"])
+        except (TypeError, json.JSONDecodeError):
+            row["estimate"] = None
+    if row.get("extracted_json") and isinstance(row["extracted_json"], str):
+        try:
+            row["extracted"] = json.loads(row["extracted_json"])
+        except (TypeError, json.JSONDecodeError):
+            row["extracted"] = None
+    return row
+
+
 @app.get("/api/itr/returns")
 async def api_list_itr_returns(
     client_phone: str = Query(...),
@@ -2104,13 +2368,8 @@ async def api_list_itr_returns(
     await assert_client_access(client_phone)
     returns = await db.list_itr_returns(client_phone)
     for r in returns:
-        if r.get("estimate_json") and isinstance(r["estimate_json"], str):
-            try:
-                r["estimate"] = json.loads(r["estimate_json"])
-            except json.JSONDecodeError:
-                r["estimate"] = None
-        docs = await db.list_itr_documents(r["id"])
-        r["documents"] = docs
+        _enrich_itr_return_row(r)
+        r["documents"] = await db.list_itr_documents(r["id"])
     return returns
 
 
@@ -2144,11 +2403,7 @@ async def api_get_itr_return(
     if not row:
         raise HTTPException(status_code=404, detail="ITR return not found.")
     await assert_client_access(row["client_phone"])
-    if row.get("estimate_json"):
-        try:
-            row["estimate"] = json.loads(row["estimate_json"])
-        except (TypeError, json.JSONDecodeError):
-            row["estimate"] = None
+    _enrich_itr_return_row(row)
     row["documents"] = await db.list_itr_documents(itr_id)
     return row
 
@@ -2196,11 +2451,9 @@ async def api_update_itr_return(
             fields["status"] = "needs_review"
 
     updated = await db.update_itr_return(itr_id, fields)
-    if updated and updated.get("estimate_json"):
-        try:
-            updated["estimate"] = json.loads(updated["estimate_json"])
-        except (TypeError, json.JSONDecodeError):
-            updated["estimate"] = None
+    if updated:
+        _enrich_itr_return_row(updated)
+        updated["documents"] = await db.list_itr_documents(itr_id)
     return updated
 
 
@@ -2297,6 +2550,8 @@ async def api_upload_form16(
             estimate = json.loads(updated["estimate_json"])
         except (TypeError, json.JSONDecodeError):
             pass
+    if updated:
+        _enrich_itr_return_row(updated)
     return {
         "status": "ok",
         "document": doc,
@@ -2353,6 +2608,9 @@ async def api_approve_itr(
     updated = await db.update_itr_return(
         itr_id, {"status": "approved", "ca_notes": notes}
     )
+    if updated:
+        _enrich_itr_return_row(updated)
+        updated["documents"] = await db.list_itr_documents(itr_id)
     return {"status": "ok", "itr": updated}
 
 
@@ -2535,6 +2793,22 @@ async def api_simulator_trigger(
             raise HTTPException(status_code=400, detail="No file provided for image/document simulation.")
 
         local_media_id = f"local_file:{saved_relative_path}"
+        import mimetypes
+
+        mime_type, _ = mimetypes.guess_type(full_path)
+        mime_type = mime_type or (
+            "application/pdf"
+            if (saved_relative_path or "").lower().endswith(".pdf")
+            else "image/png"
+        )
+        doc_filename = os.path.basename(saved_relative_path or "") or "document"
+        media_block = {
+            "mime_type": mime_type,
+            "sha256": "simulated_sha256",
+            "id": local_media_id,
+        }
+        if message_type == "document":
+            media_block["filename"] = doc_filename
         payload = {
             "object": "whatsapp_business_account",
             "entry": [{
@@ -2549,9 +2823,7 @@ async def api_simulator_trigger(
                             "timestamp": ts,
                             "type": message_type,
                             message_type: {
-                                "mime_type": "image/png",
-                                "sha256": "simulated_sha256",
-                                "id": local_media_id
+                                **media_block,
                             }
                         }]
                     },
@@ -2587,17 +2859,14 @@ async def api_simulator_trigger(
     body_bytes = json.dumps(payload, separators=(",", ":")).encode("utf-8")
     sig = hmac.new(APP_SECRET.encode("utf-8"), body_bytes, hashlib.sha256).hexdigest()
 
-    # Clear old messages for this number so poll returns fresh results
-    whatsapp.simulated_outbound_messages[:] = [
-        m for m in whatsapp.simulated_outbound_messages
-        if m.get("to") != phone_number
-    ]
+    # Do not clear prior simulated replies — the UI polls incrementally.
+    # Use DELETE /api/simulator/messages to reset a conversation.
 
     # Call /webhook internally using httpx
     try:
         async with _httpx.AsyncClient(timeout=60.0) as client:
             resp = await client.post(
-                "http://127.0.0.1:8000/webhook",
+                _webhook_internal_url(),
                 content=body_bytes,
                 headers={
                     "Content-Type": "application/json",

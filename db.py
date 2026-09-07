@@ -1828,6 +1828,130 @@ async def get_or_create_client(phone_number: str, name: str = "Unknown Client") 
         await conn.close()
 
 
+async def get_client_wa_routing(client_phone: str) -> dict:
+    """WhatsApp document routing state (intent hint + pending classification file)."""
+    conn = await get_connection()
+    try:
+        if IS_POSTGRES:
+            row = await conn.fetchrow(
+                """
+                SELECT pending_doc_intent, pending_media_path, pending_media_message_id
+                FROM clients WHERE phone_number = $1
+                """,
+                client_phone,
+            )
+        else:
+            conn.row_factory = sqlite3.Row
+            cur = await conn.execute(
+                """
+                SELECT pending_doc_intent, pending_media_path, pending_media_message_id
+                FROM clients WHERE phone_number = ?
+                """,
+                (client_phone,),
+            )
+            row = await cur.fetchone()
+        if not row:
+            return {
+                "pending_doc_intent": None,
+                "pending_media_path": None,
+                "pending_media_message_id": None,
+            }
+        d = dict(row)
+        return {
+            "pending_doc_intent": d.get("pending_doc_intent"),
+            "pending_media_path": d.get("pending_media_path"),
+            "pending_media_message_id": d.get("pending_media_message_id"),
+        }
+    finally:
+        await conn.close()
+
+
+async def set_client_doc_intent(client_phone: str, intent: str | None) -> None:
+    await get_or_create_client(client_phone)
+    conn = await get_connection()
+    try:
+        val = (intent or "").strip().lower() or None
+        if IS_POSTGRES:
+            await conn.execute(
+                "UPDATE clients SET pending_doc_intent = $1 WHERE phone_number = $2",
+                val,
+                client_phone,
+            )
+        else:
+            await conn.execute(
+                "UPDATE clients SET pending_doc_intent = ? WHERE phone_number = ?",
+                (val, client_phone),
+            )
+            await conn.commit()
+    finally:
+        await conn.close()
+
+
+async def set_pending_media_route(
+    client_phone: str, saved_path: str, message_id: str
+) -> None:
+    await get_or_create_client(client_phone)
+    conn = await get_connection()
+    try:
+        if IS_POSTGRES:
+            await conn.execute(
+                """
+                UPDATE clients
+                SET pending_media_path = $1,
+                    pending_media_message_id = $2,
+                    pending_doc_intent = NULL
+                WHERE phone_number = $3
+                """,
+                saved_path,
+                message_id,
+                client_phone,
+            )
+        else:
+            await conn.execute(
+                """
+                UPDATE clients
+                SET pending_media_path = ?,
+                    pending_media_message_id = ?,
+                    pending_doc_intent = NULL
+                WHERE phone_number = ?
+                """,
+                (saved_path, message_id, client_phone),
+            )
+            await conn.commit()
+    finally:
+        await conn.close()
+
+
+async def clear_client_wa_routing(client_phone: str) -> None:
+    conn = await get_connection()
+    try:
+        if IS_POSTGRES:
+            await conn.execute(
+                """
+                UPDATE clients
+                SET pending_doc_intent = NULL,
+                    pending_media_path = NULL,
+                    pending_media_message_id = NULL
+                WHERE phone_number = $1
+                """,
+                client_phone,
+            )
+        else:
+            await conn.execute(
+                """
+                UPDATE clients
+                SET pending_doc_intent = NULL,
+                    pending_media_path = NULL,
+                    pending_media_message_id = NULL
+                WHERE phone_number = ?
+                """,
+                (client_phone,),
+            )
+            await conn.commit()
+    finally:
+        await conn.close()
+
+
 async def update_client_profile(
     phone_number: str,
     gstin: str,
@@ -3605,6 +3729,10 @@ async def _ensure_itr_schema(conn) -> None:
         await conn.execute(
             "ALTER TABLE clients ADD COLUMN IF NOT EXISTS pan VARCHAR(10)"
         )
+        for col in ("pending_doc_intent", "pending_media_path", "pending_media_message_id"):
+            await conn.execute(
+                f"ALTER TABLE clients ADD COLUMN IF NOT EXISTS {col} TEXT"
+            )
         await conn.execute(
             """
             CREATE TABLE IF NOT EXISTS itr_returns (
@@ -3646,6 +3774,11 @@ async def _ensure_itr_schema(conn) -> None:
             await conn.execute("ALTER TABLE clients ADD COLUMN pan TEXT")
         except Exception:
             pass
+        for col in ("pending_doc_intent", "pending_media_path", "pending_media_message_id"):
+            try:
+                await conn.execute(f"ALTER TABLE clients ADD COLUMN {col} TEXT")
+            except Exception:
+                pass
         await conn.execute(
             """
             CREATE TABLE IF NOT EXISTS itr_returns (

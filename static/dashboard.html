@@ -395,6 +395,38 @@
         /* invoice preview styles live under .doc-stage */
         #itc-reason-group { display: none; }
 
+        #kpi-itc-card { cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s; }
+        #kpi-itc-card:hover { border-color: rgba(54, 214, 174, 0.35); box-shadow: 0 0 0 1px rgba(54, 214, 174, 0.12); }
+
+        .itc-issues-panel { border: 1px solid var(--line); }
+        .itc-issues-head {
+            display: flex; align-items: center; justify-content: space-between; gap: 12px;
+            flex-wrap: wrap; margin-bottom: 10px;
+        }
+        .itc-issues-list { display: flex; flex-direction: column; gap: 6px; }
+        .itc-issue-row {
+            display: flex; align-items: center; justify-content: space-between; gap: 10px;
+            padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.06);
+            background: rgba(255,255,255,0.02); cursor: pointer; transition: background 0.15s, border-color 0.15s;
+            text-align: left; width: 100%;
+        }
+        .itc-issue-row:hover { background: rgba(54, 214, 174, 0.06); border-color: rgba(54, 214, 174, 0.2); }
+        .itc-issue-main { min-width: 0; flex: 1; }
+        .itc-issue-supplier { font-size: 13px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .itc-issue-reason { font-size: 11px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .itc-issue-amt { font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .itc-issue-amt.is-blocked { color: #ED6A6A; }
+        .itc-issue-amt.is-warn { color: #F0B35A; }
+        .itc-issue-badge {
+            display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 6px;
+            margin-right: 6px; vertical-align: middle;
+        }
+        .itc-issue-badge.is-blocked { background: rgba(237,106,106,0.12); color: #ED6A6A; border: 1px solid rgba(237,106,106,0.3); }
+        .itc-issue-badge.is-partial { background: rgba(240,179,90,0.12); color: #F0B35A; border: 1px solid rgba(240,179,90,0.3); }
+        .itc-issue-badge.is-2b { background: rgba(54,214,174,0.1); color: #7BE8C8; border: 1px solid rgba(54,214,174,0.25); }
+        .itc-issues-empty { font-size: 12px; color: var(--muted); padding: 8px 4px; }
+        .line-itc-reason { font-size: 11px; color: var(--muted); max-width: 180px; }
+
         .preview-metrics-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px; }
         .preview-metric { background: #0C141C; border: 1px solid var(--line); border-radius: 10px; padding: 14px; text-align: center; }
         .preview-metric .label { display: block; font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
@@ -939,6 +971,72 @@
             font-size: 11px;
             font-weight: 700;
             text-transform: uppercase;
+        }
+        .itr-review-panel {
+            border: 1px solid rgba(240,179,90,0.35);
+            background: linear-gradient(180deg, rgba(240,179,90,0.06) 0%, rgba(14,19,26,0.4) 100%);
+        }
+        .itr-review-panel.is-verified {
+            border-color: rgba(54,214,174,0.35);
+            background: linear-gradient(180deg, rgba(54,214,174,0.06) 0%, rgba(14,19,26,0.4) 100%);
+        }
+        .itr-review-head {
+            display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+        }
+        .itr-review-meta {
+            font-size: 12px; color: #94a3b8; margin: 8px 0 12px; line-height: 1.5;
+        }
+        .itr-review-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .itr-review-table th, .itr-review-table td {
+            border-bottom: 1px solid rgba(148,163,184,0.12);
+            padding: 0.5rem 0.4rem; text-align: left; vertical-align: middle;
+        }
+        .itr-review-table th {
+            color: #94a3b8; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
+        }
+        .itr-review-table td.num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+        .itr-review-status {
+            display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 700;
+            padding: 2px 7px; border-radius: 6px; white-space: nowrap;
+        }
+        .itr-review-status.is-match { background: rgba(54,214,174,0.12); color: #36D6AE; }
+        .itr-review-status.is-diff { background: rgba(240,179,90,0.12); color: #F0B35A; }
+        .itr-review-status.is-missing { background: rgba(148,163,184,0.1); color: #94a3b8; }
+        .itr-field.is-extract-diff input,
+        .itr-field.is-extract-diff select {
+            border-color: rgba(240,179,90,0.55);
+            box-shadow: 0 0 0 1px rgba(240,179,90,0.15);
+        }
+        .itr-review-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; align-items: center; }
+        .itr-review-btn {
+            height: 34px; padding: 0 12px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;
+        }
+        .itr-review-btn.is-primary { background: #36D6AE; color: #0a141c; border: none; }
+        .itr-review-btn.is-secondary { background: transparent; border: 1px solid rgba(148,163,184,0.35); color: #e2e8f0; }
+        .itr-review-link { font-size: 12px; font-weight: 600; color: #7BE8C8; text-decoration: none; }
+        .itr-review-link:hover { text-decoration: underline; }
+        .itr-onboarding-panel {
+            border: 1px solid rgba(54, 214, 174, 0.28);
+            background: linear-gradient(135deg, rgba(54, 214, 174, 0.08) 0%, rgba(14, 19, 26, 0.5) 100%);
+        }
+        .itr-onboarding-steps { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
+        .itr-onboarding-step {
+            display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.02); font-size: 13px; color: #cbd5e1;
+        }
+        .itr-onboarding-step.is-active { border-color: rgba(54, 214, 174, 0.45); background: rgba(54, 214, 174, 0.08); color: #f2f5f8; }
+        .itr-onboarding-step.is-done { border-color: rgba(54, 214, 174, 0.2); opacity: 0.85; }
+        .itr-onboarding-num {
+            width: 26px; height: 26px; border-radius: 8px; flex-shrink: 0;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-size: 12px; font-weight: 800; background: rgba(255,255,255,0.06); color: #94a3b8;
+        }
+        .itr-onboarding-step.is-active .itr-onboarding-num { background: #36D6AE; color: #0a141c; }
+        .itr-onboarding-step.is-done .itr-onboarding-num { background: rgba(54, 214, 174, 0.2); color: #36D6AE; }
+        .itr-return-banner {
+            display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 10px;
+            background: rgba(54, 214, 174, 0.1); border: 1px solid rgba(54, 214, 174, 0.25);
+            font-size: 12px; color: #cbd5e1;
         }
         .header-actions {
             display: flex; align-items: center; gap: 10px;
@@ -2044,7 +2142,7 @@
                 </div>
             </div>
 
-            <div class="panel kpi-card p-5">
+            <div class="panel kpi-card p-5" id="kpi-itc-card" title="Jump to ITC summary">
                 <div class="flex items-center justify-between mb-4">
                     <span class="kpi-icon p-2.5 rounded-[10px] bg-secondary/10 text-secondary border border-secondary/15">
                         <span class="material-symbols-outlined text-[22px]">verified_user</span>
@@ -2074,13 +2172,8 @@
             </div>
         </div>
 
-        <!-- ── Period summary (collapsed by default — less noise for CA) ── -->
-        <div class="fade-up fade-up-delay-2">
-            <button type="button" id="toggle-period-summary" class="flex items-center gap-2 text-[12px] font-bold text-on-surface-variant hover:text-on-surface transition-colors mb-2">
-                <span class="material-symbols-outlined text-[18px]" id="period-summary-chevron">expand_more</span>
-                Period totals (ITC, GST, trends)
-            </button>
-            <div id="period-summary-panel" class="space-y-4" style="display:none;">
+        <!-- ── ITC section (always visible when client selected) ── -->
+        <div id="itc-section-panel" class="fade-up fade-up-delay-2 space-y-4">
         <!-- ── Net GST Payable Summary Row (pr keeps clear of chat FAB) ── -->
         <div class="panel p-5 pr-20" id="net-gst-row">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -2140,8 +2233,31 @@
             </div>
         </div>
 
-        <!-- ── ITC Trend Sparkline ── -->
-        <div class="panel p-5 fade-up fade-up-delay-3">
+        <!-- ITC bills needing attention -->
+        <div class="panel p-4 itc-issues-panel" id="itc-issues-panel">
+            <div class="itc-issues-head">
+                <div>
+                    <h3 class="font-bold text-[14px] text-white m-0">ITC attention</h3>
+                    <p class="text-[11px] text-on-surface-variant m-0 mt-0.5" id="itc-issues-subtitle">Blocked, partial, or 2B mismatches this period</p>
+                </div>
+                <button type="button" id="itc-issues-view-all" class="text-[11px] font-bold text-secondary hover:text-white transition-colors" style="display:none;">
+                    View all in queue →
+                </button>
+            </div>
+            <div id="itc-issues-list" class="itc-issues-list">
+                <div class="itc-issues-empty">No ITC flags in this view.</div>
+            </div>
+        </div>
+        </div><!-- /itc-section-panel -->
+
+        <!-- ── ITC trend (collapsed — chart needs visible canvas) ── -->
+        <div class="fade-up fade-up-delay-3">
+            <button type="button" id="toggle-itc-trends" class="flex items-center gap-2 text-[12px] font-bold text-on-surface-variant hover:text-on-surface transition-colors mb-2">
+                <span class="material-symbols-outlined text-[18px]" id="itc-trends-chevron">expand_more</span>
+                12-month ITC trend
+            </button>
+            <div id="itc-trends-panel" class="space-y-4" style="display:none;">
+        <div class="panel p-5">
             <div class="flex items-center justify-between mb-4">
                 <div>
                     <h3 class="font-bold text-[14px] text-white">ITC Trend — Last 12 Months</h3>
@@ -2165,7 +2281,7 @@
                 <canvas id="itc-sparkline-chart"></canvas>
             </div>
         </div>
-            </div><!-- /period-summary-panel -->
+            </div><!-- /itc-trends-panel -->
         </div>
 
         <!-- ── Invoice Table ── -->
@@ -2175,6 +2291,7 @@
                 <div class="flex items-center gap-3 flex-wrap">
                     <div class="flex items-center gap-0.5 p-1 rounded-[10px] bg-background/80 border border-outline-variant">
                         <button class="tab-btn active" data-filter="exceptions">Needs review</button>
+                        <button class="tab-btn" data-filter="itc">ITC issues</button>
                         <button class="tab-btn" data-filter="approved">Approved</button>
                         <button class="tab-btn" data-filter="all">All bills</button>
                     </div>
@@ -2261,6 +2378,32 @@
             </p>
         </div>
 
+        <div id="itr-onboarding-panel" class="panel p-4 md:p-5 itr-onboarding-panel">
+            <h3 class="text-[15px] font-bold text-white m-0 mb-3 flex items-center gap-2">
+                <span class="material-symbols-outlined text-[18px] text-secondary">route</span>
+                Get started — 3 steps
+            </h3>
+            <ol class="itr-onboarding-steps">
+                <li id="itr-step-open" class="itr-onboarding-step is-active">
+                    <span class="itr-onboarding-num">1</span>
+                    <span>Pick <strong>FY + PAN</strong>, then click <strong>Open / create return</strong> (required before upload).</span>
+                </li>
+                <li id="itr-step-upload" class="itr-onboarding-step">
+                    <span class="itr-onboarding-num">2</span>
+                    <span>Click <strong>Upload Form 16</strong> — use <code style="font-size:11px;">scratch/dummy_form16.pdf</code> for local testing.</span>
+                </li>
+                <li id="itr-step-review" class="itr-onboarding-step">
+                    <span class="itr-onboarding-num">3</span>
+                    <span>Review extraction → <strong>Save &amp; estimate</strong> → compare old vs new → <strong>Export draft</strong>.</span>
+                </li>
+            </ol>
+        </div>
+
+        <div id="itr-return-banner" class="itr-return-banner" style="display:none;">
+            <span class="material-symbols-outlined text-secondary text-[18px]">check_circle</span>
+            <span id="itr-return-banner-text">Return open for FY 2025-26 — upload Form 16 or edit fields below.</span>
+        </div>
+
         <div class="panel p-4 md:p-5 space-y-4">
             <div class="flex flex-wrap items-end gap-3">
                 <div class="itr-field" style="min-width:140px;">
@@ -2289,31 +2432,67 @@
             </div>
         </div>
 
+        <!-- Form 16 extraction review (HITL) -->
+        <div id="itr-form16-review" class="panel p-4 md:p-5 itr-review-panel" style="display:none;">
+            <div class="itr-review-head">
+                <div>
+                    <h3 class="text-[15px] font-bold text-white m-0 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[18px] text-tertiary">fact_check</span>
+                        Form 16 extraction — review before estimate
+                    </h3>
+                    <p class="text-[12px] text-on-surface-variant m-0 mt-1">
+                        Compare AI-read values with saved fields. Fix mismatches, then <strong>Save &amp; estimate</strong>.
+                    </p>
+                </div>
+                <span id="itr-review-summary-badge" class="itr-review-status is-diff">Review needed</span>
+            </div>
+            <div id="itr-review-meta" class="itr-review-meta"></div>
+            <div class="overflow-x-auto">
+                <table class="itr-review-table">
+                    <thead>
+                        <tr>
+                            <th>Field</th>
+                            <th class="text-right">Extracted (Form 16)</th>
+                            <th class="text-right">Saved (form)</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="itr-review-body"></tbody>
+                </table>
+            </div>
+            <div class="itr-review-actions">
+                <button type="button" id="itr-apply-extracted-btn" class="itr-review-btn is-secondary">Apply all extracted</button>
+                <button type="button" id="itr-review-save-btn" class="itr-review-btn is-primary">Save &amp; estimate</button>
+                <a href="#" id="itr-view-form16-link" class="itr-review-link" target="_blank" rel="noopener" style="display:none;">View uploaded Form 16</a>
+            </div>
+        </div>
+
         <div class="itr-grid">
             <div class="panel p-4 md:p-5 space-y-4">
                 <h3 class="text-[15px] font-bold text-white">Income &amp; deductions</h3>
                 <div class="itr-field-grid">
-                    <div class="itr-field">
+                    <div class="itr-field" data-itr-field="gross_salary">
                         <label for="itr-gross">Gross salary</label>
                         <input id="itr-gross" type="number" min="0" step="0.01" value="0"/>
                     </div>
-                    <div class="itr-field">
+                    <div class="itr-field" data-itr-field="exemptions">
                         <label for="itr-exemptions">Exemptions (u/s 10)</label>
                         <input id="itr-exemptions" type="number" min="0" step="0.01" value="0"/>
                     </div>
-                    <div class="itr-field">
+                    <div class="itr-field" data-itr-field="other_income">
                         <label for="itr-other">Other income</label>
                         <input id="itr-other" type="number" min="0" step="0.01" value="0"/>
                     </div>
-                    <div class="itr-field">
+                    <div class="itr-field" data-itr-field="deductions_80c">
                         <label for="itr-80c">80C deductions</label>
                         <input id="itr-80c" type="number" min="0" step="0.01" value="0"/>
                     </div>
-                    <div class="itr-field">
+                    <div class="itr-field" data-itr-field="tds">
                         <label for="itr-tds">TDS</label>
                         <input id="itr-tds" type="number" min="0" step="0.01" value="0"/>
                     </div>
-                    <div class="itr-field">
+                    <div class="itr-field" data-itr-field="advance_tax">
                         <label for="itr-advance">Advance tax</label>
                         <input id="itr-advance" type="number" min="0" step="0.01" value="0"/>
                     </div>
@@ -2469,7 +2648,9 @@
                                             <th class="py-1.5 pr-2 font-bold">Item</th>
                                             <th class="py-1.5 pr-2 font-bold">Cat</th>
                                             <th class="py-1.5 pr-2 font-bold text-right">GST</th>
-                                            <th class="py-1.5 font-bold">ITC</th>
+                                            <th class="py-1.5 pr-2 font-bold text-right">Claim</th>
+                                            <th class="py-1.5 pr-2 font-bold">ITC</th>
+                                            <th class="py-1.5 font-bold">Reason</th>
                                         </tr>
                                     </thead>
                                     <tbody id="line-itc-body" class="text-[12px]"></tbody>
@@ -2775,6 +2956,6 @@
 <!-- Toast -->
 <div id="toast">Filing updated successfully!</div>
 
-<script src="/static/dashboard.js?v=20260831-auth"></script>
+<script src="/static/dashboard.js?v=20260907-itr2"></script>
 </body>
 </html>
