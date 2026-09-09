@@ -670,10 +670,17 @@ async def _background_process_form16_wa(
             summary_lines.append(f"• *Estimated refund:* ₹{abs(payable):,.0f}")
         elif payable > 0:
             summary_lines.append(f"• *Tax payable:* ₹{payable:,.0f}")
+        dash = (os.getenv("PUBLIC_BASE_URL") or "https://taxova.pro").rstrip("/")
         summary_lines.extend(
             [
                 "",
                 "Your CA will verify this in the dashboard before filing.",
+                "",
+                "📥 *Optional next step — AIS*",
+                "Download your AIS JSON from incometax.gov.in and upload it in the "
+                "dashboard (Income Tax → Upload AIS) to catch interest / TDS gaps vs Form 16.",
+                f"Open: {dash}/dashboard",
+                "",
                 "Send more Form 16s or GST bills anytime. Commands: *summary* · *status*",
             ]
         )

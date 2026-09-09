@@ -469,6 +469,18 @@ function scoreExceptionRisk(inv) {
     return score;
 }
 
+/** Clean enough for one-click approve toward the pilot volume bar. */
+function isReadyToApprove(inv) {
+    if (!inv || inv.is_approved === 1 || inv.is_approved === true) return false;
+    const rs = inv.review_status || 'needs_review';
+    if (rs === 'rejected' || rs === 'skipped' || rs === 'approved') return false;
+    if (inv.is_calculation_correct === false || inv.is_calculation_correct === 0) return false;
+    const m2b = (inv.gstr2b_match_status || 'none').toLowerCase();
+    if (m2b === 'mismatch' || m2b === 'unmatched') return false;
+    if (inv.supplier_gstin && !validateGstinString(inv.supplier_gstin)) return false;
+    return true;
+}
+
 function truncateExceptionReason(text, maxLen) {
     const s = String(text || '').replace(/\s+/g, ' ').trim();
     const max = maxLen || 72;
@@ -663,6 +675,7 @@ const elements = {
     pilotStatusHint: document.getElementById('pilot-status-hint'),
     pilotDaysSelect: document.getElementById('pilot-days-select'),
     pilotRefreshBtn: document.getElementById('pilot-refresh-btn'),
+    pilotReviewNextBtn: document.getElementById('pilot-review-next-btn'),
     pilotProgressLabel: document.getElementById('pilot-progress-label'),
     pilotProgressFill: document.getElementById('pilot-progress-fill'),
     pilotApproved: document.getElementById('pilot-approved'),
@@ -673,6 +686,8 @@ const elements = {
     pilotRejectSkip: document.getElementById('pilot-reject-skip'),
     pilotRejectSkipSub: document.getElementById('pilot-reject-skip-sub'),
     pilotPending: document.getElementById('pilot-pending'),
+    pilotPendingSub: document.getElementById('pilot-pending-sub'),
+    pilotPendingCard: document.getElementById('pilot-pending-card'),
     pilotFieldBody: document.getElementById('pilot-field-body'),
     
     // KPI metrics
@@ -1047,6 +1062,29 @@ function setupEventListeners() {
                 console.error(err);
                 showToast(err.message || 'Pilot stats failed', true);
             });
+        });
+    }
+    if (elements.pilotReviewNextBtn) {
+        elements.pilotReviewNextBtn.addEventListener('click', () => {
+            reviewNextPilotPending().catch((err) => {
+                console.error(err);
+                showToast(err.message || 'Could not open next bill', true);
+            });
+        });
+    }
+    if (elements.pilotPendingCard) {
+        const goPending = () => {
+            reviewNextPilotPending().catch((err) => {
+                console.error(err);
+                showToast(err.message || 'Could not open next bill', true);
+            });
+        };
+        elements.pilotPendingCard.addEventListener('click', goPending);
+        elements.pilotPendingCard.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                goPending();
+            }
         });
     }
 
@@ -2006,7 +2044,7 @@ async function quickApproveInvoice(invoiceId) {
     if (state.currentInvoice && Number(state.currentInvoice.id) === Number(invoiceId)) {
         closeAuditDrawer();
     }
-    fetchData();
+    await refreshQueueAndPilot();
 }
 
 function openFixSupplierGstinModal(inv) {
@@ -2106,7 +2144,7 @@ function openSkipInvoiceModal(inv) {
             if (state.currentInvoice && Number(state.currentInvoice.id) === Number(inv.id)) {
                 closeAuditDrawer();
             }
-            fetchData();
+            await refreshQueueAndPilot();
         },
     });
 }
@@ -2664,7 +2702,7 @@ async function verifyAndApproveInvoice() {
             const ids = state.filteredInvoiceIds || [];
             const idx = ids.indexOf(Number(state.currentInvoice.id));
             const nextId = idx >= 0 && idx + 1 < ids.length ? ids[idx + 1] : null;
-            await fetchData();
+            await refreshQueueAndPilot();
             if (nextId && (state.filteredInvoiceIds || []).includes(nextId)) {
                 await openInvoiceAudit(nextId);
             } else {
@@ -2705,7 +2743,7 @@ async function rejectInvoiceHitl() {
             closeCaFormModal();
             showToast('Invoice rejected — removed from filing queue.');
             closeAuditDrawer();
-            fetchData();
+            await refreshQueueAndPilot();
         },
     });
 }
@@ -2848,7 +2886,7 @@ function renderPilotStats(payload) {
     if (elements.pilotApprovedSub) {
         const left = pilot.approvals_remaining;
         elements.pilotApprovedSub.textContent =
-            left > 0 ? `${left} more to unlock edit-rate` : 'volume bar met';
+            left > 0 ? `${left} more to volume bar` : 'volume bar met';
     }
 
     const showRate = !!pilot.show_edit_rate;
@@ -2863,7 +2901,7 @@ function renderPilotStats(payload) {
     if (elements.pilotEditRateSub) {
         elements.pilotEditRateSub.textContent = showRate
             ? `hold if ≥ ${formatPilotPct(pilot.edit_rate_hold_threshold)}`
-            : `tea-leaf ban until ${minA} approvals`;
+            : `% you changed on extract · after ${minA}`;
     }
 
     const rejected = pilot.rejected_invoices || 0;
@@ -2876,6 +2914,12 @@ function renderPilotStats(payload) {
     }
     if (elements.pilotPending) {
         elements.pilotPending.textContent = String(pilot.pending_review ?? '—');
+    }
+    if (elements.pilotPendingSub) {
+        const pending = Number(pilot.pending_review) || 0;
+        elements.pilotPendingSub.textContent = pending
+            ? 'click → review next'
+            : 'queue clear';
     }
 
     if (elements.pilotFieldBody) {
@@ -2923,6 +2967,81 @@ async function fetchPilotStats() {
             elements.pilotStatusHint.textContent = err.message || 'Could not load pilot stats';
         }
         throw err;
+    }
+}
+
+async function refreshQueueAndPilot() {
+    await Promise.all([
+        fetchData(),
+        fetchPilotStats().catch((err) => console.error(err)),
+    ]);
+}
+
+function invoiceYearMonth(inv) {
+    const raw = String((inv && inv.invoice_date) || '').trim();
+    const ym = raw.slice(0, 7);
+    return /^\d{4}-\d{2}$/.test(ym) ? ym : '';
+}
+
+/** Firm-wide pending → switch client/month → open easiest bill first. */
+async function reviewNextPilotPending() {
+    if (elements.pilotReviewNextBtn) elements.pilotReviewNextBtn.disabled = true;
+    try {
+        showToast('Finding next pending bill…');
+        const response = await apiFetch('/api/invoices?status=pending_review');
+        const invoices = await readJsonOrThrow(response, 'Failed to load pending invoices');
+        const list = Array.isArray(invoices) ? invoices : [];
+        if (!list.length) {
+            showToast('No pending bills — send WhatsApp invoices or wait for client uploads.', true);
+            await fetchPilotStats().catch(() => null);
+            return;
+        }
+        const sorted = [...list].sort((a, b) => {
+            const ra = isReadyToApprove(a) ? 1 : 0;
+            const rb = isReadyToApprove(b) ? 1 : 0;
+            if (ra !== rb) return rb - ra;
+            const d = scoreExceptionRisk(a) - scoreExceptionRisk(b); // easier first among hard
+            return d !== 0 ? d : (Number(b.id) || 0) - (Number(a.id) || 0);
+        });
+        const inv = sorted[0];
+        const phone = (inv.client_phone || '').trim();
+        if (!phone) {
+            showToast('Pending invoice missing client phone', true);
+            return;
+        }
+
+        // Ensure GST module + client context
+        if (typeof setModule === 'function') setModule('gst');
+        state.selectedClientPhone = phone;
+        if (elements.clientSelect) elements.clientSelect.value = phone;
+        invalidateClientInvoiceCache();
+        updateClientGstinLabel();
+        refreshGstSessionStatus();
+
+        let ym = invoiceYearMonth(inv);
+        if (!ym) {
+            ym = await resolveMonthForClient(phone, { preferSaved: true });
+        }
+        state.selectedMonth = ym || '';
+        if (phone && /^\d{4}-\d{2}$/.test(state.selectedMonth)) {
+            saveClientMonth(phone, state.selectedMonth);
+        }
+        saveDashContext({ phone, month: state.selectedMonth || '' });
+        if (typeof syncMonthPickerDisplay === 'function') syncMonthPickerDisplay();
+        if (typeof renderMonthCalendarGrid === 'function') {
+            try { renderMonthCalendarGrid(); } catch (_) { /* ignore */ }
+        }
+
+        await fetchData();
+        jumpToAuditQueue();
+        await openInvoiceAudit(inv.id);
+        const ready = isReadyToApprove(inv);
+        showToast(ready
+            ? `Opened ready bill #${inv.id} — approve to count toward 25`
+            : `Opened bill #${inv.id} — review flags then approve`);
+        await fetchPilotStats().catch(() => null);
+    } finally {
+        if (elements.pilotReviewNextBtn) elements.pilotReviewNextBtn.disabled = false;
     }
 }
 
@@ -3717,6 +3836,11 @@ function getFilteredInvoices() {
     const isItcTab = state.activeFilter === 'itc';
     if (isExceptionTab || isItcTab) {
         filtered.sort((a, b) => {
+            if (isExceptionTab) {
+                const ra = isReadyToApprove(a) ? 1 : 0;
+                const rb = isReadyToApprove(b) ? 1 : 0;
+                if (ra !== rb) return rb - ra; // ready-to-approve first (pilot velocity)
+            }
             const scoreFn = isItcTab ? scoreItcIssue : scoreExceptionRisk;
             const d = scoreFn(b) - scoreFn(a);
             return d !== 0 ? d : (b.id || 0) - (a.id || 0);
@@ -3840,7 +3964,7 @@ async function bulkApproveSelected() {
                 ? `Approved ${ok} · failed ${fail}`
                 : `Approved ${ok} invoice(s)`
         );
-        await fetchData();
+        await refreshQueueAndPilot();
         updateBulkBar();
     } finally {
         if (elements.bulkApproveBtn) elements.bulkApproveBtn.disabled = false;
@@ -3865,7 +3989,10 @@ function renderInvoiceTable() {
         elements.recordCountTxt.textContent = `${itcIssueCount} ITC flags · ${filtered.length} shown · ${formatYearMonthLabel(state.selectedMonth)}`;
         elements.recordCountTxt.style.color = itcIssueCount > 0 ? '#F0B35A' : '#2BB896';
     } else if (isExceptionTab) {
-        elements.recordCountTxt.textContent = `${exceptionCount} need review · highest risk first · ${formatYearMonthLabel(state.selectedMonth)}`;
+        const ready = state.invoices.filter((inv) => isExceptionInvoice(inv) && isReadyToApprove(inv)).length;
+        elements.recordCountTxt.textContent = ready
+            ? `${exceptionCount} need review · ${ready} ready to approve first · ${formatYearMonthLabel(state.selectedMonth)}`
+            : `${exceptionCount} need review · highest risk first · ${formatYearMonthLabel(state.selectedMonth)}`;
         elements.recordCountTxt.style.color = exceptionCount > 0 ? '#F0B35A' : '#2BB896';
     } else {
         elements.recordCountTxt.textContent = `${pendingCount} pending · ${filtered.length} shown · ${formatYearMonthLabel(state.selectedMonth)}`;

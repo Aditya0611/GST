@@ -1860,6 +1860,15 @@
             font-size: 11px;
             color: #9aa7b5;
         }
+        .pilot-kpi-clickable {
+            cursor: pointer;
+            transition: border-color 0.15s ease, background 0.15s ease;
+        }
+        .pilot-kpi-clickable:hover,
+        .pilot-kpi-clickable:focus-visible {
+            border-color: rgba(54, 214, 174, 0.45);
+            outline: none;
+        }
         .pilot-field-table {
             width: 100%;
             border-collapse: collapse;
@@ -2222,10 +2231,14 @@
                         <span id="pilot-status-pill" class="pilot-status-pill collecting">Collecting</span>
                     </div>
                     <p id="pilot-status-hint" class="text-[12px] text-on-surface-variant mt-1.5 mb-0">
-                        Approvals toward 25 · edit-rate locked until volume bar.
+                        Approvals toward 25 · edit-rate counted only after the volume bar.
                     </p>
                 </div>
-                <div class="flex items-center gap-2 shrink-0">
+                <div class="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+                    <button type="button" id="pilot-review-next-btn" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-primary/15 border border-primary/35 text-[12px] font-bold text-primary hover:bg-primary/25" title="Open next firm-wide pending bill (easy ones first)">
+                        <span class="material-symbols-outlined text-[16px]">play_arrow</span>
+                        Review next
+                    </button>
                     <label class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant" for="pilot-days-select">Window</label>
                     <select id="pilot-days-select" class="bg-surface-container-low border border-outline-variant rounded-lg px-2.5 py-1.5 text-[12px] text-on-surface outline-none">
                         <option value="7">7 days</option>
@@ -2265,10 +2278,10 @@
                     <div class="value" id="pilot-reject-skip">—</div>
                     <div class="sub" id="pilot-reject-skip-sub">not in edit-rate</div>
                 </div>
-                <div class="pilot-kpi">
+                <div class="pilot-kpi pilot-kpi-clickable" id="pilot-pending-card" role="button" tabindex="0" title="Open next pending bill">
                     <div class="label">Pending review</div>
                     <div class="value" id="pilot-pending">—</div>
-                    <div class="sub">created in window</div>
+                    <div class="sub" id="pilot-pending-sub">click → review next</div>
                 </div>
             </div>
 
@@ -3192,6 +3205,6 @@
 <!-- Toast -->
 <div id="toast">Filing updated successfully!</div>
 
-<script src="/static/dashboard.js?v=20260909-ais1"></script>
+<script src="/static/dashboard.js?v=20260909-pilot2"></script>
 </body>
 </html>

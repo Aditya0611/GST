@@ -3181,15 +3181,15 @@ async def get_pilot_stats(*, days: int = 30, firm_id: int | None = None) -> dict
         status = "collecting"
         status_label = "Collecting approvals"
         status_hint = (
-            f"Need {PILOT_MIN_APPROVALS - approved} more approvals before trusting edit-rate "
-            f"(tea-leaf ban until {PILOT_MIN_APPROVALS})."
+            f"{approved}/{PILOT_MIN_APPROVALS} approved — keep reviewing WhatsApp bills. "
+            f"Edit-rate (% you changed on extract) is counted only after {PILOT_MIN_APPROVALS}."
         )
     elif approved < PILOT_MIN_APPROVALS:
         status = "check_in"
         status_label = "Relationship check-in"
         status_hint = (
-            f"At {approved}/{PILOT_MIN_APPROVALS} approvals — ask the CA “how’s this feeling?” "
-            "Do not quote edit-rate yet."
+            f"At {approved}/{PILOT_MIN_APPROVALS} — ask the CA “how’s this feeling?” "
+            "Keep approving; do not decide scale/hold on edit-rate yet."
         )
     elif overall_hold or field_hold:
         status = "hold"
@@ -3201,13 +3201,17 @@ async def get_pilot_stats(*, days: int = 30, firm_id: int | None = None) -> dict
             parts.append(
                 "filing-critical: " + ", ".join(critical_hold_fields[:4])
             )
-        status_hint = "Volume met, but " + "; ".join(parts) + "."
+        status_hint = (
+            "Volume met, but extraction needs work: "
+            + "; ".join(parts)
+            + f". Hold scale if any filing-critical field ≥ {PILOT_FIELD_RATE_HOLD:.0%}."
+        )
     else:
         status = "go"
         status_label = "Go — scale outreach"
         status_hint = (
-            f"≥{PILOT_MIN_APPROVALS} approvals, overall edit-rate under "
-            f"{PILOT_EDIT_RATE_HOLD:.0%}, no filing-critical field ≥ {PILOT_FIELD_RATE_HOLD:.0%}."
+            f"≥{PILOT_MIN_APPROVALS} approvals and edit-rate under "
+            f"{PILOT_EDIT_RATE_HOLD:.0%} (no filing-critical field ≥ {PILOT_FIELD_RATE_HOLD:.0%})."
         )
 
     progress_pct = min(100.0, round(100.0 * approved / PILOT_MIN_APPROVALS, 1))
