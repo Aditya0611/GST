@@ -1,0 +1,10 @@
+{
+  "pan": "ABCDE1234F",
+  "financial_year": "2025-26",
+  "salary": 1200000,
+  "tds_on_salary": 90000,
+  "interest_income": 15000,
+  "other_income": 0,
+  "source": "dummy_ais",
+  "note": "Demo AIS for Taxova — matches dummy Form 16 salary/TDS; includes bank interest not on Form 16."
+}

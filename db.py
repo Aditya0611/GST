@@ -1038,6 +1038,25 @@ EXTRACTION_TRACKED_FIELDS = frozenset(
     }
 )
 
+# Filing-critical fields for pilot go/hold (docs/PILOT_CRITERIA.md)
+PILOT_FILING_CRITICAL_FIELDS = frozenset(
+    {
+        "supplier_gstin",
+        "recipient_gstin",
+        "invoice_number",
+        "invoice_date",
+        "total_taxable_value",
+        "total_cgst",
+        "total_sgst",
+        "total_igst",
+        "grand_total",
+    }
+)
+PILOT_MIN_APPROVALS = 25
+PILOT_CHECK_IN_AT = 10
+PILOT_EDIT_RATE_HOLD = 0.25
+PILOT_FIELD_RATE_HOLD = 0.15
+
 
 async def _ensure_extraction_edit_schema(conn) -> None:
     """Production signal: every CA edit of an extraction field before approve."""
@@ -3062,6 +3081,160 @@ async def get_extraction_edit_stats(*, days: int = 30, firm_id: int | None = Non
         await conn.close()
 
 
+async def get_pilot_stats(*, days: int = 30, firm_id: int | None = None) -> dict:
+    """
+    GST pilot KPIs for the CA dashboard (docs/PILOT_CRITERIA.md).
+    Includes approvals progress, edit-rate gate, filing-critical fields,
+    and reject/skip volume in the same window.
+    """
+    base = await get_extraction_edit_stats(days=days, firm_id=firm_id)
+    days = int(base.get("days") or days)
+    approved = int(base.get("approved_invoices") or 0)
+    edit_rate = base.get("edit_rate")
+    by_field = list(base.get("by_field") or [])
+
+    filing_critical = []
+    critical_hold_fields = []
+    for row in by_field:
+        name = row.get("field_name")
+        if name not in PILOT_FILING_CRITICAL_FIELDS:
+            continue
+        invs = int(row.get("invoices") or 0)
+        rate = (invs / approved) if approved else None
+        entry = {
+            "field_name": name,
+            "edit_events": int(row.get("edit_events") or 0),
+            "invoices": invs,
+            "rate": round(rate, 4) if rate is not None else None,
+            "hold": bool(rate is not None and rate >= PILOT_FIELD_RATE_HOLD),
+        }
+        filing_critical.append(entry)
+        if entry["hold"]:
+            critical_hold_fields.append(name)
+    filing_critical.sort(key=lambda x: (-(x["rate"] or 0), x["field_name"]))
+
+    # Reject / skip volume (same window) — not in edit_rate denominator
+    conn = await get_connection()
+    try:
+        firm_clause_pg = "AND firm_id = $2" if firm_id is not None else ""
+        firm_clause_sq = "AND firm_id = ?" if firm_id is not None else ""
+        if IS_POSTGRES:
+            params: list = [days]
+            if firm_id is not None:
+                params.append(firm_id)
+            counts = await conn.fetchrow(
+                f"""
+                SELECT
+                    COUNT(*) FILTER (WHERE review_status = 'rejected') AS rejected,
+                    COUNT(*) FILTER (WHERE review_status = 'skipped') AS skipped,
+                    COUNT(*) FILTER (
+                        WHERE COALESCE(is_approved, FALSE) = FALSE
+                          AND COALESCE(review_status, 'needs_review')
+                              NOT IN ('rejected', 'skipped', 'approved')
+                    ) AS pending_review
+                FROM invoices
+                WHERE created_at >= NOW() - make_interval(days => $1)
+                {firm_clause_pg}
+                """,
+                *params,
+            )
+            rejected = int(counts["rejected"] or 0) if counts else 0
+            skipped = int(counts["skipped"] or 0) if counts else 0
+            pending = int(counts["pending_review"] or 0) if counts else 0
+        else:
+            params = [f"-{days} days"]
+            if firm_id is not None:
+                params.append(firm_id)
+            cur = await conn.execute(
+                f"""
+                SELECT
+                    SUM(CASE WHEN review_status = 'rejected' THEN 1 ELSE 0 END) AS rejected,
+                    SUM(CASE WHEN review_status = 'skipped' THEN 1 ELSE 0 END) AS skipped,
+                    SUM(
+                        CASE
+                            WHEN COALESCE(is_approved, 0) = 0
+                             AND COALESCE(review_status, 'needs_review')
+                                 NOT IN ('rejected', 'skipped', 'approved')
+                            THEN 1 ELSE 0
+                        END
+                    ) AS pending_review
+                FROM invoices
+                WHERE created_at >= datetime('now', ?)
+                {firm_clause_sq}
+                """,
+                tuple(params),
+            )
+            row = await cur.fetchone()
+            rejected = int(row[0] or 0) if row else 0
+            skipped = int(row[1] or 0) if row else 0
+            pending = int(row[2] or 0) if row else 0
+    finally:
+        await conn.close()
+
+    volume_met = approved >= PILOT_MIN_APPROVALS
+    overall_hold = bool(
+        volume_met and edit_rate is not None and edit_rate >= PILOT_EDIT_RATE_HOLD
+    )
+    field_hold = bool(volume_met and critical_hold_fields)
+
+    if approved < PILOT_CHECK_IN_AT:
+        status = "collecting"
+        status_label = "Collecting approvals"
+        status_hint = (
+            f"Need {PILOT_MIN_APPROVALS - approved} more approvals before trusting edit-rate "
+            f"(tea-leaf ban until {PILOT_MIN_APPROVALS})."
+        )
+    elif approved < PILOT_MIN_APPROVALS:
+        status = "check_in"
+        status_label = "Relationship check-in"
+        status_hint = (
+            f"At {approved}/{PILOT_MIN_APPROVALS} approvals — ask the CA “how’s this feeling?” "
+            "Do not quote edit-rate yet."
+        )
+    elif overall_hold or field_hold:
+        status = "hold"
+        status_label = "Hold — fix extraction"
+        parts = []
+        if overall_hold:
+            parts.append(f"overall edit-rate {edit_rate:.0%} ≥ {PILOT_EDIT_RATE_HOLD:.0%}")
+        if field_hold:
+            parts.append(
+                "filing-critical: " + ", ".join(critical_hold_fields[:4])
+            )
+        status_hint = "Volume met, but " + "; ".join(parts) + "."
+    else:
+        status = "go"
+        status_label = "Go — scale outreach"
+        status_hint = (
+            f"≥{PILOT_MIN_APPROVALS} approvals, overall edit-rate under "
+            f"{PILOT_EDIT_RATE_HOLD:.0%}, no filing-critical field ≥ {PILOT_FIELD_RATE_HOLD:.0%}."
+        )
+
+    progress_pct = min(100.0, round(100.0 * approved / PILOT_MIN_APPROVALS, 1))
+
+    return {
+        **base,
+        "pilot": {
+            "status": status,
+            "status_label": status_label,
+            "status_hint": status_hint,
+            "volume_met": volume_met,
+            "min_approvals": PILOT_MIN_APPROVALS,
+            "check_in_at": PILOT_CHECK_IN_AT,
+            "progress_pct": progress_pct,
+            "approvals_remaining": max(0, PILOT_MIN_APPROVALS - approved),
+            "edit_rate_hold_threshold": PILOT_EDIT_RATE_HOLD,
+            "field_rate_hold_threshold": PILOT_FIELD_RATE_HOLD,
+            "show_edit_rate": volume_met,
+            "filing_critical": filing_critical,
+            "critical_hold_fields": critical_hold_fields,
+            "rejected_invoices": rejected,
+            "skipped_invoices": skipped,
+            "pending_review": pending,
+        },
+    }
+
+
 async def skip_invoice(
     invoice_id: int,
     reason: str = "Skipped by CA",
@@ -3734,6 +3907,9 @@ async def _ensure_itr_schema(conn) -> None:
                 f"ALTER TABLE clients ADD COLUMN IF NOT EXISTS {col} TEXT"
             )
         await conn.execute(
+            "ALTER TABLE itr_returns ADD COLUMN IF NOT EXISTS ais_json TEXT"
+        )
+        await conn.execute(
             """
             CREATE TABLE IF NOT EXISTS itr_returns (
                 id SERIAL PRIMARY KEY,
@@ -3750,6 +3926,7 @@ async def _ensure_itr_schema(conn) -> None:
                 regime_preferred VARCHAR(8),
                 estimate_json TEXT,
                 extracted_json TEXT,
+                ais_json TEXT,
                 ca_notes TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -3779,6 +3956,10 @@ async def _ensure_itr_schema(conn) -> None:
                 await conn.execute(f"ALTER TABLE clients ADD COLUMN {col} TEXT")
             except Exception:
                 pass
+        try:
+            await conn.execute("ALTER TABLE itr_returns ADD COLUMN ais_json TEXT")
+        except Exception:
+            pass
         await conn.execute(
             """
             CREATE TABLE IF NOT EXISTS itr_returns (
@@ -3796,6 +3977,7 @@ async def _ensure_itr_schema(conn) -> None:
                 regime_preferred TEXT,
                 estimate_json TEXT,
                 extracted_json TEXT,
+                ais_json TEXT,
                 ca_notes TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -3932,6 +4114,7 @@ async def update_itr_return(itr_id: int, fields: dict) -> dict | None:
         "regime_preferred",
         "estimate_json",
         "extracted_json",
+        "ais_json",
         "ca_notes",
         "financial_year",
     }

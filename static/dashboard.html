@@ -1775,6 +1775,110 @@
             font-variant-numeric: tabular-nums;
         }
 
+        /* GST pilot panel */
+        .pilot-panel {
+            border: 1px solid rgba(54, 214, 174, 0.18);
+            background: linear-gradient(145deg, rgba(24, 34, 48, 0.95), rgba(18, 26, 36, 0.98));
+        }
+        .pilot-panel-head {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+        .pilot-status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            border: 1px solid transparent;
+        }
+        .pilot-status-pill.collecting,
+        .pilot-status-pill.check_in {
+            background: rgba(240, 179, 90, 0.12);
+            color: #F0B35A;
+            border-color: rgba(240, 179, 90, 0.28);
+        }
+        .pilot-status-pill.go {
+            background: rgba(54, 214, 174, 0.12);
+            color: #36D6AE;
+            border-color: rgba(54, 214, 174, 0.28);
+        }
+        .pilot-status-pill.hold {
+            background: rgba(255, 107, 107, 0.12);
+            color: #FF8A8A;
+            border-color: rgba(255, 107, 107, 0.28);
+        }
+        .pilot-progress-track {
+            height: 8px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.06);
+            overflow: hidden;
+        }
+        .pilot-progress-fill {
+            height: 100%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #36D6AE, #5B8CFF);
+            transition: width 0.35s ease;
+        }
+        .pilot-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+        @media (min-width: 900px) {
+            .pilot-kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        }
+        .pilot-kpi {
+            padding: 12px 14px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .pilot-kpi .label {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #9aa7b5;
+            margin-bottom: 6px;
+        }
+        .pilot-kpi .value {
+            font-size: 22px;
+            font-weight: 800;
+            color: #F2F5F8;
+            line-height: 1.1;
+        }
+        .pilot-kpi .sub {
+            margin-top: 4px;
+            font-size: 11px;
+            color: #9aa7b5;
+        }
+        .pilot-field-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        .pilot-field-table th,
+        .pilot-field-table td {
+            padding: 8px 10px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .pilot-field-table th {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #9aa7b5;
+        }
+        .pilot-muted { opacity: 0.55; }
+
         select option { background: #121A24; color: var(--text); }
     </style>
 </head>
@@ -2109,6 +2213,88 @@
             </div>
         </div>
 
+        <!-- ── GST Pilot KPIs ── -->
+        <section id="pilot-panel" class="panel pilot-panel p-5 fade-up" aria-label="GST pilot metrics">
+            <div class="pilot-panel-head">
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <h3 class="text-[15px] font-extrabold text-white m-0">GST pilot</h3>
+                        <span id="pilot-status-pill" class="pilot-status-pill collecting">Collecting</span>
+                    </div>
+                    <p id="pilot-status-hint" class="text-[12px] text-on-surface-variant mt-1.5 mb-0">
+                        Approvals toward 25 · edit-rate locked until volume bar.
+                    </p>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                    <label class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant" for="pilot-days-select">Window</label>
+                    <select id="pilot-days-select" class="bg-surface-container-low border border-outline-variant rounded-lg px-2.5 py-1.5 text-[12px] text-on-surface outline-none">
+                        <option value="7">7 days</option>
+                        <option value="30" selected>30 days</option>
+                        <option value="90">90 days</option>
+                    </select>
+                    <button type="button" id="pilot-refresh-btn" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-outline-variant text-[12px] font-semibold text-on-surface hover:border-primary/40" title="Refresh pilot stats">
+                        <span class="material-symbols-outlined text-[16px]">refresh</span>
+                        Refresh
+                    </button>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <div class="flex items-center justify-between text-[11px] text-on-surface-variant mb-1.5">
+                    <span>Approvals progress</span>
+                    <span id="pilot-progress-label" class="font-semibold text-on-surface">0 / 25</span>
+                </div>
+                <div class="pilot-progress-track" aria-hidden="true">
+                    <div id="pilot-progress-fill" class="pilot-progress-fill" style="width:0%"></div>
+                </div>
+            </div>
+
+            <div class="pilot-kpi-grid mb-4">
+                <div class="pilot-kpi">
+                    <div class="label">Approved</div>
+                    <div class="value" id="pilot-approved">—</div>
+                    <div class="sub" id="pilot-approved-sub">toward volume bar</div>
+                </div>
+                <div class="pilot-kpi" id="pilot-edit-rate-card">
+                    <div class="label">Edit rate</div>
+                    <div class="value" id="pilot-edit-rate">—</div>
+                    <div class="sub" id="pilot-edit-rate-sub">locked until 25 approvals</div>
+                </div>
+                <div class="pilot-kpi">
+                    <div class="label">Rejected / skipped</div>
+                    <div class="value" id="pilot-reject-skip">—</div>
+                    <div class="sub" id="pilot-reject-skip-sub">not in edit-rate</div>
+                </div>
+                <div class="pilot-kpi">
+                    <div class="label">Pending review</div>
+                    <div class="value" id="pilot-pending">—</div>
+                    <div class="sub">created in window</div>
+                </div>
+            </div>
+
+            <div>
+                <div class="flex items-center justify-between mb-2">
+                    <h4 class="text-[12px] font-bold uppercase tracking-widest text-on-surface-variant m-0">Filing-critical field edits</h4>
+                    <span class="text-[11px] text-on-surface-variant">hold if any ≥ 15% after volume bar</span>
+                </div>
+                <div class="overflow-x-auto rounded-xl border border-outline-variant/60">
+                    <table class="pilot-field-table">
+                        <thead>
+                            <tr>
+                                <th>Field</th>
+                                <th>Invoices edited</th>
+                                <th>Rate</th>
+                                <th>Signal</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pilot-field-body">
+                            <tr><td colspan="4" class="text-on-surface-variant">Loading…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
         <!-- ── KPI Cards Grid ── -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 fade-up fade-up-delay-1">
 
@@ -2373,8 +2559,8 @@
             </nav>
             <h2 class="text-[28px] md:text-[32px] font-extrabold tracking-tight page-title-accent">ITR prep (Form 16)</h2>
             <p class="text-[14px] text-on-surface-variant max-w-2xl">
-                Upload Form 16, review the AI extract (or edit manually), compare old vs new regime, approve, then export a prep draft.
-                <span class="text-secondary font-semibold">Not e-filing — print/save PDF for portal use.</span>
+                Upload Form 16, then optionally upload AIS JSON from the income-tax portal to catch mismatches before filing.
+                <span class="text-secondary font-semibold">Not e-filing — prep + reconcile only.</span>
             </p>
         </div>
 
@@ -2394,7 +2580,7 @@
                 </li>
                 <li id="itr-step-review" class="itr-onboarding-step">
                     <span class="itr-onboarding-num">3</span>
-                    <span>Review extraction → <strong>Save &amp; estimate</strong> → compare old vs new → <strong>Export draft</strong>.</span>
+                    <span>Review Form 16 → optional <strong>AIS upload</strong> → Save estimate → Export draft.</span>
                 </li>
             </ol>
         </div>
@@ -2428,7 +2614,24 @@
                 <button type="button" id="itr-upload-btn" class="h-[38px] px-4 rounded-[10px] border border-outline-variant text-[13px] font-bold text-on-surface hover:border-primary/50 disabled:opacity-40" disabled>
                     Upload Form 16
                 </button>
+                <input type="file" id="itr-ais-input" accept=".json,application/json,text/plain" class="hidden"/>
+                <button type="button" id="itr-ais-upload-btn" class="h-[38px] px-4 rounded-[10px] border border-outline-variant text-[13px] font-bold text-on-surface hover:border-primary/50 disabled:opacity-40" disabled title="Upload AIS JSON from incometax.gov.in">
+                    Upload AIS
+                </button>
                 <span id="itr-upload-hint" class="text-[12px] text-on-surface-variant">Select a client and open a FY first.</span>
+            </div>
+            <div id="itr-ais-password-row" class="flex flex-wrap items-end gap-3" style="display:none;">
+                <div class="itr-field" style="min-width:140px;">
+                    <label for="itr-ais-dob">DOB (for encrypted AIS)</label>
+                    <input id="itr-ais-dob" type="text" maxlength="8" placeholder="ddmmyyyy" autocomplete="off"/>
+                </div>
+                <div class="itr-field" style="min-width:180px;">
+                    <label for="itr-ais-password">Or full AIS password</label>
+                    <input id="itr-ais-password" type="password" placeholder="optional if DOB set" autocomplete="off"/>
+                </div>
+                <span class="text-[11px] text-on-surface-variant max-w-md">
+                    Portal AIS JSON is often encrypted. Password is usually <strong>PAN + DOB</strong> (ddmmyyyy). Plain demo JSON needs no password.
+                </span>
             </div>
         </div>
 
@@ -2465,6 +2668,39 @@
                 <button type="button" id="itr-apply-extracted-btn" class="itr-review-btn is-secondary">Apply all extracted</button>
                 <button type="button" id="itr-review-save-btn" class="itr-review-btn is-primary">Save &amp; estimate</button>
                 <a href="#" id="itr-view-form16-link" class="itr-review-link" target="_blank" rel="noopener" style="display:none;">View uploaded Form 16</a>
+            </div>
+        </div>
+
+        <!-- AIS vs Form 16 reconcile -->
+        <div id="itr-ais-panel" class="panel p-4 md:p-5" style="display:none;">
+            <div class="flex flex-wrap items-start justify-between gap-3 mb-3">
+                <div>
+                    <h3 class="text-[15px] font-bold text-white m-0 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[18px] text-secondary">compare_arrows</span>
+                        AIS vs Form 16
+                    </h3>
+                    <p class="text-[12px] text-on-surface-variant m-0 mt-1">
+                        Government AIS download compared to saved Form 16 fields. No portal login inside Taxova.
+                    </p>
+                </div>
+                <span id="itr-ais-status-badge" class="itr-review-status is-diff">—</span>
+            </div>
+            <div id="itr-ais-summary" class="itr-review-meta mb-3"></div>
+            <div class="overflow-x-auto rounded-xl border border-outline-variant/60">
+                <table class="itr-review-table">
+                    <thead>
+                        <tr>
+                            <th>Field</th>
+                            <th class="text-right">AIS</th>
+                            <th class="text-right">Return / Form 16</th>
+                            <th>Severity</th>
+                            <th>Note</th>
+                        </tr>
+                    </thead>
+                    <tbody id="itr-ais-mismatch-body">
+                        <tr><td colspan="5" class="text-on-surface-variant">Upload AIS to compare.</td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
 
@@ -2956,6 +3192,6 @@
 <!-- Toast -->
 <div id="toast">Filing updated successfully!</div>
 
-<script src="/static/dashboard.js?v=20260907-itr2"></script>
+<script src="/static/dashboard.js?v=20260909-ais1"></script>
 </body>
 </html>

@@ -595,9 +595,12 @@ const state = {
     itrExtracted: null,
     itrLastDocuments: [],
     itrLatestForm16Path: null,
+    itrAisSummary: null,
+    itrAisReconcile: null,
     selectedMonth: '', // Set on load to latest invoice month / current month (not "all")
     monthCalViewYear: new Date().getFullYear(),
     categoryFilter: '', // Empty = all categories
+    pilotDays: 30,
     invoices: [],
     activeFilter: 'exceptions',
     searchQuery: '',
@@ -653,6 +656,24 @@ const elements = {
     recipientPortalRecheckBtn: document.getElementById('recipient-portal-recheck-btn'),
     syncBtn: document.getElementById('sync-btn'),
     globalSearch: document.getElementById('global-search'),
+
+    // GST pilot panel
+    pilotPanel: document.getElementById('pilot-panel'),
+    pilotStatusPill: document.getElementById('pilot-status-pill'),
+    pilotStatusHint: document.getElementById('pilot-status-hint'),
+    pilotDaysSelect: document.getElementById('pilot-days-select'),
+    pilotRefreshBtn: document.getElementById('pilot-refresh-btn'),
+    pilotProgressLabel: document.getElementById('pilot-progress-label'),
+    pilotProgressFill: document.getElementById('pilot-progress-fill'),
+    pilotApproved: document.getElementById('pilot-approved'),
+    pilotApprovedSub: document.getElementById('pilot-approved-sub'),
+    pilotEditRateCard: document.getElementById('pilot-edit-rate-card'),
+    pilotEditRate: document.getElementById('pilot-edit-rate'),
+    pilotEditRateSub: document.getElementById('pilot-edit-rate-sub'),
+    pilotRejectSkip: document.getElementById('pilot-reject-skip'),
+    pilotRejectSkipSub: document.getElementById('pilot-reject-skip-sub'),
+    pilotPending: document.getElementById('pilot-pending'),
+    pilotFieldBody: document.getElementById('pilot-field-body'),
     
     // KPI metrics
     kpiPendingTrend: document.getElementById('kpi-pending-trend'),
@@ -1012,6 +1033,22 @@ function setupEventListeners() {
 
     // Reload dashboard data (no GST portal API yet)
     elements.syncBtn.addEventListener('click', triggerSync);
+
+    if (elements.pilotDaysSelect) {
+        elements.pilotDaysSelect.addEventListener('change', () => {
+            const days = parseInt(elements.pilotDaysSelect.value, 10);
+            state.pilotDays = [7, 30, 90].includes(days) ? days : 30;
+            fetchPilotStats().catch((err) => console.error(err));
+        });
+    }
+    if (elements.pilotRefreshBtn) {
+        elements.pilotRefreshBtn.addEventListener('click', () => {
+            fetchPilotStats().catch((err) => {
+                console.error(err);
+                showToast(err.message || 'Pilot stats failed', true);
+            });
+        });
+    }
 
     // Global Search filter
     elements.globalSearch.addEventListener('input', (e) => {
@@ -1480,6 +1517,7 @@ async function fetchClients() {
             state.selectedMonth = currentYearMonth();
             syncMonthPickerDisplay();
             updateClientGstinLabel();
+            await fetchPilotStats();
             return;
         }
 
@@ -1493,6 +1531,7 @@ async function fetchClients() {
         await applyClientAndMonthDefaults(clients);
         if (typeof resetItrPanelForClient === 'function') resetItrPanelForClient();
         await fetchData();
+        await fetchPilotStats();
     } catch (e) {
         console.error("Failed to load clients:", e);
         if (elements.clientSelect) {
@@ -2773,11 +2812,118 @@ function triggerSync() {
     elements.syncBtn.disabled = true;
     showToast("Reloading dashboard from database…");
 
-    Promise.resolve(fetchData()).finally(() => {
+    Promise.all([fetchData(), fetchPilotStats()]).finally(() => {
         elements.syncBtn.classList.remove('loading');
         elements.syncBtn.disabled = false;
         showToast("Dashboard data refreshed.");
     });
+}
+
+function formatPilotPct(rate) {
+    if (rate == null || Number.isNaN(Number(rate))) return '—';
+    return `${Math.round(Number(rate) * 1000) / 10}%`;
+}
+
+function renderPilotStats(payload) {
+    if (!elements.pilotPanel || !payload) return;
+    const pilot = payload.pilot || {};
+    const approved = payload.approved_invoices || 0;
+    const minA = pilot.min_approvals || 25;
+    const status = pilot.status || 'collecting';
+
+    if (elements.pilotStatusPill) {
+        elements.pilotStatusPill.className = `pilot-status-pill ${status}`;
+        elements.pilotStatusPill.textContent = pilot.status_label || status;
+    }
+    if (elements.pilotStatusHint) {
+        elements.pilotStatusHint.textContent = pilot.status_hint || '';
+    }
+    if (elements.pilotProgressLabel) {
+        elements.pilotProgressLabel.textContent = `${approved} / ${minA}`;
+    }
+    if (elements.pilotProgressFill) {
+        elements.pilotProgressFill.style.width = `${Math.min(100, Number(pilot.progress_pct) || 0)}%`;
+    }
+    if (elements.pilotApproved) elements.pilotApproved.textContent = String(approved);
+    if (elements.pilotApprovedSub) {
+        const left = pilot.approvals_remaining;
+        elements.pilotApprovedSub.textContent =
+            left > 0 ? `${left} more to unlock edit-rate` : 'volume bar met';
+    }
+
+    const showRate = !!pilot.show_edit_rate;
+    if (elements.pilotEditRateCard) {
+        elements.pilotEditRateCard.classList.toggle('pilot-muted', !showRate);
+    }
+    if (elements.pilotEditRate) {
+        elements.pilotEditRate.textContent = showRate
+            ? formatPilotPct(payload.edit_rate)
+            : 'locked';
+    }
+    if (elements.pilotEditRateSub) {
+        elements.pilotEditRateSub.textContent = showRate
+            ? `hold if ≥ ${formatPilotPct(pilot.edit_rate_hold_threshold)}`
+            : `tea-leaf ban until ${minA} approvals`;
+    }
+
+    const rejected = pilot.rejected_invoices || 0;
+    const skipped = pilot.skipped_invoices || 0;
+    if (elements.pilotRejectSkip) {
+        elements.pilotRejectSkip.textContent = `${rejected} / ${skipped}`;
+    }
+    if (elements.pilotRejectSkipSub) {
+        elements.pilotRejectSkipSub.textContent = 'rejected / skipped';
+    }
+    if (elements.pilotPending) {
+        elements.pilotPending.textContent = String(pilot.pending_review ?? '—');
+    }
+
+    if (elements.pilotFieldBody) {
+        const rows = pilot.filing_critical || [];
+        if (!rows.length) {
+            elements.pilotFieldBody.innerHTML =
+                '<tr><td colspan="4" class="text-on-surface-variant">No filing-critical edits in this window.</td></tr>';
+        } else {
+            elements.pilotFieldBody.innerHTML = rows.map((row) => {
+                const rateLabel = showRate ? formatPilotPct(row.rate) : '—';
+                const signal = !showRate
+                    ? '<span class="text-on-surface-variant">wait for volume</span>'
+                    : (row.hold
+                        ? '<span style="color:#FF8A8A;font-weight:700;">HOLD</span>'
+                        : '<span style="color:#36D6AE;font-weight:700;">OK</span>');
+                return `<tr>
+                    <td class="font-semibold text-on-surface">${row.field_name}</td>
+                    <td>${row.invoices}</td>
+                    <td>${rateLabel}</td>
+                    <td>${signal}</td>
+                </tr>`;
+            }).join('');
+        }
+    }
+}
+
+async function fetchPilotStats() {
+    if (!elements.pilotPanel) return null;
+    const days = state.pilotDays || 30;
+    try {
+        const response = await apiFetch(`/api/pilot/stats?days=${days}`);
+        if (response.status === 401 || response.status === 403) {
+            if (elements.pilotStatusHint) {
+                elements.pilotStatusHint.textContent =
+                    'Sign in as CA (or admin API key) to load pilot KPIs.';
+            }
+            return null;
+        }
+        const payload = await readJsonOrThrow(response, 'Failed to load pilot stats');
+        renderPilotStats(payload);
+        return payload;
+    } catch (err) {
+        console.error('Pilot stats failed:', err);
+        if (elements.pilotStatusHint) {
+            elements.pilotStatusHint.textContent = err.message || 'Could not load pilot stats';
+        }
+        throw err;
+    }
 }
 
 // ── Local UI Rendering & Helpers ──
@@ -5069,6 +5215,8 @@ function resetItrPanelForClient() {
     state.itrExtracted = null;
     state.itrLastDocuments = [];
     state.itrLatestForm16Path = null;
+    state.itrAisSummary = null;
+    state.itrAisReconcile = null;
     const badge = document.getElementById("itr-status-badge");
     if (badge) { badge.style.display = "none"; badge.textContent = ""; }
     ["itr-gross","itr-exemptions","itr-other","itr-80c","itr-tds","itr-advance"].forEach(id => {
@@ -5083,6 +5231,7 @@ function resetItrPanelForClient() {
     renderItrEstimate(null);
     renderItrDocs([]);
     renderForm16Review(null);
+    renderAisReconcile(null);
     setItrActionsEnabled(false);
     updateItrOnboardingUI();
     const hint = document.getElementById("itr-upload-hint");
@@ -5092,10 +5241,12 @@ function resetItrPanelForClient() {
 }
 
 function setItrActionsEnabled(on) {
-    ["itr-upload-btn","itr-save-btn","itr-approve-btn","itr-export-btn"].forEach(id => {
+    ["itr-upload-btn","itr-ais-upload-btn","itr-save-btn","itr-approve-btn","itr-export-btn"].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.disabled = !on;
     });
+    const pwRow = document.getElementById("itr-ais-password-row");
+    if (pwRow) pwRow.style.display = on ? "" : "none";
 }
 
 function renderItrEstimate(est) {
@@ -5141,7 +5292,8 @@ function renderItrDocs(docs) {
     if (latest && latest.file_path) state.itrLatestForm16Path = latest.file_path;
     el.innerHTML = '<div class="font-semibold mb-1">Documents</div>' + list.map((d) => {
         const name = d.original_filename || d.file_path || "file";
-        return "<div>form16: " + name + "</div>";
+        const dtype = (d.doc_type || "file").toLowerCase();
+        return "<div>" + dtype + ": " + name + "</div>";
     }).join("");
 }
 
@@ -5181,11 +5333,147 @@ function fillItrFormFromReturn(row) {
     renderItrEstimate(est);
     renderItrDocs(row.documents || state.itrLastDocuments || []);
     renderForm16Review(row);
+    const aisBlob = row.ais || null;
+    const aisSummary = aisBlob && aisBlob.summary ? aisBlob.summary : aisBlob;
+    state.itrAisSummary = aisSummary || null;
+    if (aisSummary) {
+        // Live reconcile against current form values
+        renderAisReconcileFromClient(aisSummary);
+    } else {
+        renderAisReconcile(null);
+    }
     setItrActionsEnabled(true);
     updateItrOnboardingUI();
     const hint = document.getElementById("itr-upload-hint");
-    if (hint) hint.textContent = "PDF or image \u00B7 AI extract with manual edit fallback.";
+    if (hint) hint.textContent = "Form 16 PDF/image · AIS JSON from portal (or scratch/dummy_ais.json).";
 }
+
+function formatAisMoney(v) {
+    if (v == null || v === "") return "—";
+    const n = Number(v);
+    if (Number.isNaN(n)) return String(v);
+    return "₹" + n.toLocaleString("en-IN", { maximumFractionDigits: 0 });
+}
+
+function renderAisReconcile(payload) {
+    const panel = document.getElementById("itr-ais-panel");
+    const body = document.getElementById("itr-ais-mismatch-body");
+    const badge = document.getElementById("itr-ais-status-badge");
+    const summaryEl = document.getElementById("itr-ais-summary");
+    if (!panel) return;
+    if (!payload) {
+        panel.style.display = "none";
+        state.itrAisReconcile = null;
+        return;
+    }
+    panel.style.display = "";
+    state.itrAisReconcile = payload;
+    const recon = payload.reconcile || payload;
+    const ais = payload.ais || recon.ais || state.itrAisSummary || {};
+    const status = recon.status || "review";
+    if (badge) {
+        badge.textContent =
+            status === "match" ? "Match" :
+            status === "mismatch" ? "Mismatch" : "Review";
+        badge.className = "itr-review-status is-" + (status === "match" ? "match" : "diff");
+    }
+    if (summaryEl) {
+        const bits = [];
+        if (ais.pan) bits.push("PAN " + ais.pan);
+        if (ais.financial_year) bits.push("FY " + ais.financial_year);
+        bits.push("Salary " + formatAisMoney(ais.salary));
+        bits.push("TDS " + formatAisMoney(ais.tds_on_salary));
+        if (Number(ais.interest_income) > 0) bits.push("Interest " + formatAisMoney(ais.interest_income));
+        if (ais.encrypted) bits.push("decrypted portal file");
+        summaryEl.textContent = bits.join(" · ");
+    }
+    const rows = recon.mismatches || [];
+    if (!body) return;
+    if (!rows.length) {
+        body.innerHTML = '<tr><td colspan="5" class="text-on-surface-variant">No mismatches — AIS aligns with saved Form 16 fields.</td></tr>';
+        return;
+    }
+    body.innerHTML = rows.map((m) => {
+        const sev = (m.severity || "info").toLowerCase();
+        const color = sev === "error" ? "#FF8A8A" : (sev === "warn" ? "#F0B35A" : "#9aa7b5");
+        const aisVal = typeof m.ais === "number" ? formatAisMoney(m.ais) : (m.ais ?? "—");
+        const retVal = typeof m.return_value === "number" ? formatAisMoney(m.return_value) : (m.return_value ?? "—");
+        return `<tr>
+            <td class="font-semibold">${m.field || "—"}</td>
+            <td class="text-right">${aisVal}</td>
+            <td class="text-right">${retVal}</td>
+            <td style="color:${color};font-weight:700;text-transform:uppercase;font-size:11px;">${sev}</td>
+            <td class="text-on-surface-variant">${m.note || ""}</td>
+        </tr>`;
+    }).join("");
+}
+
+function renderAisReconcileFromClient(aisSummary) {
+    // Lightweight client-side preview; server reconcile runs on upload
+    if (!aisSummary) {
+        renderAisReconcile(null);
+        return;
+    }
+    const num = (id) => Number((document.getElementById(id) || {}).value || 0);
+    const pan = ((document.getElementById("itr-pan-input") || {}).value || "").trim().toUpperCase();
+    const fy = (document.getElementById("itr-fy-select") || {}).value || "";
+    const itrRow = {
+        pan,
+        financial_year: fy,
+        gross_salary: num("itr-gross"),
+        tds: num("itr-tds"),
+        other_income: num("itr-other"),
+    };
+    // Call server if we have a return id for authoritative reconcile
+    if (state.itrReturnId) {
+        apiFetch("/api/itr/returns/" + state.itrReturnId + "/ais/reconcile")
+            .then((r) => readJsonOrThrow(r, "AIS reconcile failed"))
+            .then((data) => renderAisReconcile(data))
+            .catch(() => {
+                renderAisReconcile({
+                    ais: aisSummary,
+                    reconcile: { status: "review", mismatches: [], ais: aisSummary },
+                });
+            });
+        return;
+    }
+    renderAisReconcile({
+        ais: aisSummary,
+        reconcile: { status: "review", mismatches: [], ais: aisSummary },
+    });
+}
+
+async function uploadAis() {
+    if (!state.itrReturnId) {
+        showToast("Open a return first", true);
+        return;
+    }
+    const input = document.getElementById("itr-ais-input");
+    if (!input || !input.files || !input.files[0]) {
+        if (input) input.click();
+        return;
+    }
+    const form = new FormData();
+    form.append("file", input.files[0]);
+    const dob = ((document.getElementById("itr-ais-dob") || {}).value || "").trim();
+    const password = ((document.getElementById("itr-ais-password") || {}).value || "").trim();
+    if (dob) form.append("dob", dob);
+    if (password) form.append("password", password);
+    showToast("Uploading AIS…");
+    const response = await apiFetch("/api/itr/returns/" + state.itrReturnId + "/ais", {
+        method: "POST",
+        body: form,
+    });
+    const data = await readJsonOrThrow(response, "AIS upload failed");
+    input.value = "";
+    await reloadItrReturnFull();
+    renderAisReconcile(data);
+    const st = (data.reconcile || {}).status;
+    if (st === "match") showToast("AIS matches Form 16 fields");
+    else if (st === "mismatch") showToast("AIS mismatches found — review the table", true);
+    else showToast("AIS uploaded — review comparison");
+}
+
 
 async function openOrCreateItrReturn() {
     if (!state.selectedClientPhone) {
@@ -5339,6 +5627,15 @@ function setupItrModule() {
     const fileInput = document.getElementById("itr-form16-input");
     if (fileInput) fileInput.addEventListener("change", () => {
         uploadForm16().catch(e => showToast(e.message || "Upload failed", true));
+    });
+    const aisBtn = document.getElementById("itr-ais-upload-btn");
+    if (aisBtn) aisBtn.addEventListener("click", () => {
+        const input = document.getElementById("itr-ais-input");
+        if (input) input.click();
+    });
+    const aisInput = document.getElementById("itr-ais-input");
+    if (aisInput) aisInput.addEventListener("change", () => {
+        uploadAis().catch(e => showToast(e.message || "AIS upload failed", true));
     });
     const approveBtn = document.getElementById("itr-approve-btn");
     if (approveBtn) approveBtn.addEventListener("click", () => {

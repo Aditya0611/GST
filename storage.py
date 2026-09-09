@@ -89,6 +89,8 @@ async def save_file(
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
         "application/vnd.ms-excel": "xls",
         "text/csv": "csv",
+        "application/json": "json",
+        "text/plain": "txt",
         "audio/ogg": "ogg",
         "audio/mpeg": "mp3",
         "video/mp4": "mp4",

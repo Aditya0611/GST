@@ -38,6 +38,7 @@ import re
 import sandbox
 import itr
 import document_router
+import ais as ais_mod
 
 # ── Load config ───────────────────────────────────────────────────────────────
 WEBHOOK_VERIFY_TOKEN = os.getenv("WEBHOOK_VERIFY_TOKEN", "")
@@ -1228,6 +1229,27 @@ async def api_extraction_edit_stats(
     return await db.get_extraction_edit_stats(days=days, firm_id=firm_id)
 
 
+@app.get("/api/pilot/stats")
+async def api_pilot_stats(
+    days: int = Query(30, ge=1, le=365),
+    firm_id: int | None = Query(None),
+    _auth: security.AuthContext = Depends(require_dashboard_auth),
+):
+    """
+    GST pilot KPIs: approvals toward 25, edit-rate gate, filing-critical fields, reject/skip.
+    CA sessions are firm-scoped; platform admin may pass firm_id or omit for all firms.
+    """
+    scoped_firm = firm_id
+    if _auth.mode == "ca_session":
+        if _auth.firm_id is None:
+            raise HTTPException(status_code=403, detail="CA session missing firm.")
+        scoped_firm = int(_auth.firm_id)
+    elif firm_id is not None:
+        require_platform_admin(_auth)
+    # Admin with no firm_id → all firms; CA → always their firm
+    return await db.get_pilot_stats(days=days, firm_id=scoped_firm)
+
+
 @app.post("/api/admin/firms")
 async def api_admin_create_firm(
     request: Request,
@@ -2358,6 +2380,11 @@ def _enrich_itr_return_row(row: dict) -> dict:
             row["extracted"] = json.loads(row["extracted_json"])
         except (TypeError, json.JSONDecodeError):
             row["extracted"] = None
+    if row.get("ais_json") and isinstance(row["ais_json"], str):
+        try:
+            row["ais"] = json.loads(row["ais_json"])
+        except (TypeError, json.JSONDecodeError):
+            row["ais"] = None
     return row
 
 
@@ -2560,6 +2587,105 @@ async def api_upload_form16(
         "extracted": extracted,
         "estimate": estimate,
     }
+
+
+@app.post("/api/itr/returns/{itr_id}/ais")
+async def api_upload_ais(
+    itr_id: int,
+    file: UploadFile = File(...),
+    password: str = Form(""),
+    dob: str = Form(""),
+    _auth: security.AuthContext = Depends(require_dashboard_auth),
+):
+    """
+    Upload AIS JSON (plain demo JSON or portal encrypted JSON).
+    Encrypted files need password = PAN+DOB (ddmmyyyy) or full AIS Utility password.
+    Reconciles against Form 16 / saved ITR fields.
+    """
+    row = await db.get_itr_return(itr_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="ITR return not found.")
+    await assert_client_access(row["client_phone"])
+
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Empty file.")
+    if len(content) > 20 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large (max 20 MB).")
+
+    name = (file.filename or "ais.json").strip()
+    if not name.lower().endswith((".json", ".txt")):
+        raise HTTPException(status_code=400, detail="Upload AIS as .json (portal download or plain JSON).")
+
+    try:
+        summary, payload = ais_mod.load_ais_bytes(
+            content,
+            filename=name,
+            pan=row.get("pan") or "",
+            dob_ddmmyyyy=dob or "",
+            password=password or "",
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception as e:
+        logger.exception("AIS parse failed:")
+        raise HTTPException(status_code=400, detail=f"Could not read AIS file: {e}") from e
+
+    # Store plaintext JSON (never store the encryption password)
+    rel = await storage.save_file(
+        row["client_phone"],
+        json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+        "document",
+        "application/json",
+        original_filename=name if name.lower().endswith(".json") else f"{name}.json",
+    )
+    doc = await db.add_itr_document(
+        itr_id, rel, doc_type="ais", original_filename=name
+    )
+
+    ais_blob = {"summary": summary, "uploaded_filename": name}
+    updated = await db.update_itr_return(
+        itr_id,
+        {
+            "ais_json": json.dumps(ais_blob),
+            "status": "needs_review" if row.get("status") in (None, "draft", "exported") else row.get("status"),
+        },
+    )
+    if updated:
+        _enrich_itr_return_row(updated)
+        updated["documents"] = await db.list_itr_documents(itr_id)
+
+    reconcile = ais_mod.reconcile_ais_vs_return(summary, updated or row)
+    return {
+        "status": "ok",
+        "document": doc,
+        "itr": updated,
+        "ais": summary,
+        "reconcile": reconcile,
+        "hint": (
+            "No government approval required — you uploaded a file the taxpayer already downloaded. "
+            "Review mismatches before filing on incometax.gov.in."
+        ),
+    }
+
+
+@app.get("/api/itr/returns/{itr_id}/ais/reconcile")
+async def api_reconcile_ais(
+    itr_id: int,
+    _auth: security.AuthContext = Depends(require_dashboard_auth),
+):
+    """Re-run AIS vs Form 16 / return field comparison using stored AIS summary."""
+    row = await db.get_itr_return(itr_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="ITR return not found.")
+    await assert_client_access(row["client_phone"])
+    _enrich_itr_return_row(row)
+    ais_blob = row.get("ais")
+    if not ais_blob or not isinstance(ais_blob, dict):
+        raise HTTPException(status_code=404, detail="No AIS uploaded for this return yet.")
+    summary = ais_blob.get("summary") or ais_blob
+    reconcile = ais_mod.reconcile_ais_vs_return(summary, row)
+    return {"status": "ok", "ais": summary, "reconcile": reconcile, "itr": row}
 
 
 @app.post("/api/itr/returns/{itr_id}/estimate")
