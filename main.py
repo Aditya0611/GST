@@ -49,12 +49,13 @@ WHATSAPP_DISPLAY_NUMBER = "".join(
 
 
 def _webhook_internal_url() -> str:
-    """URL for simulator → local /webhook (same process, correct port)."""
+    """URL for simulator → same-process /webhook (works on Railway + local)."""
     explicit = os.getenv("WEBHOOK_INTERNAL_URL", "").strip()
     if explicit:
         return explicit if explicit.endswith("/webhook") else explicit.rstrip("/") + "/webhook"
-    base = os.getenv("ITR_TEST_BASE", "http://127.0.0.1:8001").strip().rstrip("/")
-    return f"{base}/webhook"
+    # Loopback on the port this process listens on (Railway sets PORT).
+    port = (os.getenv("PORT") or os.getenv("WEBHOOK_PORT") or "8001").strip()
+    return f"http://127.0.0.1:{port}/webhook"
 
 
 def whatsapp_me_url(prefill: str = "Hi Taxova.ai — I want to start GST filing") -> str:
@@ -906,7 +907,7 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "gst-autopilot-webhook",
-        "version": "0.2.1",
+        "version": "0.2.2",
         "features": {
             "wa_document_routing": True,
             "form16_whatsapp_pipeline": True,
