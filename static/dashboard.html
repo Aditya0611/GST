@@ -1869,6 +1869,73 @@
             border-color: rgba(54, 214, 174, 0.45);
             outline: none;
         }
+        .pilot-preflight {
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 0 12px;
+            background: rgba(255,255,255,0.02);
+        }
+        .pilot-preflight-summary {
+            cursor: pointer;
+            list-style: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 10px 0;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #c5d0db;
+        }
+        .pilot-preflight-summary::-webkit-details-marker { display: none; }
+        .pilot-preflight-list {
+            list-style: none;
+            margin: 0 0 10px;
+            padding: 0;
+            display: grid;
+            gap: 6px;
+        }
+        .pilot-preflight-list label {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            font-size: 12px;
+            color: #9aa7b5;
+            cursor: pointer;
+            font-weight: 500;
+            text-transform: none;
+            letter-spacing: 0;
+        }
+        .pilot-preflight-list input {
+            margin-top: 2px;
+            accent-color: #36D6AE;
+        }
+        .pilot-preflight-note {
+            font-size: 11px;
+            color: #7e8b99;
+            margin: 0 0 12px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+        }
+        .pilot-preflight-note code {
+            font-size: 10px;
+            color: #c5d0db;
+        }
+        .pilot-reset-btn {
+            margin-left: auto;
+            padding: 4px 8px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,138,138,0.35);
+            background: rgba(255,138,138,0.08);
+            color: #FF8A8A;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+        }
         .pilot-field-table {
             width: 100%;
             border-collapse: collapse;
@@ -2261,6 +2328,27 @@
                     <div id="pilot-progress-fill" class="pilot-progress-fill" style="width:0%"></div>
                 </div>
             </div>
+
+            <details id="pilot-preflight" class="pilot-preflight mb-4">
+                <summary class="pilot-preflight-summary">
+                    Pre-flight checklist
+                    <span id="pilot-preflight-count" class="text-on-surface-variant font-normal">0/6</span>
+                </summary>
+                <ul id="pilot-preflight-list" class="pilot-preflight-list">
+                    <li><label><input type="checkbox" data-pilot-check="reset"/> Day-zero stats reset (approved = 0)</label></li>
+                    <li><label><input type="checkbox" data-pilot-check="firm"/> Warm firm + invite created</label></li>
+                    <li><label><input type="checkbox" data-pilot-check="clients"/> Clients linked via /ca-assign</label></li>
+                    <li><label><input type="checkbox" data-pilot-check="trained"/> CA trained (login · Review next · Import 2B)</label></li>
+                    <li><label><input type="checkbox" data-pilot-check="checkin10"/> Calendar: check-in at ~10 approvals</label></li>
+                    <li><label><input type="checkbox" data-pilot-check="review25"/> Calendar: week-1 review at ≥25</label></li>
+                </ul>
+                <p class="pilot-preflight-note">
+                    Execute: <code>docs/PILOT_RUNBOOK.md</code>. Richer AIS waits until Go.
+                    <button type="button" id="pilot-reset-stats-btn" class="pilot-reset-btn" style="display:none;" title="Admin only — wipe edit-rate smoke rows">
+                        Reset smoke stats
+                    </button>
+                </p>
+            </details>
 
             <div class="pilot-kpi-grid mb-4">
                 <div class="pilot-kpi">
@@ -3205,6 +3293,6 @@
 <!-- Toast -->
 <div id="toast">Filing updated successfully!</div>
 
-<script src="/static/dashboard.js?v=20260909-pilot2"></script>
+<script src="/static/dashboard.js?v=20260910-pilot3"></script>
 </body>
 </html>

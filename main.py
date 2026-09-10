@@ -1236,6 +1236,51 @@ async def api_extraction_edit_stats(
     return await db.get_extraction_edit_stats(days=days, firm_id=firm_id)
 
 
+@app.post("/api/admin/extraction-edit-stats/reset")
+async def api_reset_extraction_edit_stats(
+    request: Request,
+    _auth: security.AuthContext = Depends(require_dashboard_auth),
+):
+    """
+    Platform admin: day-zero wipe of extraction_field_edits + invoice_extraction_outcomes.
+    Body: {"confirm": "RESET_EDIT_STATS", "firm_id": optional}
+    Does not delete invoices — only pilot metrics tables.
+    """
+    require_platform_admin(_auth)
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    confirm = str((body or {}).get("confirm") or "").strip()
+    if confirm != "RESET_EDIT_STATS":
+        raise HTTPException(
+            status_code=400,
+            detail='Send JSON {"confirm": "RESET_EDIT_STATS"} (optional firm_id).',
+        )
+    firm_raw = (body or {}).get("firm_id")
+    firm_id = None
+    if firm_raw is not None and str(firm_raw).strip() != "":
+        try:
+            firm_id = int(firm_raw)
+        except (TypeError, ValueError) as e:
+            raise HTTPException(status_code=400, detail="firm_id must be an integer") from e
+    result = await db.reset_extraction_edit_stats(firm_id=firm_id)
+    await db.insert_security_audit_log(
+        actor=_auth.display_name,
+        action="extraction_edit_stats_reset",
+        resource_type="pilot",
+        resource_id=str(firm_id) if firm_id is not None else "all",
+        detail=json.dumps(
+            {
+                "deleted_edit_events": result.get("deleted_edit_events"),
+                "deleted_outcomes": result.get("deleted_outcomes"),
+            }
+        ),
+        ip=request.client.host if request.client else None,
+    )
+    return result
+
+
 @app.get("/api/pilot/stats")
 async def api_pilot_stats(
     days: int = Query(30, ge=1, le=365),

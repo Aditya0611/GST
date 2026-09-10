@@ -149,6 +149,7 @@ async function refreshAuthMe() {
         const res = await apiFetch('/api/auth/me');
         if (!res.ok) return;
         const me = await res.json();
+        state.isAdminKey = !!me.is_admin_key;
         if (me.firm_id != null || me.firm_name) {
             localStorage.setItem(
                 'CA_FIRM',
@@ -156,6 +157,7 @@ async function refreshAuthMe() {
             );
         }
         updateFirmChip();
+        updatePilotAdminControls();
     } catch (_) { /* ignore */ }
 }
 
@@ -613,6 +615,7 @@ const state = {
     monthCalViewYear: new Date().getFullYear(),
     categoryFilter: '', // Empty = all categories
     pilotDays: 30,
+    isAdminKey: false,
     invoices: [],
     activeFilter: 'exceptions',
     searchQuery: '',
@@ -689,6 +692,8 @@ const elements = {
     pilotPendingSub: document.getElementById('pilot-pending-sub'),
     pilotPendingCard: document.getElementById('pilot-pending-card'),
     pilotFieldBody: document.getElementById('pilot-field-body'),
+    pilotPreflightCount: document.getElementById('pilot-preflight-count'),
+    pilotResetStatsBtn: document.getElementById('pilot-reset-stats-btn'),
     
     // KPI metrics
     kpiPendingTrend: document.getElementById('kpi-pending-trend'),
@@ -1085,6 +1090,15 @@ function setupEventListeners() {
                 e.preventDefault();
                 goPending();
             }
+        });
+    }
+    setupPilotPreflightChecklist();
+    if (elements.pilotResetStatsBtn) {
+        elements.pilotResetStatsBtn.addEventListener('click', () => {
+            resetPilotSmokeStats().catch((err) => {
+                console.error(err);
+                showToast(err.message || 'Reset failed', true);
+            });
         });
     }
 
@@ -2975,6 +2989,86 @@ async function refreshQueueAndPilot() {
         fetchData(),
         fetchPilotStats().catch((err) => console.error(err)),
     ]);
+}
+
+const PILOT_PREFLIGHT_KEY = 'PILOT_PREFLIGHT_V1';
+
+function loadPilotPreflight() {
+    try {
+        return JSON.parse(localStorage.getItem(PILOT_PREFLIGHT_KEY) || '{}') || {};
+    } catch (_) {
+        return {};
+    }
+}
+
+function savePilotPreflight(map) {
+    try {
+        localStorage.setItem(PILOT_PREFLIGHT_KEY, JSON.stringify(map || {}));
+    } catch (_) { /* ignore */ }
+}
+
+function updatePilotPreflightCount() {
+    const boxes = document.querySelectorAll('[data-pilot-check]');
+    let done = 0;
+    boxes.forEach((el) => { if (el.checked) done += 1; });
+    if (elements.pilotPreflightCount) {
+        elements.pilotPreflightCount.textContent = `${done}/${boxes.length || 6}`;
+    }
+}
+
+function setupPilotPreflightChecklist() {
+    const saved = loadPilotPreflight();
+    document.querySelectorAll('[data-pilot-check]').forEach((el) => {
+        const key = el.getAttribute('data-pilot-check');
+        el.checked = !!saved[key];
+        el.addEventListener('change', () => {
+            const map = loadPilotPreflight();
+            map[key] = !!el.checked;
+            savePilotPreflight(map);
+            updatePilotPreflightCount();
+        });
+    });
+    updatePilotPreflightCount();
+}
+
+function markPilotPreflight(key, value = true) {
+    const el = document.querySelector(`[data-pilot-check="${key}"]`);
+    if (el) {
+        el.checked = !!value;
+        el.dispatchEvent(new Event('change'));
+    } else {
+        const map = loadPilotPreflight();
+        map[key] = !!value;
+        savePilotPreflight(map);
+        updatePilotPreflightCount();
+    }
+}
+
+function updatePilotAdminControls() {
+    if (!elements.pilotResetStatsBtn) return;
+    const admin = !!state.isAdminKey || !!(localStorage.getItem('DASHBOARD_API_KEY') || '').trim();
+    elements.pilotResetStatsBtn.style.display = admin ? 'inline-flex' : 'none';
+}
+
+async function resetPilotSmokeStats() {
+    const ok = window.confirm(
+        'Reset smoke edit-rate stats?\n\n'
+        + 'Deletes extraction_field_edits + invoice_extraction_outcomes.\n'
+        + 'Does NOT delete invoices.\n\n'
+        + 'Only do this on pilot day zero before real firm traffic.'
+    );
+    if (!ok) return;
+    const response = await apiFetch('/api/admin/extraction-edit-stats/reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: 'RESET_EDIT_STATS' }),
+    });
+    const data = await readJsonOrThrow(response, 'Reset failed (admin API key required)');
+    markPilotPreflight('reset', true);
+    showToast(
+        `Cleared ${data.deleted_outcomes || 0} outcomes · ${data.deleted_edit_events || 0} edit events`
+    );
+    await fetchPilotStats().catch(() => null);
 }
 
 function invoiceYearMonth(inv) {

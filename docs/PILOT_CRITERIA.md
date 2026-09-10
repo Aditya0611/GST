@@ -52,9 +52,11 @@ A high rate only on names is annoying; a high rate on GSTIN / totals blocks fili
 
 ## Pre-flight checklist
 
-- [x] Smoke `extraction_field_edits` / `invoice_extraction_outcomes` cleared (pilot day zero)
+- [ ] Smoke `extraction_field_edits` / `invoice_extraction_outcomes` cleared (pilot day zero) — `POST /api/admin/extraction-edit-stats/reset` with `{"confirm":"RESET_EDIT_STATS"}` (see `docs/PILOT_RUNBOOK.md`)
 - [ ] Warm CA firm + invite created (`POST /api/admin/firms`)
 - [ ] Clients linked via `/ca-assign`
-- [ ] CA trained: Sign out vs Settings login; Import 2B if portal offline
+- [ ] CA trained: Sign out vs Settings login; **Review next**; Import 2B if portal offline
 - [ ] Schedule week-1 review of stats at ≥25 approvals
 - [ ] Calendar/reminder: human check-in at ~10 approvals (“how’s this feeling?”)
+
+**Execute steps:** `docs/PILOT_RUNBOOK.md`. Do not expand AIS features until this volume gate clears.

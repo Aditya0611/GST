@@ -48,6 +48,22 @@ GET /api/admin/extraction-edit-stats?days=30&firm_id=2
 
 Requires `DASHBOARD_API_KEY` (`X-API-Key`).
 
+## Day-zero reset (before real pilot traffic)
+
+Wipe smoke-test edit events and approve outcomes so week-1 `edit_rate` is clean. **Does not delete invoices.**
+
+```
+POST /api/admin/extraction-edit-stats/reset
+Content-Type: application/json
+X-API-Key: …
+
+{"confirm": "RESET_EDIT_STATS"}
+```
+
+Optional: `"firm_id": 2` to scope one firm. Then `GET .../extraction-edit-stats?days=30` and confirm `approved_invoices` is **0**.
+
+Full sequence: `docs/PILOT_RUNBOOK.md`.
+
 ## Note
 
 ITC / review-status toggles are **not** counted as extraction errors — only fields the model extracted from the bill image/PDF.

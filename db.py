@@ -3239,6 +3239,78 @@ async def get_pilot_stats(*, days: int = 30, firm_id: int | None = None) -> dict
     }
 
 
+async def reset_extraction_edit_stats(*, firm_id: int | None = None) -> dict:
+    """
+    Day-zero pilot wipe: clear extraction edit events + approve outcomes.
+    Does NOT delete invoices. Optional firm_id scopes the wipe.
+    """
+    conn = await get_connection()
+    try:
+        if IS_POSTGRES:
+            if firm_id is not None:
+                edits = await conn.fetchval(
+                    "SELECT COUNT(*) FROM extraction_field_edits WHERE firm_id = $1",
+                    firm_id,
+                )
+                outcomes = await conn.fetchval(
+                    "SELECT COUNT(*) FROM invoice_extraction_outcomes WHERE firm_id = $1",
+                    firm_id,
+                )
+                await conn.execute(
+                    "DELETE FROM extraction_field_edits WHERE firm_id = $1", firm_id
+                )
+                await conn.execute(
+                    "DELETE FROM invoice_extraction_outcomes WHERE firm_id = $1", firm_id
+                )
+            else:
+                edits = await conn.fetchval("SELECT COUNT(*) FROM extraction_field_edits")
+                outcomes = await conn.fetchval(
+                    "SELECT COUNT(*) FROM invoice_extraction_outcomes"
+                )
+                await conn.execute("DELETE FROM extraction_field_edits")
+                await conn.execute("DELETE FROM invoice_extraction_outcomes")
+        else:
+            if firm_id is not None:
+                cur = await conn.execute(
+                    "SELECT COUNT(*) FROM extraction_field_edits WHERE firm_id = ?",
+                    (firm_id,),
+                )
+                edits = int((await cur.fetchone())[0] or 0)
+                cur = await conn.execute(
+                    "SELECT COUNT(*) FROM invoice_extraction_outcomes WHERE firm_id = ?",
+                    (firm_id,),
+                )
+                outcomes = int((await cur.fetchone())[0] or 0)
+                await conn.execute(
+                    "DELETE FROM extraction_field_edits WHERE firm_id = ?", (firm_id,)
+                )
+                await conn.execute(
+                    "DELETE FROM invoice_extraction_outcomes WHERE firm_id = ?",
+                    (firm_id,),
+                )
+                await conn.commit()
+            else:
+                cur = await conn.execute("SELECT COUNT(*) FROM extraction_field_edits")
+                edits = int((await cur.fetchone())[0] or 0)
+                cur = await conn.execute(
+                    "SELECT COUNT(*) FROM invoice_extraction_outcomes"
+                )
+                outcomes = int((await cur.fetchone())[0] or 0)
+                await conn.execute("DELETE FROM extraction_field_edits")
+                await conn.execute("DELETE FROM invoice_extraction_outcomes")
+                await conn.commit()
+
+        return {
+            "ok": True,
+            "firm_id": firm_id,
+            "deleted_edit_events": int(edits or 0),
+            "deleted_outcomes": int(outcomes or 0),
+            "hint": "Verify with GET /api/admin/extraction-edit-stats — approved_invoices should be 0 before real traffic.",
+        }
+    finally:
+        await conn.close()
+
+
 async def skip_invoice(
     invoice_id: int,
     reason: str = "Skipped by CA",
