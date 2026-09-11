@@ -894,15 +894,54 @@
             .header-toolbar .header-divider-xl { display: none !important; }
         }
         .header-client-wrap {
+            position: relative;
             flex: 1 1 220px;
             min-width: 200px;
             max-width: 300px;
-        }
-        .header-client-wrap select {
-            width: 100%;
+            /* Icons are overlays; select fills the full control so the native
+               dropdown popup aligns with the visible box (not the inner text). */
+            padding: 0;
             overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+        }
+        .header-client-wrap .header-client-ico,
+        .header-client-wrap .header-client-chevron {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 2;
+            pointer-events: none;
+            color: #8B9BB0;
+            font-size: 18px;
+            line-height: 1;
+        }
+        .header-client-wrap .header-client-ico { left: 12px; }
+        .header-client-wrap .header-client-chevron { right: 10px; }
+        .header-client-wrap select {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0 36px 0 40px;
+            border: 0;
+            border-radius: 10px;
+            background: transparent;
+            color: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            z-index: 1;
+        }
+        .header-client-wrap select:focus {
+            outline: none;
+            box-shadow: inset 0 0 0 1px rgba(54, 214, 174, 0.55);
+        }
+        .header-client-wrap select option {
+            background: #121A24;
+            color: #F2F5F8;
         }
         .module-switch {
             display: inline-flex;
@@ -2230,12 +2269,12 @@
             </div>
             <div class="hidden xl:block h-8 w-px bg-outline-variant shrink-0 header-divider-xl"></div>
 
-            <div class="header-control header-client-wrap relative">
-                <span class="material-symbols-outlined text-[18px] text-on-surface-variant shrink-0">apartment</span>
-                <select id="client-select" class="appearance-none w-full pr-6 cursor-pointer" title="Select client">
+            <div class="header-control header-client-wrap" title="Select client">
+                <span class="material-symbols-outlined header-client-ico" aria-hidden="true">apartment</span>
+                <select id="client-select" aria-label="Select client">
                     <option value="">Loading clients…</option>
                 </select>
-                <span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant pointer-events-none">expand_more</span>
+                <span class="material-symbols-outlined header-client-chevron" aria-hidden="true">expand_more</span>
             </div>
 
             <div class="header-control month-picker-wrap" id="month-picker-wrap" title="Filter by invoice month">
@@ -3546,6 +3585,6 @@
 <!-- Toast -->
 <div id="toast">Filing updated successfully!</div>
 
-<script src="/static/dashboard.js?v=20260911-header1"></script>
+<script src="/static/dashboard.js?v=20260911-header2"></script>
 </body>
 </html>
