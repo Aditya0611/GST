@@ -873,8 +873,11 @@
         }
 
         .header-toolbar {
-            display: flex; align-items: center; gap: 10px;
-            min-width: 0; flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+            flex: 1 1 auto;
             overflow: visible;
         }
         .header-toolbar .workspace-label {
@@ -883,6 +886,23 @@
             justify-content: center;
             line-height: 1.15;
             padding-top: 1px;
+            flex-shrink: 0;
+            max-width: 140px;
+        }
+        @media (max-width: 1400px) {
+            .header-toolbar .workspace-label { display: none !important; }
+            .header-toolbar .header-divider-xl { display: none !important; }
+        }
+        .header-client-wrap {
+            flex: 1 1 220px;
+            min-width: 200px;
+            max-width: 300px;
+        }
+        .header-client-wrap select {
+            width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
         .module-switch {
             display: inline-flex;
@@ -1039,16 +1059,34 @@
             font-size: 12px; color: #cbd5e1;
         }
         .header-actions {
-            display: flex; align-items: center; gap: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
             flex-shrink: 0;
+            margin-left: 8px;
+        }
+        .header-actions #global-search {
+            height: 38px;
+            width: 11rem;
+            box-sizing: border-box;
+        }
+        @media (min-width: 1280px) {
+            .header-actions #global-search { width: 13rem; }
+        }
+        @media (max-width: 1100px) {
+            .header-actions .header-search-wrap { display: none !important; }
         }
         .header-control {
-            display: inline-flex; align-items: center; gap: 8px;
-            height: 38px; padding: 0 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            height: 38px;
+            padding: 0 12px;
             background: var(--surface-2, #121A24);
             border: 1px solid var(--line);
             border-radius: 10px;
             color: var(--text);
+            box-sizing: border-box;
         }
         .header-control select,
         .header-control input {
@@ -1058,7 +1096,10 @@
         }
         .month-picker-wrap {
             position: relative;
+            flex: 0 0 auto;
+            width: 168px;
             min-width: 168px;
+            max-width: 168px;
             cursor: pointer;
             user-select: none;
         }
@@ -1067,8 +1108,11 @@
             font-size: 13px;
             font-weight: 600;
             color: var(--text);
-            min-width: 7.5rem;
+            min-width: 0;
             flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .month-picker-wrap.is-empty .month-display { color: var(--muted); }
         .month-picker-wrap .month-chevron {
@@ -1559,6 +1603,153 @@
         }
         .ca-form-hint { font-size: 12px; color: #8B9BB0; line-height: 1.45; margin-top: 4px; }
 
+        /* GST Filing panel (Phase 1 portal handoff) */
+        .gst-filing-panel {
+            border: 1px solid rgba(54, 214, 174, 0.18);
+        }
+        .gst-filing-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+        .gst-filing-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+        .gst-filing-badge.is-pending {
+            background: rgba(154, 167, 181, 0.15);
+            color: #9aa7b5;
+        }
+        .gst-filing-badge.is-ready {
+            background: rgba(54, 214, 174, 0.15);
+            color: #36D6AE;
+        }
+        .gst-filing-badge.is-blocked {
+            background: rgba(240, 179, 90, 0.15);
+            color: #F0B35A;
+        }
+        .gst-filing-badge.is-filed {
+            background: rgba(54, 214, 174, 0.22);
+            color: #9AF0D6;
+        }
+        .gst-filing-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.12);
+            background: rgba(255,255,255,0.03);
+            color: #e8eef4;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .gst-filing-btn:hover:not(:disabled) {
+            border-color: rgba(54, 214, 174, 0.4);
+        }
+        .gst-filing-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        .gst-filing-btn.is-primary {
+            background: rgba(54, 214, 174, 0.14);
+            border-color: rgba(54, 214, 174, 0.35);
+            color: #36D6AE;
+        }
+        .gst-filing-grid {
+            display: grid;
+            gap: 14px;
+        }
+        @media (min-width: 900px) {
+            .gst-filing-grid { grid-template-columns: 1fr 1.15fr; }
+        }
+        .gst-filing-card {
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 14px;
+            background: rgba(0,0,0,0.18);
+        }
+        .gst-filing-card-title {
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #9aa7b5;
+            margin-bottom: 10px;
+        }
+        .gst-filing-stats {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px 12px;
+        }
+        .gst-filing-stats li {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            font-size: 12px;
+            color: #9aa7b5;
+        }
+        .gst-filing-stats strong { color: #e8eef4; font-weight: 700; }
+        .gst-filing-blockers {
+            margin: 12px 0 0;
+            font-size: 12px;
+            color: #F0B35A;
+            line-height: 1.45;
+        }
+        .gst-filing-blockers.is-ok { color: #36D6AE; }
+        .gst-filing-portal-steps {
+            margin: 0 0 14px;
+            padding-left: 18px;
+            font-size: 13px;
+            color: #c5d0db;
+            line-height: 1.55;
+        }
+        .gst-filing-portal-steps a {
+            color: #36D6AE;
+            text-decoration: underline;
+        }
+        .gst-filing-track { display: grid; gap: 8px; }
+        .gst-filing-check {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #9aa7b5;
+            cursor: pointer;
+        }
+        .gst-filing-check input { accent-color: #36D6AE; }
+        .gst-filing-arn-row label {
+            display: block;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #9aa7b5;
+            margin-bottom: 4px;
+        }
+        .gst-filing-arn-row input {
+            width: 100%;
+            padding: 8px 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.12);
+            background: #0E131A;
+            color: #e8eef4;
+            font-size: 13px;
+        }
+
         .month-close-strip {
             margin-top: 12px;
             padding: 14px 16px;
@@ -2037,11 +2228,11 @@
                 <button type="button" class="module-switch-btn is-active" id="module-btn-gst" data-module="gst" role="tab" aria-selected="true">GST</button>
                 <button type="button" class="module-switch-btn" id="module-btn-itr" data-module="itr" role="tab" aria-selected="false">Income Tax</button>
             </div>
-            <div class="hidden xl:block h-8 w-px bg-outline-variant shrink-0"></div>
+            <div class="hidden xl:block h-8 w-px bg-outline-variant shrink-0 header-divider-xl"></div>
 
-            <div class="header-control relative min-w-[180px] max-w-[240px] flex-1">
+            <div class="header-control header-client-wrap relative">
                 <span class="material-symbols-outlined text-[18px] text-on-surface-variant shrink-0">apartment</span>
-                <select id="client-select" class="appearance-none w-full pr-6 cursor-pointer truncate" title="Select client">
+                <select id="client-select" class="appearance-none w-full pr-6 cursor-pointer" title="Select client">
                     <option value="">Loading clients…</option>
                 </select>
                 <span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant pointer-events-none">expand_more</span>
@@ -2073,10 +2264,10 @@
         </div>
 
         <div class="header-actions">
-            <div class="relative hidden md:block">
+            <div class="relative hidden md:block header-search-wrap">
                 <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant pointer-events-none">search</span>
-                <input id="global-search" type="text" placeholder="Search invoices…"
-                    class="bg-surface-container-low border border-outline-variant rounded-[10px] pl-10 pr-3 py-2 text-[13px] focus:ring-1 focus:ring-primary focus:border-primary w-40 lg:w-52 outline-none placeholder:text-on-surface-variant/50 text-on-surface"/>
+                <input id="global-search" type="text" placeholder="Search…"
+                    class="bg-surface-container-low border border-outline-variant rounded-[10px] pl-10 pr-3 py-2 text-[13px] focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder:text-on-surface-variant/50 text-on-surface"/>
             </div>
             <button id="sync-btn" title="Reload invoices and metrics from the database"
                 class="flex items-center gap-2 h-[38px] px-3.5 bg-primary text-on-primary rounded-[10px] text-[13px] font-bold hover:brightness-110 transition-all focus:outline-none shrink-0">
@@ -2288,6 +2479,68 @@
                 </div>
             </div>
         </div>
+
+        <!-- ── GST Filing (Phase 1 — portal handoff) ── -->
+        <section id="gst-filing-panel" class="panel gst-filing-panel p-5 fade-up" aria-label="GST filing handoff">
+            <div class="gst-filing-head">
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <h3 class="text-[15px] font-extrabold text-white m-0">GST Filing</h3>
+                        <span id="gst-filing-ready-badge" class="gst-filing-badge is-pending">—</span>
+                    </div>
+                    <p class="text-[12px] text-on-surface-variant mt-1.5 mb-0">
+                        Taxova prepares GSTR drafts. Filing happens on <strong>gst.gov.in</strong> — no live e-file in-app yet.
+                    </p>
+                    <p id="gst-filing-period" class="text-[12px] text-on-surface mt-1 mb-0 font-semibold">Period: —</p>
+                </div>
+                <div class="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+                    <button type="button" id="gst-filing-export-gstr1-btn" class="gst-filing-btn is-primary" title="Download GSTR-1 draft JSON">
+                        <span class="material-symbols-outlined text-[16px]">file_export</span>
+                        Export GSTR-1
+                    </button>
+                    <button type="button" id="gst-filing-export-gstr3b-btn" class="gst-filing-btn" title="Download GSTR-3B draft JSON">
+                        <span class="material-symbols-outlined text-[16px]">file_export</span>
+                        Export GSTR-3B
+                    </button>
+                </div>
+            </div>
+
+            <div class="gst-filing-grid">
+                <div class="gst-filing-card">
+                    <div class="gst-filing-card-title">Readiness</div>
+                    <ul id="gst-filing-stats" class="gst-filing-stats">
+                        <li><span>Bills</span><strong id="gst-filing-stat-bills">—</strong></li>
+                        <li><span>Need CA</span><strong id="gst-filing-stat-need-ca">—</strong></li>
+                        <li><span>2B imported</span><strong id="gst-filing-stat-2b">—</strong></li>
+                        <li><span>2B gaps</span><strong id="gst-filing-stat-gaps">—</strong></li>
+                    </ul>
+                    <p id="gst-filing-blockers" class="gst-filing-blockers">Select a client and month.</p>
+                    <button type="button" id="gst-filing-review-btn" class="gst-filing-btn mt-3" title="Jump to Needs review">
+                        <span class="material-symbols-outlined text-[16px]">fact_check</span>
+                        Clear review queue
+                    </button>
+                </div>
+
+                <div class="gst-filing-card">
+                    <div class="gst-filing-card-title">Portal steps (after export)</div>
+                    <ol class="gst-filing-portal-steps">
+                        <li>Open <a href="https://www.gst.gov.in" target="_blank" rel="noopener noreferrer">gst.gov.in</a> → Returns Dashboard</li>
+                        <li>Upload / enter <strong>GSTR-1</strong> from the downloaded JSON</li>
+                        <li>Complete <strong>GSTR-3B</strong> (liability + ITC)</li>
+                        <li>File + pay challan → note the <strong>ARN</strong></li>
+                    </ol>
+                    <div class="gst-filing-track">
+                        <label class="gst-filing-check"><input type="checkbox" id="gst-filing-gstr1-exported" disabled /> GSTR-1 exported</label>
+                        <label class="gst-filing-check"><input type="checkbox" id="gst-filing-gstr3b-exported" disabled /> GSTR-3B exported</label>
+                        <label class="gst-filing-check"><input type="checkbox" id="gst-filing-marked" /> Mark prepared / filed on portal</label>
+                        <div class="gst-filing-arn-row">
+                            <label for="gst-filing-arn">ARN / note (optional)</label>
+                            <input id="gst-filing-arn" type="text" maxlength="80" placeholder="e.g. ARN or filed date" autocomplete="off"/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
 
         <!-- ── GST Pilot KPIs ── -->
         <section id="pilot-panel" class="panel pilot-panel p-5 fade-up" aria-label="GST pilot metrics">
@@ -3293,6 +3546,6 @@
 <!-- Toast -->
 <div id="toast">Filing updated successfully!</div>
 
-<script src="/static/dashboard.js?v=20260910-pilot3"></script>
+<script src="/static/dashboard.js?v=20260911-header1"></script>
 </body>
 </html>

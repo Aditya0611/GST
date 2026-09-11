@@ -1052,10 +1052,13 @@ PILOT_FILING_CRITICAL_FIELDS = frozenset(
         "grand_total",
     }
 )
-PILOT_MIN_APPROVALS = 25
-PILOT_CHECK_IN_AT = 10
-PILOT_EDIT_RATE_HOLD = 0.25
-PILOT_FIELD_RATE_HOLD = 0.15
+# Defaults match docs/PILOT_CRITERIA.md. Override locally for demos, e.g. PILOT_MIN_APPROVALS=5
+PILOT_MIN_APPROVALS = max(1, int(os.getenv("PILOT_MIN_APPROVALS", "25") or 25))
+PILOT_CHECK_IN_AT = max(
+    1, min(PILOT_MIN_APPROVALS, int(os.getenv("PILOT_CHECK_IN_AT", "10") or 10))
+)
+PILOT_EDIT_RATE_HOLD = float(os.getenv("PILOT_EDIT_RATE_HOLD", "0.25") or 0.25)
+PILOT_FIELD_RATE_HOLD = float(os.getenv("PILOT_FIELD_RATE_HOLD", "0.15") or 0.15)
 
 
 async def _ensure_extraction_edit_schema(conn) -> None:

@@ -871,6 +871,23 @@ const elements = {
     stepBillsSub: document.getElementById('step-bills-sub'),
     stepQueueSub: document.getElementById('step-queue-sub'),
     stepExportSub: document.getElementById('step-export-sub'),
+
+    // GST Filing panel (Phase 1)
+    gstFilingPanel: document.getElementById('gst-filing-panel'),
+    gstFilingReadyBadge: document.getElementById('gst-filing-ready-badge'),
+    gstFilingPeriod: document.getElementById('gst-filing-period'),
+    gstFilingStatBills: document.getElementById('gst-filing-stat-bills'),
+    gstFilingStatNeedCa: document.getElementById('gst-filing-stat-need-ca'),
+    gstFilingStat2b: document.getElementById('gst-filing-stat-2b'),
+    gstFilingStatGaps: document.getElementById('gst-filing-stat-gaps'),
+    gstFilingBlockers: document.getElementById('gst-filing-blockers'),
+    gstFilingReviewBtn: document.getElementById('gst-filing-review-btn'),
+    gstFilingExportGstr1Btn: document.getElementById('gst-filing-export-gstr1-btn'),
+    gstFilingExportGstr3bBtn: document.getElementById('gst-filing-export-gstr3b-btn'),
+    gstFilingGstr1Exported: document.getElementById('gst-filing-gstr1-exported'),
+    gstFilingGstr3bExported: document.getElementById('gst-filing-gstr3b-exported'),
+    gstFilingMarked: document.getElementById('gst-filing-marked'),
+    gstFilingArn: document.getElementById('gst-filing-arn'),
     
     // Toast
     toast: document.getElementById('toast')
@@ -1220,12 +1237,13 @@ function setupEventListeners() {
         elements.recomputeItcBtn.addEventListener('click', recomputeInvoiceItc);
     }
 
-    // GSTR Modal hooks
+    // GSTR Modal hooks — nav jumps to Filing panel; modal still used for download
     if (elements.navGstrBtn) {
         elements.navGstrBtn.addEventListener('click', (e) => {
             e.preventDefault();
             setSidebarNavActive('gstr');
-            openGstrModal();
+            if (typeof setModule === 'function') setModule('gst');
+            jumpToGstFiling();
         });
     }
     elements.closeGstrModalBtn.addEventListener('click', closeGstrModal);
@@ -1233,6 +1251,42 @@ function setupEventListeners() {
     elements.gstrModalOverlay.addEventListener('click', closeGstrModal);
     elements.exportGstrJsonBtn.addEventListener('click', compileGstrDownload);
     elements.modalGstrMonth.addEventListener('change', updateGstrModalPreviews);
+
+    if (elements.gstFilingExportGstr1Btn) {
+        elements.gstFilingExportGstr1Btn.addEventListener('click', () => openGstFilingExport('GSTR1'));
+    }
+    if (elements.gstFilingExportGstr3bBtn) {
+        elements.gstFilingExportGstr3bBtn.addEventListener('click', () => openGstFilingExport('GSTR3B'));
+    }
+    if (elements.gstFilingReviewBtn) {
+        elements.gstFilingReviewBtn.addEventListener('click', () => {
+            jumpToAuditQueue();
+            showToast('Clear Needs review, then return to GST Filing');
+        });
+    }
+    if (elements.gstFilingMarked) {
+        elements.gstFilingMarked.addEventListener('change', () => {
+            const st = loadGstFilingStatus();
+            st.marked_prepared = !!elements.gstFilingMarked.checked;
+            if (st.marked_prepared && !st.marked_filed_at) {
+                st.marked_filed_at = new Date().toISOString();
+            }
+            if (!st.marked_prepared) st.marked_filed_at = null;
+            saveGstFilingStatus(st);
+            renderGstFilingPanel(state._lastMetrics || {});
+        });
+    }
+    if (elements.gstFilingArn) {
+        let arnTimer = null;
+        elements.gstFilingArn.addEventListener('input', () => {
+            clearTimeout(arnTimer);
+            arnTimer = setTimeout(() => {
+                const st = loadGstFilingStatus();
+                st.arn_note = (elements.gstFilingArn.value || '').trim();
+                saveGstFilingStatus(st);
+            }, 300);
+        });
+    }
 
     setupSidebarNavigation();
 
@@ -1564,7 +1618,7 @@ async function fetchClients() {
         elements.clientSelect.disabled = false;
         
         if (clients.length === 0) {
-            elements.clientSelect.innerHTML = '<option value="">No clients registered</option>';
+            elements.clientSelect.innerHTML = '<option value="">No clients yet</option>';
             state.selectedClientPhone = '';
             state.selectedMonth = currentYearMonth();
             syncMonthPickerDisplay();
@@ -1749,7 +1803,7 @@ function syncMonthPickerDisplay() {
     const value = state.selectedMonth || '';
     if (elements.monthPickerDisplay) {
         elements.monthPickerDisplay.textContent = value
-            ? formatYearMonthLabel(value)
+            ? formatYearMonthShort(value)
             : 'All months';
     }
     if (elements.monthPickerWrap) {
@@ -2849,8 +2903,24 @@ async function compileGstrDownload() {
         document.body.appendChild(downloadAnchor);
         downloadAnchor.click();
         downloadAnchor.remove();
+
+        // Track export on Filing panel (same client/month)
+        if (state.selectedClientPhone && /^\d{4}-\d{2}$/.test(month)) {
+            const prevMonth = state.selectedMonth;
+            // Persist against the exported month key
+            const keyPhone = state.selectedClientPhone;
+            const keyMonth = month;
+            const st = loadGstFilingStatusFor(keyPhone, keyMonth);
+            if (type === 'GSTR1') st.gstr1_exported = true;
+            if (type === 'GSTR3B') st.gstr3b_exported = true;
+            st.exported_at = new Date().toISOString();
+            saveGstFilingStatusFor(keyPhone, keyMonth, st);
+            if (prevMonth === keyMonth || state.selectedMonth === keyMonth) {
+                renderGstFilingPanel(state._lastMetrics || {});
+            }
+        }
         
-        showToast("Utility JSON downloaded successfully!");
+        showToast("Utility JSON downloaded — continue on gst.gov.in");
         closeGstrModal();
     } catch (e) {
         console.error("GSTR Export failed:", e);
@@ -3357,6 +3427,162 @@ function updateMonthCloseStrip(metrics) {
     }
 
     updateWorkflowGuide({ needCa, imported, ready, scopeAll, bills });
+    renderGstFilingPanel({
+        ...m,
+        needs_ca_count: needCa,
+        invoice_count: bills,
+        gstr2b_matched_count: matched,
+        gstr2b_unmatched_count: missing,
+        gstr2b_mismatch_count: mismatch,
+        gstr2b_imported: imported,
+        month_close_blockers: blockers,
+        month_close_ready: ready,
+    });
+}
+
+function gstFilingStatusKey(phone, month) {
+    return `GST_FILING_STATUS:${phone || ''}:${month || ''}`;
+}
+
+function loadGstFilingStatusFor(phone, month) {
+    try {
+        return JSON.parse(localStorage.getItem(gstFilingStatusKey(phone, month)) || '{}') || {};
+    } catch (_) {
+        return {};
+    }
+}
+
+function saveGstFilingStatusFor(phone, month, st) {
+    try {
+        localStorage.setItem(gstFilingStatusKey(phone, month), JSON.stringify(st || {}));
+    } catch (_) { /* ignore */ }
+}
+
+function loadGstFilingStatus() {
+    const month = (state.selectedMonth && state.selectedMonth !== 'all') ? state.selectedMonth : '';
+    return loadGstFilingStatusFor(state.selectedClientPhone || '', month);
+}
+
+function saveGstFilingStatus(st) {
+    const month = (state.selectedMonth && state.selectedMonth !== 'all') ? state.selectedMonth : '';
+    saveGstFilingStatusFor(state.selectedClientPhone || '', month, st);
+}
+
+function jumpToGstFiling() {
+    setSidebarNavActive('gstr');
+    const panel = elements.gstFilingPanel;
+    if (panel) {
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        panel.classList.add('ring-pulse');
+        setTimeout(() => panel.classList.remove('ring-pulse'), 1200);
+    }
+}
+
+function openGstFilingExport(type) {
+    if (!state.selectedClientPhone) {
+        showToast('Select a client first.', true);
+        return;
+    }
+    if (state.selectedMonth && state.selectedMonth !== 'all' && elements.modalGstrMonth) {
+        elements.modalGstrMonth.value = state.selectedMonth;
+    }
+    if (elements.modalGstrType) {
+        elements.modalGstrType.value = type === 'GSTR3B' ? 'GSTR3B' : 'GSTR1';
+    }
+    openGstrModal();
+}
+
+function renderGstFilingPanel(metrics) {
+    if (!elements.gstFilingPanel) return;
+    const m = metrics || {};
+    state._lastMetrics = m;
+    const scopeAll = !state.selectedMonth || state.selectedMonth === 'all';
+    const periodLabel = formatYearMonthLabel(state.selectedMonth);
+    const needCa = typeof m.needs_ca_count === 'number'
+        ? m.needs_ca_count
+        : (state.invoices || []).filter(isExceptionInvoice).length;
+    const bills = m.invoice_count ?? (state.invoices || []).length;
+    const missing = m.gstr2b_unmatched_count || 0;
+    const mismatch = m.gstr2b_mismatch_count || 0;
+    const imported = !!m.gstr2b_imported;
+    const blockers = Array.isArray(m.month_close_blockers) ? m.month_close_blockers : [];
+    const ready = !!m.month_close_ready || (blockers.length === 0 && !scopeAll && !!state.selectedClientPhone);
+
+    if (elements.gstFilingPeriod) {
+        elements.gstFilingPeriod.textContent = !state.selectedClientPhone
+            ? 'Select a client'
+            : (scopeAll ? 'Pick a single month to file' : `Period: ${periodLabel}`);
+    }
+
+    const st = loadGstFilingStatus();
+    const marked = !!st.marked_prepared;
+    if (elements.gstFilingReadyBadge) {
+        elements.gstFilingReadyBadge.classList.remove('is-ready', 'is-blocked', 'is-pending', 'is-filed');
+        if (!state.selectedClientPhone || scopeAll) {
+            elements.gstFilingReadyBadge.classList.add('is-pending');
+            elements.gstFilingReadyBadge.textContent = scopeAll ? 'Pick month' : 'Pick client';
+        } else if (marked) {
+            elements.gstFilingReadyBadge.classList.add('is-filed');
+            elements.gstFilingReadyBadge.textContent = 'Marked on portal';
+        } else if (ready) {
+            elements.gstFilingReadyBadge.classList.add('is-ready');
+            elements.gstFilingReadyBadge.textContent = 'Ready to export';
+        } else {
+            elements.gstFilingReadyBadge.classList.add('is-blocked');
+            elements.gstFilingReadyBadge.textContent = 'Not ready';
+        }
+    }
+
+    if (elements.gstFilingStatBills) elements.gstFilingStatBills.textContent = String(bills);
+    if (elements.gstFilingStatNeedCa) {
+        elements.gstFilingStatNeedCa.textContent = String(needCa);
+        elements.gstFilingStatNeedCa.style.color = needCa > 0 ? '#F0B35A' : '#36D6AE';
+    }
+    if (elements.gstFilingStat2b) {
+        elements.gstFilingStat2b.textContent = scopeAll ? '—' : (imported ? 'Yes' : 'No');
+    }
+    if (elements.gstFilingStatGaps) {
+        const gaps = missing + mismatch;
+        elements.gstFilingStatGaps.textContent = scopeAll ? '—' : String(gaps);
+        elements.gstFilingStatGaps.style.color = gaps > 0 ? '#F0B35A' : '#36D6AE';
+    }
+    if (elements.gstFilingBlockers) {
+        if (!state.selectedClientPhone) {
+            elements.gstFilingBlockers.textContent = 'Select a client to prepare filing.';
+            elements.gstFilingBlockers.classList.remove('is-ok');
+        } else if (scopeAll) {
+            elements.gstFilingBlockers.textContent = 'Pick a single return month in the header.';
+            elements.gstFilingBlockers.classList.remove('is-ok');
+        } else if (ready) {
+            elements.gstFilingBlockers.textContent = 'All clear — export drafts, then file on gst.gov.in.';
+            elements.gstFilingBlockers.classList.add('is-ok');
+        } else {
+            elements.gstFilingBlockers.textContent = blockers.join(' · ') || 'Finish month-close blockers first.';
+            elements.gstFilingBlockers.classList.remove('is-ok');
+        }
+    }
+
+    const canExport = !!state.selectedClientPhone;
+    if (elements.gstFilingExportGstr1Btn) elements.gstFilingExportGstr1Btn.disabled = !canExport;
+    if (elements.gstFilingExportGstr3bBtn) elements.gstFilingExportGstr3bBtn.disabled = !canExport;
+    if (elements.gstFilingReviewBtn) elements.gstFilingReviewBtn.disabled = !state.selectedClientPhone || scopeAll;
+
+    if (elements.gstFilingGstr1Exported) {
+        elements.gstFilingGstr1Exported.checked = !!st.gstr1_exported;
+    }
+    if (elements.gstFilingGstr3bExported) {
+        elements.gstFilingGstr3bExported.checked = !!st.gstr3b_exported;
+    }
+    if (elements.gstFilingMarked) {
+        elements.gstFilingMarked.checked = marked;
+        elements.gstFilingMarked.disabled = scopeAll || !state.selectedClientPhone;
+    }
+    if (elements.gstFilingArn) {
+        if (document.activeElement !== elements.gstFilingArn) {
+            elements.gstFilingArn.value = st.arn_note || '';
+        }
+        elements.gstFilingArn.disabled = scopeAll || !state.selectedClientPhone;
+    }
 }
 
 function openGstrModalForMonthClose() {
@@ -4835,6 +5061,18 @@ function formatYearMonthLabel(yearMonthStr) {
     if (isNaN(year) || isNaN(month) || month < 1 || month > 12) return yearMonthStr;
     const dt = new Date(year, month - 1, 1);
     return dt.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+}
+
+/** Compact label for header month picker — avoids truncation ("Sep 2025"). */
+function formatYearMonthShort(yearMonthStr) {
+    if (!yearMonthStr || !yearMonthStr.includes('-')) return 'All months';
+    const parts = yearMonthStr.split('-');
+    if (parts.length < 2) return yearMonthStr;
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10);
+    if (isNaN(year) || isNaN(month) || month < 1 || month > 12) return yearMonthStr;
+    const dt = new Date(year, month - 1, 1);
+    return dt.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 }
 
 function formatTimestamp(timestampStr) {
