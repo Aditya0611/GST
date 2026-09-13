@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Docs · How to use Taxova.ai</title>
+<meta name="description" content="How to use Taxova.ai — WhatsApp GST for businesses, and a part-by-part CA dashboard guide."/>
+<link rel="icon" href="/favicon.ico" sizes="any"/>
+<link rel="icon" type="image/png" sizes="48x48" href="/static/favicon-48.png"/>
+<link rel="icon" type="image/png" sizes="192x192" href="/static/favicon-192.png"/>
+<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png"/>
+<meta name="theme-color" content="#F3EDE3"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        paper: "#F3EDE3",
+        slip: "#FFFDF8",
+        ink: "#1C1528",
+        mist: "#6A6258",
+        line: "#D6CBB8",
+        violet: "#4A2C7A",
+        "violet-deep": "#2A1B45",
+        stamp: "#C23B2A",
+        muted: "#6A6258",
+        teal: "#1A8A72",
+        navy: "#1A2744",
+      },
+      fontFamily: {
+        sans: ["Space Grotesk", "system-ui", "sans-serif"],
+        mono: ["IBM Plex Mono", "ui-monospace", "monospace"],
+      },
+    },
+  },
+};
+</script>
+<style>
+  :root {
+    --paper: #F3EDE3;
+    --slip: #FFFDF8;
+    --ink: #1C1528;
+    --mist: #6A6258;
+    --line: #D6CBB8;
+    --violet: #4A2C7A;
+    --violet-deep: #2A1B45;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    color: var(--ink);
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    background: var(--paper);
+    overflow-x: hidden;
+  }
+  .material-symbols-outlined {
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+  }
+  .site-bg {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-color: #F3EDE3;
+    background-image:
+      radial-gradient(ellipse 60% 40% at 12% 0%, rgba(74, 44, 122, 0.06), transparent 55%),
+      radial-gradient(ellipse 45% 30% at 92% 12%, rgba(74, 44, 122, 0.04), transparent 50%),
+      radial-gradient(rgba(28, 21, 40, 0.06) 1px, transparent 1px),
+      radial-gradient(rgba(28, 21, 40, 0.035) 1px, transparent 1px),
+      linear-gradient(180deg, #F7F1E8 0%, #F3EDE3 52%, #EFE6DA 100%);
+    background-size: auto, auto, 18px 18px, 18px 18px, auto;
+    background-position: 0 0, 0 0, 0 0, 9px 9px, 0 0;
+  }
+  .logo-img {
+    height: 48px;
+    width: auto;
+    max-width: min(260px, 56vw);
+    object-fit: contain;
+    display: block;
+  }
+  @media (max-width: 640px) {
+    .logo-img { height: 40px; max-width: min(200px, 58vw); }
+  }
+  .site-header {
+    position: fixed;
+    top: 0;
+    inset-inline: 0;
+    z-index: 50;
+  }
+  .site-header-bar {
+    width: 100%;
+    height: 72px;
+    display: flex;
+    align-items: center;
+    background: rgba(255, 253, 248, 0.92);
+    backdrop-filter: blur(20px) saturate(1.12);
+    -webkit-backdrop-filter: blur(20px) saturate(1.12);
+    border-bottom: 1px solid rgba(214, 203, 184, 0.45);
+    box-shadow: 0 10px 30px -22px rgba(28, 21, 40, 0.2);
+  }
+  .site-header-inner {
+    width: 100%;
+    max-width: 72rem;
+    margin: 0 auto;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0 16px;
+  }
+  @media (min-width: 768px) {
+    .site-header-inner { padding: 0 40px; }
+  }
+  .site-header-logo {
+    display: inline-flex;
+    align-items: center;
+    transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .site-header-logo:hover { transform: scale(1.03); }
+  .site-nav {
+    display: none;
+    align-items: center;
+    gap: 0;
+    font-family: "Plus Jakarta Sans", "Space Grotesk", system-ui, sans-serif;
+    font-size: 14.5px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--mist);
+  }
+  @media (min-width: 768px) {
+    .site-nav { display: flex; }
+  }
+  .site-nav a {
+    position: relative;
+    color: inherit;
+    text-decoration: none;
+    padding: 7px 12px;
+    border-radius: 6px;
+    border: 1px dashed transparent;
+    transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .site-nav a:not(:last-child)::before {
+    content: "";
+    position: absolute;
+    right: -1px;
+    top: 50%;
+    width: 1px;
+    height: 14px;
+    margin-top: -7px;
+    background: repeating-linear-gradient(to bottom, rgba(106, 98, 88, 0.45) 0 2px, transparent 2px 4px);
+    pointer-events: none;
+  }
+  .site-nav a:hover,
+  .site-nav a:focus-visible,
+  .site-nav a.is-active {
+    color: var(--ink);
+    background: rgba(255, 253, 248, 0.95);
+    border-color: rgba(74, 44, 122, 0.28);
+    box-shadow: 2px 2px 0 rgba(74, 44, 122, 0.08);
+  }
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 10px;
+    background: var(--violet);
+    color: #fff;
+    font-family: "Plus Jakarta Sans", "Space Grotesk", system-ui, sans-serif;
+    font-weight: 600;
+    font-size: 14.5px;
+    letter-spacing: -0.015em;
+    padding: 11px 18px;
+    text-decoration: none;
+    box-shadow: 0 12px 28px -14px rgba(74, 44, 122, 0.55);
+    transition: transform 0.2s ease, filter 0.2s ease;
+  }
+  .btn-primary:hover { filter: brightness(1.06); transform: translateY(-1px); }
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 10px;
+    border: 1px solid rgba(28, 21, 40, 0.14);
+    color: var(--ink);
+    font-family: "Plus Jakarta Sans", "Space Grotesk", system-ui, sans-serif;
+    font-weight: 600;
+    font-size: 14.5px;
+    letter-spacing: -0.015em;
+    padding: 11px 18px;
+    background: rgba(255, 253, 248, 0.85);
+    text-decoration: none;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+  }
+  .btn-ghost:hover {
+    transform: translateY(-1px);
+    border-color: rgba(74, 44, 122, 0.35);
+  }
+  .page-shell {
+    width: 100%;
+    max-width: 72rem;
+    margin: 0 auto;
+    padding: 0 16px;
+  }
+  @media (min-width: 768px) {
+    .page-shell { padding: 0 40px; }
+  }
+  .docs-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+    align-items: start;
+  }
+  @media (min-width: 1024px) {
+    .docs-layout {
+      grid-template-columns: 220px minmax(0, 1fr);
+      gap: 3rem;
+    }
+  }
+  .docs-toc {
+    position: sticky;
+    top: 96px;
+    display: none;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 1rem 0;
+  }
+  @media (min-width: 1024px) {
+    .docs-toc { display: flex; }
+  }
+  .docs-toc-label {
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--mist);
+    margin: 0 0 0.65rem;
+  }
+  .docs-toc a {
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--mist);
+    text-decoration: none;
+    padding: 0.35rem 0.6rem;
+    border-radius: 6px;
+    border-left: 2px solid transparent;
+    transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+  }
+  .docs-toc a:hover {
+    color: var(--ink);
+    background: rgba(255, 253, 248, 0.8);
+    border-left-color: rgba(74, 44, 122, 0.35);
+  }
+  .docs-toc a.is-section {
+    margin-top: 0.75rem;
+    font-weight: 700;
+    color: var(--violet);
+  }
+  .eyebrow {
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+    font-size: 13.5px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--violet);
+    margin: 0 0 1rem;
+  }
+  .hero-h1 {
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-size: clamp(2.15rem, 4.5vw, 2.85rem);
+    font-weight: 700;
+    letter-spacing: -0.035em;
+    line-height: 1.08;
+    margin: 0;
+  }
+  .lead {
+    margin: 1.1rem 0 0;
+    font-size: 1.125rem;
+    line-height: 1.7;
+    color: var(--mist);
+    max-width: 40rem;
+  }
+  .jump-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    margin-top: 1.75rem;
+  }
+  .jump-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.55rem 0.9rem;
+    border-radius: 8px;
+    border: 1px solid rgba(74, 44, 122, 0.22);
+    background: rgba(255, 253, 248, 0.9);
+    color: var(--violet);
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+    font-size: 13.5px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .jump-chip:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px -14px rgba(74, 44, 122, 0.45);
+  }
+  .section-rule {
+    border: none;
+    border-top: 1px solid rgba(214, 203, 184, 0.75);
+    margin: 0;
+  }
+  .docs-section {
+    scroll-margin-top: 96px;
+    padding: 3rem 0;
+  }
+  .docs-section h2 {
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-size: clamp(1.45rem, 2.6vw, 1.85rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    margin: 0 0 0.75rem;
+  }
+  .docs-section h3 {
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin: 2rem 0 0.65rem;
+  }
+  .docs-section h4 {
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin: 1.35rem 0 0.5rem;
+  }
+  .docs-section p,
+  .docs-section li {
+    font-size: 1rem;
+    line-height: 1.7;
+    color: var(--mist);
+  }
+  .docs-section p { margin: 0.65rem 0; }
+  .docs-section strong { color: var(--ink); font-weight: 600; }
+  .docs-section a { color: var(--violet); font-weight: 600; }
+  .step-list {
+    list-style: none;
+    margin: 1.5rem 0 0;
+    padding: 0;
+    display: grid;
+    gap: 1rem;
+  }
+  .step-list li {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.9rem;
+    align-items: start;
+    background: var(--slip);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 1rem 1.1rem;
+    box-shadow: 0 14px 32px -28px rgba(28, 21, 40, 0.35);
+  }
+  .step-num {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: rgba(74, 44, 122, 0.1);
+    color: var(--violet);
+    display: grid;
+    place-items: center;
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .step-list h4 {
+    margin: 0 0 0.25rem;
+    color: var(--ink);
+  }
+  .step-list p { margin: 0; }
+  .callout {
+    margin: 1.25rem 0;
+    padding: 0.9rem 1rem;
+    border-radius: 10px;
+    border: 1px solid rgba(74, 44, 122, 0.18);
+    background: rgba(74, 44, 122, 0.05);
+    color: var(--ink);
+    font-size: 0.95rem;
+    line-height: 1.6;
+  }
+  .flow-strip {
+    display: grid;
+    gap: 0.5rem;
+    margin: 1.25rem 0 1.5rem;
+    padding: 1rem;
+    border-radius: 12px;
+    background: #1C1528;
+    color: rgba(243, 237, 227, 0.88);
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 12px;
+    line-height: 1.55;
+    overflow-x: auto;
+    white-space: pre;
+  }
+  .guide-figure {
+    margin: 1.25rem 0 1.5rem;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    background: #0f0c14;
+    box-shadow: 0 22px 48px -30px rgba(28, 21, 40, 0.55);
+  }
+  .guide-figure img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .guide-figure figcaption {
+    padding: 0.65rem 0.9rem;
+    font-size: 0.8125rem;
+    color: var(--mist);
+    background: var(--slip);
+    border-top: 1px solid var(--line);
+  }
+  .docs-table-wrap {
+    overflow-x: auto;
+    margin: 1rem 0 1.5rem;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--slip);
+  }
+  table.docs-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.925rem;
+  }
+  table.docs-table th,
+  table.docs-table td {
+    text-align: left;
+    vertical-align: top;
+    padding: 0.75rem 0.9rem;
+    border-bottom: 1px solid rgba(214, 203, 184, 0.85);
+    line-height: 1.5;
+  }
+  table.docs-table th {
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--ink);
+    background: rgba(243, 237, 227, 0.65);
+  }
+  table.docs-table td { color: var(--mist); }
+  table.docs-table td strong { color: var(--ink); }
+  table.docs-table tr:last-child td { border-bottom: none; }
+  .flow-cards {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.65rem;
+    margin: 1.25rem 0;
+  }
+  @media (min-width: 640px) {
+    .flow-cards { grid-template-columns: repeat(3, 1fr); }
+  }
+  .flow-card {
+    background: var(--slip);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 1rem;
+  }
+  .flow-card .k {
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--violet);
+    margin-bottom: 0.35rem;
+  }
+  .flow-card p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--mist);
+  }
+  .site-footer {
+    background: #FFFDF8;
+    border-top: 1px solid var(--line);
+    margin-top: 2rem;
+  }
+  .site-footer a {
+    color: var(--mist);
+    text-decoration: none;
+  }
+  .site-footer a:hover { color: var(--violet); }
+  .footer-bottom {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.25rem;
+    justify-content: space-between;
+    padding: 1.25rem 0 2rem;
+    border-top: 1px solid rgba(214, 203, 184, 0.7);
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--mist);
+  }
+</style>
+</head>
+<body>
+<div class="site-bg" aria-hidden="true"></div>
+
+<header class="site-header">
+  <div class="site-header-bar">
+    <div class="site-header-inner">
+      <a href="/" class="site-header-logo shrink-0" aria-label="Taxova.ai home">
+        <img src="/static/logo-on-light.png?v=2" alt="Taxova.ai" class="logo-img"/>
+      </a>
+      <nav class="site-nav">
+        <a href="/#how">How it works</a>
+        <a href="/#product">Product</a>
+        <a href="/docs" class="is-active">Docs</a>
+        <a href="/careers">Careers</a>
+        <a href="/dashboard">CA login</a>
+      </nav>
+      <a href="/onboarding" class="btn-primary !py-2.5 !px-4 text-sm shrink-0">
+        Get started
+        <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+      </a>
+    </div>
+  </div>
+</header>
+
+<main class="pt-[72px]">
+  <section class="page-shell pt-14 pb-8 md:pt-16 md:pb-10">
+    <p class="eyebrow">Docs · How to use Taxova</p>
+    <h1 class="hero-h1 text-ink">WhatsApp in. Filing-ready out.</h1>
+    <p class="lead">
+      Short path for businesses, then a full walkthrough of the CA dashboard —
+      every panel, what to click, and how it fits month close and GST filing prep.
+    </p>
+    <div class="jump-row">
+      <a class="jump-chip" href="#businesses">
+        <span class="material-symbols-outlined text-[18px]">storefront</span>
+        For businesses
+      </a>
+      <a class="jump-chip" href="#ca-guide">
+        <span class="material-symbols-outlined text-[18px]">account_balance</span>
+        CA dashboard guide
+      </a>
+      <a class="jump-chip" href="/dashboard">
+        <span class="material-symbols-outlined text-[18px]">open_in_new</span>
+        Open dashboard
+      </a>
+    </div>
+  </section>
+
+  <hr class="section-rule page-shell"/>
+
+  <div class="page-shell docs-layout pb-16">
+    <aside class="docs-toc" aria-label="On this page">
+      <p class="docs-toc-label">On this page</p>
+      <a class="is-section" href="#businesses">For businesses</a>
+      <a href="#businesses-steps">Steps</a>
+      <a class="is-section" href="#ca-guide">CA dashboard</a>
+      <a href="#big-picture">1. Big picture</a>
+      <a href="#sidebar">2. Sidebar</a>
+      <a href="#top-header">3. Top header</a>
+      <a href="#gst-module">4. GST module</a>
+      <a href="#month-close">5. Month close</a>
+      <a href="#gst-filing">6. GST Filing</a>
+      <a href="#pilot">7. Pilot panel</a>
+      <a href="#invoice-queue">8. Invoice queue</a>
+      <a href="#income-tax">9. Income Tax</a>
+      <a href="#connect">10. How it connects</a>
+      <a href="#login-modes">11. Login modes</a>
+    </aside>
+
+    <div>
+      <!-- Businesses -->
+      <section class="docs-section" id="businesses">
+        <p class="eyebrow">For businesses</p>
+        <h2>Send invoices on WhatsApp. Your CA gets a clean file.</h2>
+        <p>
+          You do not need a new app. After onboarding, Taxova lives in the same
+          WhatsApp chat you already use — snap a bill, send it, and move on.
+        </p>
+
+        <ol class="step-list" id="businesses-steps">
+          <li>
+            <span class="step-num">1</span>
+            <div>
+              <h4>Get started</h4>
+              <p>
+                Complete <a href="/onboarding">onboarding</a>, confirm your WhatsApp number,
+                and link your CA (or ask them to invite you via
+                <a href="/ca-assign">CA assign</a>).
+              </p>
+            </div>
+          </li>
+          <li>
+            <span class="step-num">2</span>
+            <div>
+              <h4>Send the invoice</h4>
+              <p>
+                Photo or PDF of the tax invoice is enough. Clear GSTIN, totals, and
+                invoice number help your CA approve faster.
+              </p>
+            </div>
+          </li>
+          <li>
+            <span class="step-num">3</span>
+            <div>
+              <h4>Taxova extracts &amp; checks ITC</h4>
+              <p>
+                Fields are pulled automatically and ITC eligibility is flagged.
+                Edge cases go to your CA’s review queue — not your inbox.
+              </p>
+            </div>
+          </li>
+          <li>
+            <span class="step-num">4</span>
+            <div>
+              <h4>Your CA prepares the return</h4>
+              <p>
+                They review, close the month, and export GSTR drafts from the
+                dashboard. Final filing still happens on <strong>gst.gov.in</strong>.
+              </p>
+            </div>
+          </li>
+        </ol>
+
+        <div class="callout" style="margin-top:1.5rem">
+          Tip: if your CA nudges you for missing bills near month-end, reply in the
+          same WhatsApp thread with the photo — no portal login required on your side.
+        </div>
+
+        <div class="jump-row" style="margin-top:1.25rem">
+          <a class="btn-primary" href="/onboarding">Start onboarding</a>
+          <a class="btn-ghost" href="#ca-guide">Jump to CA guide</a>
+        </div>
+      </section>
+
+      <hr class="section-rule"/>
+
+      <!-- CA Guide -->
+      <section class="docs-section" id="ca-guide">
+        <p class="eyebrow">For CAs</p>
+        <h2>CA dashboard — part-by-part guide</h2>
+        <p>
+          Every major area of <a href="/dashboard">/dashboard</a>: what it is for,
+          what you click, and how it fits WhatsApp → review → filing prep.
+          Screenshots are from the live dark UI.
+        </p>
+      </section>
+
+      <section class="docs-section" id="big-picture">
+        <h3>1. Big picture</h3>
+        <div class="flow-strip" aria-label="End-to-end flow">WhatsApp (client)          CA Dashboard                         Government
+─────────────────          ───────────────────────────          ────────────
+Invoice photo/PDF ──AI──►  Review queue / edit / approve
+                           Month close + 2B reconcile
+                           GST Filing → export JSON  ────────►  gst.gov.in
+Form 16 / AIS     ──────►  Income Tax module                    (file there)</div>
+        <p><strong>Taxova prepares.</strong> Portal filing (GST) still happens on <strong>gst.gov.in</strong>.</p>
+        <figure class="guide-figure">
+          <img src="/docs-assets/dashboard/01-full-dashboard.png" alt="Full CA dashboard overview"/>
+          <figcaption>Full dashboard — sidebar (A), top header (B), main GST body (C).</figcaption>
+        </figure>
+        <div class="docs-table-wrap">
+          <table class="docs-table">
+            <thead><tr><th>Zone</th><th>What it is</th></tr></thead>
+            <tbody>
+              <tr><td><strong>A — Sidebar</strong></td><td>Navigation + active client + sign out</td></tr>
+              <tr><td><strong>B — Top header</strong></td><td>GST / Income Tax switch, client, month, search, reload</td></tr>
+              <tr><td><strong>C — Main GST body</strong></td><td>Review queue hero, GSTIN bar, month close, filing, pilot, invoice table</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="docs-section" id="sidebar">
+        <h3>2. Sidebar (left)</h3>
+        <figure class="guide-figure">
+          <img src="/docs-assets/dashboard/02-sidebar.png" alt="CA dashboard sidebar"/>
+          <figcaption>Sidebar navigation and active client card.</figcaption>
+        </figure>
+        <div class="docs-table-wrap">
+          <table class="docs-table">
+            <thead><tr><th>Part</th><th>Purpose</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Taxova.ai logo</strong></td><td>Brand / home feel</td></tr>
+              <tr><td><strong>CA WORKSPACE</strong></td><td>Shows you are in the CA product (admin key may show “PLATFORM ADMIN”)</td></tr>
+              <tr><td><strong>Active client card</strong></td><td>Who you are reviewing. <strong>Switch</strong> focuses the client picker</td></tr>
+              <tr><td><strong>Dashboard</strong></td><td>Main GST review home</td></tr>
+              <tr><td><strong>Audit Queue</strong></td><td>Jumps to Needs review / invoice table</td></tr>
+              <tr><td><strong>GSTR Filing</strong></td><td>Scrolls to GST Filing panel (prep + export, not live e-file)</td></tr>
+              <tr><td><strong>WA Simulator</strong></td><td>Test WhatsApp uploads without Meta (local / staging)</td></tr>
+              <tr><td><strong>Settings</strong></td><td>CA login, API key, logout</td></tr>
+              <tr><td><strong>Support</strong></td><td>Shortcuts / help</td></tr>
+              <tr><td><strong>Sign out</strong></td><td>End CA session for this firm</td></tr>
+              <tr><td><strong>+ New Audit</strong></td><td>Open next bill that needs review</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          If you see “Select a client” / “No clients yet”: no clients are linked to this login.
+          Use <a href="/ca-assign">/ca-assign</a> or confirm your invite is linked on the production database.
+        </div>
+      </section>
+
+      <section class="docs-section" id="top-header">
+        <h3>3. Top header</h3>
+        <figure class="guide-figure">
+          <img src="/docs-assets/dashboard/03-header.png" alt="CA dashboard top header toolbar"/>
+          <figcaption>Workspace toolbar — module switch, client, month, search.</figcaption>
+        </figure>
+        <div class="docs-table-wrap">
+          <table class="docs-table">
+            <thead><tr><th>Part</th><th>Purpose</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Workspace · CA Review Queue</strong></td><td>Context label (hides on narrower screens)</td></tr>
+              <tr><td><strong>GST | Income Tax</strong></td><td>Module switch. GST = invoices &amp; filing prep. Income Tax = Form 16 / AIS / estimates</td></tr>
+              <tr><td><strong>Client dropdown</strong></td><td>Pick taxpayer (phone + name + GSTIN)</td></tr>
+              <tr><td><strong>Month picker</strong></td><td>Filter invoices / month-close / filing to one return period</td></tr>
+              <tr><td><strong>Search</strong></td><td>Filter invoice list by number / supplier / GSTIN</td></tr>
+              <tr><td><strong>Reload</strong></td><td>Refresh invoices + metrics + pilot stats</td></tr>
+              <tr><td><strong>Bell / CA chip</strong></td><td>Notifications placeholder · session indicator</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          Tip for demos: always pick a <strong>client with GSTIN</strong> and a <strong>month that has bills</strong>,
+          or month close / filing will show “Not ready”.
+        </div>
+      </section>
+
+      <section class="docs-section" id="gst-module">
+        <h3>4. GST module — review hero &amp; context</h3>
+        <figure class="guide-figure">
+          <img src="/docs-assets/dashboard/07-gst-module.png" alt="GST module main body"/>
+          <figcaption>Scrollable GST main — review hero, GSTIN bar, and downstream panels.</figcaption>
+        </figure>
+        <h4>4.1 Page title row</h4>
+        <div class="docs-table-wrap">
+          <table class="docs-table">
+            <thead><tr><th>Part</th><th>Purpose</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Your review queue</strong></td><td>Home for CA exception review</td></tr>
+              <tr><td><strong>GSTR-1 / GSTR-3B chips</strong></td><td>Local readiness (not portal filing status)</td></tr>
+              <tr><td><strong>Review these / Import 2B / Close month</strong></td><td>Shortcuts into queue, 2B import, month-close strip</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>4.2 Client GSTIN bar</h4>
+        <div class="docs-table-wrap">
+          <table class="docs-table">
+            <thead><tr><th>Part</th><th>Purpose</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Client GSTIN</strong></td><td>Required for ITC classification and clean exports. Click to edit</td></tr>
+              <tr><td><strong>Import GSTR-2B</strong></td><td>Upload portal 2B JSON/CSV and reconcile purchases</td></tr>
+              <tr><td><strong>Advanced</strong></td><td>Pull 2B (OTP), recompute ITC, GSTIN lookup</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="docs-section" id="month-close">
+        <h3>5. Month close</h3>
+        <figure class="guide-figure">
+          <img src="/docs-assets/dashboard/04-month-close.png" alt="Month close readiness strip"/>
+          <figcaption>Month close — readiness, 2B health, and action shortcuts.</figcaption>
+        </figure>
+        <p><strong>Purpose:</strong> answer “Can we close this return month?” before export.</p>
+        <div class="docs-table-wrap">
+          <table class="docs-table">
+            <thead><tr><th>Part</th><th>Purpose</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Period + Ready / Not ready</strong></td><td>Selected month + blocker summary</td></tr>
+              <tr><td><strong>Bills received</strong></td><td>Count of invoices in this month</td></tr>
+              <tr><td><strong>Still need CA</strong></td><td>Exceptions still open</td></tr>
+              <tr><td><strong>2B imported / matched / missing / mismatch</strong></td><td>Purchase reconcile health</td></tr>
+              <tr><td><strong>Steps 1–4</strong></td><td>Bills in → Import 2B → Clear queue → Export draft</td></tr>
+              <tr><td><strong>Review queue</strong></td><td>Jump to Needs review</td></tr>
+              <tr><td><strong>Import 2B</strong></td><td>Open import modal</td></tr>
+              <tr><td><strong>Nudge client</strong></td><td>WhatsApp nudge for missing bills</td></tr>
+              <tr><td><strong>Export draft</strong></td><td>Open GSTR JSON export modal</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Common blockers: missing GSTIN, no month selected, bills still needing CA, 2B not imported.</p>
+      </section>
+
+      <section class="docs-section" id="gst-filing">
+        <h3>6. GST Filing (Phase 1)</h3>
+        <figure class="guide-figure">
+          <img src="/docs-assets/dashboard/05-gst-filing.png" alt="GST Filing handoff panel"/>
+          <figcaption>GST Filing — export drafts and portal checklist (not live e-file).</figcaption>
+        </figure>
+        <p>
+          <strong>Purpose:</strong> turn “month is ready” into <strong>download drafts + portal checklist</strong>.
+          Taxova does <strong>not</strong> submit to gst.gov.in yet.
+        </p>
+        <div class="docs-table-wrap">
+          <table class="docs-table">
+            <thead><tr><th>Part</th><th>Purpose</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Ready / Not ready badge</strong></td><td>Same readiness idea as month close</td></tr>
+              <tr><td><strong>Export GSTR-1 / GSTR-3B</strong></td><td>Download offline-utility-style JSON</td></tr>
+              <tr><td><strong>Readiness stats</strong></td><td>Bills, need CA, 2B imported, 2B gaps</td></tr>
+              <tr><td><strong>Clear review queue</strong></td><td>Fix blockers first</td></tr>
+              <tr><td><strong>Portal steps</strong></td><td>What to do on gst.gov.in after download</td></tr>
+              <tr><td><strong>GSTR-1 / 3B exported checkboxes</strong></td><td>Auto-tick after successful download (browser memory)</td></tr>
+              <tr><td><strong>Mark prepared / ARN note</strong></td><td>CA tracking only (local) — not a legal ARN</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="docs-section" id="pilot">
+        <h3>7. GST pilot panel</h3>
+        <figure class="guide-figure">
+          <img src="/docs-assets/dashboard/06-pilot.png" alt="GST pilot readiness panel"/>
+          <figcaption>Pilot panel — extraction quality gate for ops (not day-to-day filing).</figcaption>
+        </figure>
+        <p>
+          <strong>Purpose:</strong> founder / ops gate — “Is extraction good enough to scale?” —
+          <strong>not</strong> day-to-day filing.
+        </p>
+        <div class="docs-table-wrap">
+          <table class="docs-table">
+            <thead><tr><th>Part</th><th>Purpose</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Status pill</strong></td><td>Collecting / check-in / Go / Hold</td></tr>
+              <tr><td><strong>Approvals progress</strong></td><td>Toward volume bar (default 25)</td></tr>
+              <tr><td><strong>Review next</strong></td><td>Open next firm-wide pending bill (easy ones first)</td></tr>
+              <tr><td><strong>Edit rate</strong></td><td>Locked until volume bar; then % of approved bills you edited</td></tr>
+              <tr><td><strong>Rejected / skipped</strong></td><td>Volume outside edit-rate</td></tr>
+              <tr><td><strong>Pending review</strong></td><td>Clickable → same as Review next</td></tr>
+              <tr><td><strong>Pre-flight checklist</strong></td><td>Day-zero / firm / training checklist</td></tr>
+              <tr><td><strong>Filing-critical field table</strong></td><td>GSTIN / totals / invoice # edits</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="docs-section" id="invoice-queue">
+        <h3>8. Invoice review table (queue)</h3>
+        <figure class="guide-figure">
+          <img src="/docs-assets/dashboard/08-invoice-queue.png" alt="Invoice review queue table"/>
+          <figcaption>Invoice queue — filter tabs, risk reasons, open / approve.</figcaption>
+        </figure>
+        <div class="docs-table-wrap">
+          <table class="docs-table">
+            <thead><tr><th>Part</th><th>Purpose</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Tabs</strong></td><td>Needs review / Pending / Approved / ITC / All</td></tr>
+              <tr><td><strong>Row</strong></td><td>One WhatsApp (or uploaded) invoice</td></tr>
+              <tr><td><strong>Risk / reason</strong></td><td>Why it needs a CA (calc, GSTIN, 2B, ITC, etc.)</td></tr>
+              <tr><td><strong>Open / Approve</strong></td><td>Drawer audit or quick approve when ready</td></tr>
+              <tr><td><strong>Bulk bar</strong></td><td>Multi-select approve</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><strong>Typical CA loop:</strong> Needs review → open bill → fix fields if needed → Approve → next.</p>
+      </section>
+
+      <section class="docs-section" id="income-tax">
+        <h3>9. Income Tax module</h3>
+        <figure class="guide-figure">
+          <img src="/docs-assets/dashboard/09-income-tax-full.png" alt="Income Tax module full view"/>
+          <figcaption>Income Tax module — Form 16 / AIS / estimates for the same client.</figcaption>
+        </figure>
+        <figure class="guide-figure">
+          <img src="/docs-assets/dashboard/10-itr-module.png" alt="ITR module panel detail"/>
+          <figcaption>ITR panel detail — uploads, editable fields, AIS reconcile.</figcaption>
+        </figure>
+        <p>Switch with the header <strong>Income Tax</strong> tab (same client).</p>
+        <div class="docs-table-wrap">
+          <table class="docs-table">
+            <thead><tr><th>Part</th><th>Purpose</th></tr></thead>
+            <tbody>
+              <tr><td><strong>FY + PAN + Open / create return</strong></td><td>One ITR return per client + year</td></tr>
+              <tr><td><strong>Upload Form 16</strong></td><td>PDF/image → AI extract salary / TDS / exemptions</td></tr>
+              <tr><td><strong>Upload AIS</strong></td><td>Portal/demo AIS JSON → reconcile vs Form 16</td></tr>
+              <tr><td><strong>Salary / TDS / 80C fields</strong></td><td>Editable estimate inputs</td></tr>
+              <tr><td><strong>Save estimate</strong></td><td>Old vs new regime comparison</td></tr>
+              <tr><td><strong>AIS vs Form 16 table</strong></td><td>Mismatches (e.g. interest income)</td></tr>
+              <tr><td><strong>Approve / Export draft</strong></td><td>CA sign-off + prep for portal filing (not e-file inside Taxova)</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="docs-section" id="connect">
+        <h3>10. How the pieces connect (GST)</h3>
+        <div class="flow-cards">
+          <div class="flow-card">
+            <div class="k">1 · Capture</div>
+            <p>WhatsApp invoice → AI extract → lands in review queue.</p>
+          </div>
+          <div class="flow-card">
+            <div class="k">2 · Review</div>
+            <p>CA edits if needed → Approve. Import GSTR-2B in parallel.</p>
+          </div>
+          <div class="flow-card">
+            <div class="k">3 · File prep</div>
+            <p>Month close ready → GST Filing → export JSON → file on gst.gov.in.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="docs-section" id="login-modes">
+        <h3>11. Login modes (why the UI looks empty)</h3>
+        <div class="docs-table-wrap">
+          <table class="docs-table">
+            <thead><tr><th>Mode</th><th>How</th><th>What you see</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><strong>CA session</strong></td>
+                <td>Settings → invite + password</td>
+                <td>Only clients linked via <a href="/ca-assign">/ca-assign</a> for that invite</td>
+              </tr>
+              <tr>
+                <td><strong>Platform admin API key</strong></td>
+                <td>Settings → paste dashboard API key</td>
+                <td>All clients in the DB (ops only — do not give to customer CAs)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          Production “No clients yet” with a valid CA login almost always means:
+          no client↔CA links for that invite on the production database.
+        </div>
+        <div class="jump-row" style="margin-top:1.75rem">
+          <a class="btn-primary" href="/dashboard">Open CA dashboard</a>
+          <a class="btn-ghost" href="mailto:taxova.ai@gmail.com?subject=Taxova%20docs%20help">Ask a question</a>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page-shell">
+    <div class="footer-bottom">
+      <p>© 2026 Taxova.ai</p>
+      <p>
+        <a href="/">Home</a>
+        ·
+        <a href="/docs">Docs</a>
+        ·
+        <a href="/careers">Careers</a>
+        ·
+        <a href="mailto:taxova.ai@gmail.com">taxova.ai@gmail.com</a>
+      </p>
+    </div>
+  </div>
+</footer>
+</body>
+</html>

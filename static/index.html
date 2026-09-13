@@ -418,9 +418,16 @@ tailwind.config = {
   .hero-visual {
     position: relative;
     padding-top: 0;
+    width: 100%;
+    min-width: 0;
   }
   @media (min-width: 1024px) {
-    .hero-visual { padding-top: 6px; }
+    .hero-visual {
+      padding-top: 6px;
+      display: flex;
+      justify-content: center;
+      align-self: start;
+    }
   }
   .hero-h1 {
     font-family: "Space Grotesk", system-ui, sans-serif;
@@ -451,11 +458,17 @@ tailwind.config = {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
+    width: 100%;
     max-width: 36rem;
+    min-width: 0;
     padding-right: 0.5rem;
   }
   @media (min-width: 1024px) {
-    .hero-copy { padding-right: 1.25rem; }
+    .hero-copy {
+      max-width: none;
+      padding-right: 1.25rem;
+      align-self: start;
+    }
   }
   .hero-copy .eyebrow {
     display: block;
@@ -481,7 +494,8 @@ tailwind.config = {
   }
   .hero-copy .hero-lead {
     margin: 18px 0 0;
-    max-width: 30rem;
+    max-width: 32rem;
+    width: 100%;
     font-size: 1.125rem;
     line-height: 1.7;
     color: var(--mist);
@@ -492,6 +506,7 @@ tailwind.config = {
     gap: 12px;
     margin-top: 32px;
     width: 100%;
+    max-width: 100%;
   }
   @media (min-width: 640px) {
     .hero-copy .hero-actions {
@@ -565,8 +580,9 @@ tailwind.config = {
     margin: 0 auto;
     padding: 48px 20px 56px;
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 2.75rem;
-    align-items: center;
+    align-items: start;
   }
   @media (min-width: 640px) {
     .hero-shell { padding: 56px 32px 64px; }
@@ -576,58 +592,44 @@ tailwind.config = {
   }
   @media (min-width: 1024px) {
     .hero-shell {
-      grid-template-columns: 1.05fr 0.95fr;
-      gap: 3.5rem;
+      /* Equal columns; minmax(0,…) stops content from blowing a track open */
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 3rem;
       padding: 72px 40px 80px;
+      align-items: start;
     }
   }
 
   /* ── Thermal receipt ── */
   .receipt-stage {
     position: relative;
-    width: min(100%, 340px);
-    margin-left: auto;
+    width: 100%;
+    max-width: 400px;
+    min-height: 0;
+    margin-inline: auto;
+  }
+  @media (min-width: 1024px) {
+    .receipt-stage {
+      max-width: 380px;
+    }
   }
   .printer-unit {
     position: relative;
+    width: 100%;
     background: var(--slip);
-    border: 1px solid rgba(214, 203, 184, 0.85);
-    border-radius: 16px;
+    border-left: 1px solid rgba(214, 203, 184, 0.55);
+    border-right: 1px solid rgba(214, 203, 184, 0.55);
+    border-top: 1px solid rgba(196, 182, 160, 0.85);
+    border-bottom: 1px solid rgba(196, 182, 160, 0.85);
+    border-radius: 14px;
     overflow: hidden;
     box-shadow:
       0 1px 0 rgba(255, 255, 255, 0.8) inset,
-      0 18px 40px -24px rgba(28, 21, 40, 0.28),
-      0 40px 64px -40px rgba(28, 21, 40, 0.18);
+      0 14px 32px -22px rgba(28, 21, 40, 0.28),
+      0 28px 48px -36px rgba(28, 21, 40, 0.16);
   }
-  .printer-slot {
-    position: relative;
-    z-index: 4;
-    margin: 0;
-    padding: 10px 16px;
-    background: linear-gradient(180deg, #2A2438 0%, #1C1528 100%);
-    border-radius: 0;
-    border: none;
-    border-bottom: 1px solid #3D3550;
-    box-shadow: none;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-  }
-  .printer-slot::after { display: none; }
-  .printer-led {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: rgba(74, 44, 122, 0.35);
-    flex-shrink: 0;
-    box-shadow: inset 0 1px 2px rgba(0,0,0,0.3);
-  }
-  .printer-unit.is-printing .printer-led {
-    background: #6EE7A8;
-    box-shadow: 0 0 8px rgba(110, 231, 168, 0.7);
-    animation: printer-led 0.9s ease-in-out infinite;
-  }
+  .printer-slot,
+  .printer-led { display: none !important; }
   @keyframes printer-led {
     0%, 100% { opacity: 0.45; }
     50% { opacity: 1; }
@@ -669,13 +671,13 @@ tailwind.config = {
   }
   .ncr-sheet {
     height: 100%;
-    min-height: 420px;
+    min-height: 300px;
     background:
       linear-gradient(135deg, rgba(74, 44, 122, 0.14), rgba(74, 44, 122, 0.06)),
       var(--slip);
     border: 1px dashed rgba(74, 44, 122, 0.45);
     border-top: none;
-    padding: 22px;
+    padding: 16px;
     font-family: "Space Grotesk", system-ui, sans-serif;
     box-shadow: 0 18px 40px -24px rgba(74, 44, 122, 0.35);
     display: flex;
@@ -699,41 +701,21 @@ tailwind.config = {
     letter-spacing: 0;
     font-family: "Space Grotesk", system-ui, sans-serif;
   }
-  .ca-file-badge {
-    position: absolute;
-    left: 20px;
-    top: 18px;
-    z-index: 3;
-    font-family: "Plus Jakarta Sans", "Space Grotesk", system-ui, sans-serif;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0;
-    text-transform: none;
-    color: var(--violet);
-    border: 1px solid rgba(74, 44, 122, 0.22);
-    background: rgba(255, 253, 248, 0.92);
-    padding: 4px 9px;
-    border-radius: 6px;
-    opacity: 0;
-    transform: scale(0.92);
-    transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.22, 1.4, 0.36, 1);
-  }
-  .ca-file-badge.is-shown {
-    opacity: 0.92;
-    transform: scale(1);
-  }
+  .ca-file-badge,
+  .btn-replay,
+  .receipt-footer { display: none !important; }
   .receipt-feed-window {
     overflow: hidden;
-    max-height: 118px;
+    max-height: 110px;
     transition: max-height 0.12s cubic-bezier(0.22, 1, 0.36, 1);
   }
   .receipt-feed-window.is-expanded {
-    max-height: 560px;
+    max-height: 520px;
   }
   .receipt-wrap {
     position: relative;
     width: 100%;
-    filter: drop-shadow(0 22px 40px rgba(28, 21, 40, 0.18));
+    filter: drop-shadow(0 16px 28px rgba(28, 21, 40, 0.16));
     transition: filter 0.35s ease;
   }
   .receipt-wrap.is-entering {
@@ -791,10 +773,10 @@ tailwind.config = {
       radial-gradient(rgba(28, 21, 40, 0.04) 0.7px, transparent 0.7px);
     background-size: auto, 10px 10px;
     color: var(--ink);
-    padding: 28px 26px 32px;
+    padding: 20px 20px 28px;
     font-family: "Space Grotesk", system-ui, sans-serif;
-    min-height: 420px;
-    overflow: hidden;
+    min-height: 0;
+    overflow: visible;
   }
   .receipt::before,
   .receipt::after {
@@ -817,35 +799,54 @@ tailwind.config = {
     transform: rotate(180deg);
   }
   .receipt-merchant {
-    text-align: center;
-    border-bottom: 1px dashed var(--line);
-    padding-bottom: 16px;
-    margin-bottom: 16px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    text-align: left;
+    border-bottom: 1px solid rgba(196, 182, 160, 0.75);
+    padding-bottom: 12px;
+    margin-bottom: 12px;
   }
   .receipt-merchant .brand {
     display: flex;
-    justify-content: center;
-    margin: 0 auto 2px;
+    align-items: center;
+    flex-shrink: 0;
+    margin: 0;
   }
   .receipt-merchant .brand img {
-    height: 28px;
+    height: 26px;
     width: auto;
     object-fit: contain;
   }
   .receipt-merchant .meta {
-    margin-top: 8px;
-    font-size: 12px;
+    margin: 0;
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    text-align: right;
+    font-size: 11px;
     color: var(--mist);
-    line-height: 1.6;
+    line-height: 1.35;
     letter-spacing: 0;
+    white-space: normal;
+    overflow: visible;
+  }
+  .receipt-merchant .meta .meta-line {
+    display: block;
   }
   .receipt-merchant .meta .data {
     font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-size: 11.5px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ink);
   }
   .receipt-status {
-    min-height: 1.35rem;
-    margin: 0 0 14px;
+    min-height: 1.2rem;
+    margin: 0 0 10px;
     font-size: 12px;
     font-weight: 500;
     letter-spacing: 0;
@@ -879,8 +880,8 @@ tailwind.config = {
     align-items: baseline;
     gap: 12px;
     font-size: 13px;
-    line-height: 1.4;
-    margin: 0 0 12px;
+    line-height: 1.35;
+    margin: 0 0 9px;
     padding: 0;
     border-radius: 4px;
     opacity: 0;
@@ -911,14 +912,14 @@ tailwind.config = {
   .receipt-row .v {
     font-family: "IBM Plex Mono", ui-monospace, monospace;
     font-weight: 600;
-    font-size: 12.5px;
+    font-size: 13px;
     text-align: right;
   }
   .receipt-total {
     font-size: 14px;
     font-weight: 700;
     margin-top: 0;
-    margin-bottom: 12px;
+    margin-bottom: 9px;
   }
   .receipt-total .data {
     font-family: "IBM Plex Mono", ui-monospace, monospace;
@@ -927,7 +928,7 @@ tailwind.config = {
   .receipt-divider {
     border: none;
     border-top: 1px dashed var(--line);
-    margin: 6px 0 14px;
+    margin: 6px 0 12px;
     opacity: 0;
     transform: scaleX(0.92);
     transition: opacity 0.35s ease, transform 0.35s ease;
@@ -937,9 +938,9 @@ tailwind.config = {
     transform: scaleX(1);
   }
   .receipt-footer {
-    margin-top: 18px;
+    margin-top: 10px;
     text-align: center;
-    font-size: 11px;
+    font-size: 10px;
     color: var(--mist);
     letter-spacing: 0;
     opacity: 0;
@@ -952,11 +953,11 @@ tailwind.config = {
   }
   .ink-stamp {
     position: absolute;
-    right: 16px;
-    bottom: 68px;
-    width: 84px;
-    height: 84px;
-    border: 2px solid var(--violet);
+    right: 14px;
+    bottom: 28px;
+    width: 78px;
+    height: 78px;
+    border: 2.5px solid var(--violet);
     border-radius: 50%;
     color: var(--violet);
     display: grid;
@@ -965,17 +966,19 @@ tailwind.config = {
     font-family: "Plus Jakarta Sans", "Space Grotesk", system-ui, sans-serif;
     font-size: 11px;
     font-weight: 700;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.02em;
     line-height: 1.15;
     text-transform: none;
     opacity: 0;
     transform: rotate(-14deg) scale(1.4) translateY(-14px);
-    box-shadow: inset 0 0 0 1px rgba(74, 44, 122, 0.16);
-    background: rgba(255, 253, 248, 0.4);
+    box-shadow:
+      inset 0 0 0 1.5px rgba(74, 44, 122, 0.28),
+      0 2px 8px rgba(74, 44, 122, 0.12);
+    background: rgba(255, 253, 248, 0.72);
     pointer-events: none;
-    mix-blend-mode: multiply;
+    mix-blend-mode: normal;
     will-change: transform, opacity;
-    z-index: 3;
+    z-index: 5;
   }
   .ink-stamp.is-slammed {
     animation: stamp-slam 0.22s cubic-bezier(0.22, 1.4, 0.36, 1) forwards;
@@ -986,28 +989,28 @@ tailwind.config = {
       transform: rotate(-22deg) scale(1.45) translateY(-20px);
     }
     55% {
-      opacity: 0.7;
+      opacity: 0.95;
       transform: rotate(-12deg) scale(0.96) translateY(1px);
     }
     100% {
-      opacity: 0.55;
+      opacity: 0.88;
       transform: rotate(-14deg) scale(1) translateY(0);
     }
   }
   .ink-stamp span {
     display: block;
     font-size: 9px;
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: 0.04em;
-    opacity: 0.85;
+    opacity: 0.9;
     margin-top: 2px;
   }
   .ink-splatter {
     position: absolute;
-    right: 8px;
-    bottom: 58px;
-    width: 120px;
-    height: 120px;
+    right: 4px;
+    bottom: 36px;
+    width: 90px;
+    height: 90px;
     pointer-events: none;
     opacity: 0;
     z-index: 2;
@@ -1062,10 +1065,10 @@ tailwind.config = {
   }
   .ink-ripple {
     position: absolute;
-    right: 30px;
-    bottom: 84px;
-    width: 72px;
-    height: 72px;
+    right: 18px;
+    bottom: 52px;
+    width: 56px;
+    height: 56px;
     border-radius: 50%;
     border: 2px solid rgba(194, 59, 42, 0.55);
     pointer-events: none;
@@ -1102,18 +1105,18 @@ tailwind.config = {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.4rem;
-    margin-top: 12px;
+    gap: 0.35rem;
+    margin-top: 8px;
     width: 100%;
     border-radius: 8px;
     border: 1px solid var(--line);
     background: rgba(255, 253, 248, 0.85);
     color: var(--ink);
     font-family: "Space Grotesk", system-ui, sans-serif;
-    font-size: 13.5px;
+    font-size: 12px;
     font-weight: 600;
     letter-spacing: -0.01em;
-    padding: 10px 14px;
+    padding: 7px 12px;
     cursor: pointer;
     opacity: 0;
     pointer-events: none;
@@ -1555,7 +1558,7 @@ tailwind.config = {
       transition: none !important;
     }
     .ink-stamp {
-      opacity: 0.55 !important;
+      opacity: 0.88 !important;
       transform: rotate(-14deg) scale(1) !important;
     }
     .btn-replay.is-ready { opacity: 1; pointer-events: auto; }
@@ -1963,6 +1966,7 @@ tailwind.config = {
       <nav class="site-nav">
         <a href="/#how">How it works</a>
         <a href="/#product">Product</a>
+        <a href="/docs">Docs</a>
         <a href="/careers">Careers</a>
         <a href="/dashboard">CA login</a>
       </nav>
@@ -2014,9 +2018,6 @@ tailwind.config = {
             <div class="wa-time">10:42 ✓✓</div>
           </div>
           <div class="printer-unit" id="printer-unit">
-            <div class="printer-slot" aria-hidden="true">
-              <span class="printer-led"></span>
-            </div>
             <div class="receipt-stack" id="receipt-stack">
               <div class="ncr-peel" id="ncr-peel" aria-hidden="true">
                 <div class="ncr-sheet">
@@ -2027,14 +2028,17 @@ tailwind.config = {
               <div class="receipt-wrap" id="receipt-demo" aria-hidden="true">
                 <div class="receipt-feed-window" id="receipt-feed">
                   <div class="receipt">
-                    <div class="ca-file-badge" id="ca-file-badge">CA file</div>
                     <div class="receipt-merchant">
                       <div class="brand">
                         <img src="/static/logo-on-light.png?v=2" alt="Taxova.ai"/>
                       </div>
                       <div class="meta">
-                        GST extract · WhatsApp<br/>
-                        <span class="data" id="receipt-inv">INV-2048</span> · <span class="data" id="receipt-clock">10:42 IST</span>
+                        <span class="meta-line">GST extract · WhatsApp</span>
+                        <span class="meta-line">
+                          <span class="data" id="receipt-inv">INV-2048</span>
+                          ·
+                          <span class="data" id="receipt-clock">19:45 IST</span>
+                        </span>
                       </div>
                     </div>
                     <div class="receipt-status is-idle" id="receipt-status" aria-live="polite">
@@ -2074,7 +2078,6 @@ tailwind.config = {
                       <span class="k">ITC status</span>
                       <span class="v" style="color:var(--violet)" data-final="Eligible">Eligible</span>
                     </div>
-                    <div class="receipt-footer" data-reveal="footer">End of extract</div>
                     <div class="ink-ripple" id="receipt-ripple" aria-hidden="true"></div>
                     <div class="ink-splatter" id="receipt-splatter" aria-hidden="true">
                       <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
@@ -2085,10 +2088,6 @@ tailwind.config = {
               </div>
             </div>
           </div>
-          <button type="button" class="btn-replay" id="receipt-replay" aria-label="Replay receipt animation">
-            <span class="material-symbols-outlined" aria-hidden="true">replay</span>
-            Replay animation
-          </button>
         </div>
       </div>
     </div>
@@ -2339,6 +2338,7 @@ tailwind.config = {
           <li><a href="/#how">How it works</a></li>
           <li><a href="/#product">For CAs</a></li>
           <li><a href="/#samples">ITC outcomes</a></li>
+          <li><a href="/docs">Docs</a></li>
           <li><a href="/onboarding">Get started</a></li>
           <li><a href="/simulator">WA Simulator</a></li>
         </ul>
@@ -2367,6 +2367,8 @@ tailwind.config = {
     <div class="footer-bottom">
       <p>© 2026 Taxova.ai. All rights reserved.</p>
       <p class="footer-bottom-links">
+        <a href="/docs">Docs</a>
+        <span aria-hidden="true">·</span>
         <a href="/careers">Careers</a>
         <span aria-hidden="true">·</span>
         <a href="mailto:taxova.ai@gmail.com">taxova.ai@gmail.com</a>
@@ -2402,14 +2404,12 @@ tailwind.config = {
 
   (function runReceiptExtraction() {
     const wrap = document.getElementById("receipt-demo");
-    const replayBtn = document.getElementById("receipt-replay");
     const handoff = document.getElementById("wa-handoff");
     const invEl = document.getElementById("receipt-inv");
     const clockEl = document.getElementById("receipt-clock");
     const feed = document.getElementById("receipt-feed");
     const printerUnit = document.getElementById("printer-unit");
     const ncrPeel = document.getElementById("ncr-peel");
-    const caBadge = document.getElementById("ca-file-badge");
     if (!wrap) return;
 
     const statusEl = document.getElementById("receipt-status");
@@ -2428,7 +2428,7 @@ tailwind.config = {
     function resetFeed() {
       if (!feed) return;
       feed.classList.remove("is-expanded");
-      feed.style.maxHeight = "118px";
+      feed.style.maxHeight = "110px";
     }
 
     function updateFeed(forceFull) {
@@ -2437,7 +2437,7 @@ tailwind.config = {
       if (!receipt) return;
       if (forceFull) {
         feed.classList.add("is-expanded");
-        feed.style.maxHeight = receipt.scrollHeight + 24 + "px";
+        feed.style.maxHeight = receipt.scrollHeight + 20 + "px";
         return;
       }
       let maxBottom = 0;
@@ -2447,7 +2447,7 @@ tailwind.config = {
       receipt.querySelectorAll(".is-visible").forEach(function (node) {
         maxBottom = Math.max(maxBottom, node.offsetTop + node.offsetHeight);
       });
-      feed.style.maxHeight = Math.max(118, maxBottom + 32) + "px";
+      feed.style.maxHeight = Math.max(110, maxBottom + 28) + "px";
     }
 
     function setPrinting(on) {
@@ -2456,16 +2456,11 @@ tailwind.config = {
 
     async function playNcrPeel(id) {
       if (id !== runId) return;
-      if (reduceMotion) {
-        if (caBadge) caBadge.classList.add("is-shown");
-        return;
-      }
-      if (!ncrPeel) return;
+      if (reduceMotion || !ncrPeel) return;
       ncrPeel.classList.add("is-visible");
       await wait(80);
       if (id !== runId) return;
       ncrPeel.classList.add("is-peeling");
-      if (caBadge) caBadge.classList.add("is-shown");
       await wait(280);
       if (id !== runId) return;
       ncrPeel.classList.remove("is-peeling", "is-visible");
@@ -2473,7 +2468,6 @@ tailwind.config = {
 
     function resetPeel() {
       if (ncrPeel) ncrPeel.classList.remove("is-visible", "is-peeling");
-      if (caBadge) caBadge.classList.remove("is-shown");
     }
 
     function tickClock() {
@@ -2501,12 +2495,6 @@ tailwind.config = {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       });
-    }
-
-    function setReplayReady(ready) {
-      if (!replayBtn) return;
-      replayBtn.classList.toggle("is-ready", ready);
-      replayBtn.disabled = !ready;
     }
 
     function bumpInvoice() {
@@ -2592,16 +2580,14 @@ tailwind.config = {
         if (v) v.textContent = v.dataset.final;
       });
       stamp.classList.add("is-slammed");
-      stamp.style.opacity = "0.55";
+      stamp.style.opacity = "0.88";
       stamp.style.transform = "rotate(-14deg) scale(1)";
       if (splatter) splatter.classList.add("is-burst");
       updateFeed(true);
-      if (caBadge) caBadge.classList.add("is-shown");
       setStatus("extract complete", false);
       setPrinting(false);
       wrap.classList.add("is-floating");
       wrap.classList.remove("is-calculating", "is-entering");
-      setReplayReady(true);
       playing = false;
     }
 
@@ -2609,7 +2595,6 @@ tailwind.config = {
       if (playing) return;
       playing = true;
       const id = ++runId;
-      setReplayReady(false);
       bumpInvoice();
       tickClock();
 
@@ -2692,7 +2677,6 @@ tailwind.config = {
       await wait(120);
       if (id !== runId) return;
 
-      el("footer").classList.add("is-visible");
       updateFeed(true);
       wrap.classList.add("is-shaking");
       stamp.classList.add("is-slammed");
@@ -2703,17 +2687,8 @@ tailwind.config = {
       setStatus("extract complete", false);
       setPrinting(false);
       wrap.classList.add("is-floating");
-      setReplayReady(true);
       playing = false;
       playNcrPeel(id);
-    }
-
-    if (replayBtn) {
-      replayBtn.addEventListener("click", function () {
-        runId += 1;
-        playing = false;
-        play();
-      });
     }
 
     play();

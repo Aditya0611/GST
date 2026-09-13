@@ -1018,6 +1018,15 @@ async def get_careers():
     return FileResponse(path)
 
 
+@app.get("/docs", response_class=HTMLResponse)
+async def get_docs():
+    """Public how-to docs hub (business + CA dashboard guide)."""
+    path = os.path.join("static", "docs.html")
+    if not os.path.exists(path):
+        return HTMLResponse("<h1>Docs page not found.</h1>", status_code=404)
+    return FileResponse(path)
+
+
 @app.post("/api/ca/link")
 async def api_link_ca(request: Request):
     """Validates a CA invite code and links the CA to the client session."""
@@ -3100,6 +3109,10 @@ async def api_simulator_clear_messages(phone_number: str = Query("919999999999")
 os.makedirs("static", exist_ok=True)
 os.makedirs(storage.STORAGE_DIR, exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
+# Public screenshots for /docs (CA dashboard guide)
+_docs_images = os.path.join("docs", "images")
+if os.path.isdir(_docs_images):
+    app.mount("/docs-assets", StaticFiles(directory=_docs_images), name="docs_assets")
 # NOTE: Raw /storage mount removed for Phase 1 security.
 # Use authenticated GET /api/files/{path} (decrypts at rest).
 
