@@ -1009,6 +1009,15 @@ async def get_data_deletion():
     return FileResponse(path)
 
 
+@app.get("/careers", response_class=HTMLResponse)
+async def get_careers():
+    """Public careers page."""
+    path = os.path.join("static", "careers.html")
+    if not os.path.exists(path):
+        return HTMLResponse("<h1>Careers page not found.</h1>", status_code=404)
+    return FileResponse(path)
+
+
 @app.post("/api/ca/link")
 async def api_link_ca(request: Request):
     """Validates a CA invite code and links the CA to the client session."""

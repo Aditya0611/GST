@@ -10,10 +10,10 @@
 <link rel="icon" type="image/png" sizes="192x192" href="/static/favicon-192.png"/>
 <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png"/>
 <meta property="og:image" content="https://taxova.pro/static/favicon-512.png"/>
-<meta name="theme-color" content="#0B1220"/>
+<meta name="theme-color" content="#F3EDE3"/>
 <link href="https://fonts.googleapis.com" rel="preconnect"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@450;500;600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet"/>
 <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
 <script>
@@ -21,18 +21,21 @@ tailwind.config = {
   theme: {
     extend: {
       colors: {
-        paper: "#F7F9FC",
-        surface: "#FFFFFF",
-        ink: "#0B1220",
-        line: "#D7DEE8",
-        teal: "#0F9F84",
-        "teal-bright": "#12B89A",
-        amber: "#C8892A",
-        mist: "#5A6B80",
-        muted: "#7A8BA0",
+        paper: "#F3EDE3",
+        slip: "#FFFDF8",
+        ink: "#1C1528",
+        mist: "#6A6258",
+        line: "#D6CBB8",
+        violet: "#4A2C7A",
+        "violet-deep": "#2A1B45",
+        stamp: "#C23B2A",
+        "stamp-tint": "#F6E4E0",
+        carbon: "#3D2A5C",
+        teal: "#1A8A72",
+        muted: "#6A6258",
       },
       fontFamily: {
-        sans: ["Sora", "system-ui", "sans-serif"],
+        sans: ["Space Grotesk", "system-ui", "sans-serif"],
         mono: ["IBM Plex Mono", "ui-monospace", "monospace"],
       },
     },
@@ -41,283 +44,1793 @@ tailwind.config = {
 </script>
 <style>
   :root {
-    --paper: #F7F9FC;
-    --surface: #FFFFFF;
-    --ink: #0B1220;
-    --line: #D7DEE8;
-    --teal: #0F9F84;
-    --amber: #C8892A;
-    --mist: #5A6B80;
+    --paper: #F3EDE3;
+    --slip: #FFFDF8;
+    --ink: #1C1528;
+    --mist: #6A6258;
+    --line: #D6CBB8;
+    --violet: #4A2C7A;
+    --violet-deep: #2A1B45;
+    --stamp: #C23B2A;
+    --stamp-tint: #F6E4E0;
+    --carbon: #3D2A5C;
+    --teal: #1A8A72;
+    --navy: #1A2744;
   }
   * { box-sizing: border-box; }
   html { scroll-behavior: smooth; }
   body {
     margin: 0;
     color: var(--ink);
-    font-family: Sora, system-ui, sans-serif;
+    font-family: "Space Grotesk", system-ui, sans-serif;
     background: var(--paper);
     overflow-x: hidden;
   }
   .material-symbols-outlined {
     font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
   }
+  .num, .mono, .data {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+  }
   .site-bg {
     position: fixed;
     inset: 0;
     z-index: -1;
     pointer-events: none;
-    background:
-      radial-gradient(ellipse 70% 45% at 0% -5%, rgba(15, 159, 132, 0.12), transparent 55%),
-      radial-gradient(ellipse 55% 40% at 100% 0%, rgba(200, 137, 42, 0.08), transparent 50%),
-      radial-gradient(ellipse 50% 35% at 80% 100%, rgba(15, 159, 132, 0.06), transparent 55%),
-      linear-gradient(180deg, #FFFFFF 0%, #F7F9FC 45%, #F3F6FA 100%);
+    background-color: #F3EDE3;
+    background-image:
+      radial-gradient(ellipse 60% 40% at 12% 0%, rgba(74, 44, 122, 0.06), transparent 55%),
+      radial-gradient(ellipse 45% 30% at 92% 12%, rgba(74, 44, 122, 0.04), transparent 50%),
+      radial-gradient(rgba(28, 21, 40, 0.06) 1px, transparent 1px),
+      radial-gradient(rgba(28, 21, 40, 0.035) 1px, transparent 1px),
+      linear-gradient(180deg, #F7F1E8 0%, #F3EDE3 52%, #EFE6DA 100%);
+    background-size: auto, auto, 18px 18px, 18px 18px, auto;
+    background-position: 0 0, 0 0, 0 0, 9px 9px, 0 0;
+    will-change: transform;
   }
-  .site-bg::after {
+  .accent-word {
+    color: var(--violet);
+    position: relative;
+    display: inline-block;
+  }
+  .accent-word::after {
     content: "";
     position: absolute;
-    inset: 0;
-    background-image:
-      linear-gradient(rgba(11, 18, 32, 0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(11, 18, 32, 0.03) 1px, transparent 1px);
-    background-size: 64px 64px;
-    mask-image: radial-gradient(ellipse 70% 55% at 50% 25%, #000 15%, transparent 75%);
-    pointer-events: none;
+    left: 0.02em;
+    right: 0.02em;
+    bottom: 0.08em;
+    height: 0.14em;
+    background: rgba(74, 44, 122, 0.22);
+    border-radius: 1px;
+    transform: scaleX(0);
+    transform-origin: left;
+    animation: accent-underline 1s cubic-bezier(0.22, 1, 0.36, 1) 0.55s forwards;
   }
-  .orb {
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(70px);
-    pointer-events: none;
-    animation: drift 14s ease-in-out infinite;
-  }
-  .orb-a {
-    width: 380px; height: 380px;
-    background: rgba(15, 159, 132, 0.16);
-    top: -6%; right: 6%;
-  }
-  .orb-b {
-    width: 260px; height: 260px;
-    background: rgba(200, 137, 42, 0.1);
-    bottom: 10%; left: -3%;
-    animation-delay: -5s;
-    animation-duration: 18s;
-  }
-  @keyframes drift {
-    0%, 100% { transform: translate(0, 0) scale(1); }
-    50% { transform: translate(-14px, 18px) scale(1.05); }
+  @keyframes accent-underline {
+    to { transform: scaleX(1); }
   }
   .reveal {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(16px);
     transition: opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1), transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
   }
-  .reveal.active {
-    opacity: 1;
-    transform: none;
-  }
-  .logo-lockup {
-    height: 46px;
+  .reveal.active { opacity: 1; transform: none; }
+
+  .logo-img {
+    height: 48px;
     width: auto;
-    max-width: min(250px, 52vw);
+    max-width: min(260px, 56vw);
     object-fit: contain;
     display: block;
   }
   @media (max-width: 640px) {
-    .logo-lockup { height: 38px; max-width: min(200px, 56vw); }
+    .logo-img { height: 40px; max-width: min(200px, 58vw); }
   }
-  .header-blur {
-    background: rgba(255, 255, 255, 0.82);
-    backdrop-filter: blur(14px) saturate(1.1);
-    -webkit-backdrop-filter: blur(14px) saturate(1.1);
-    border-bottom: 1px solid rgba(215, 222, 232, 0.9);
+  .site-header {
+    position: fixed;
+    top: 0;
+    inset-inline: 0;
+    z-index: 50;
+    padding: 0;
   }
-  .accent-word {
-    background: linear-gradient(120deg, #0F9F84 0%, #12B89A 50%, #C8892A 115%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+  .site-header-bar {
+    width: 100%;
+    height: 72px;
+    display: flex;
+    align-items: center;
+    background: rgba(255, 253, 248, 0.92);
+    backdrop-filter: blur(20px) saturate(1.12);
+    -webkit-backdrop-filter: blur(20px) saturate(1.12);
+    border: none;
+    border-bottom: 1px solid rgba(214, 203, 184, 0.45);
+    border-radius: 0;
+    box-shadow: 0 10px 30px -22px rgba(28, 21, 40, 0.2);
+    transition: box-shadow 0.28s ease, border-color 0.28s ease, background 0.28s ease;
   }
+  .site-header-bar:hover {
+    border-bottom-color: rgba(196, 182, 160, 0.65);
+    box-shadow: 0 14px 34px -20px rgba(28, 21, 40, 0.24);
+  }
+  .site-header-inner {
+    width: 100%;
+    max-width: 72rem;
+    margin: 0 auto;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0 16px;
+  }
+  @media (min-width: 768px) {
+    .site-header-inner { padding: 0 40px; }
+  }
+  .site-header-logo {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 10px;
+    transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .site-header-logo:hover {
+    transform: scale(1.03);
+  }
+  .site-header-logo .logo-img {
+    transition: opacity 0.2s ease;
+  }
+  .logo-lockup {
+    height: 42px;
+    width: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: inherit;
+  }
+  .logo-lockup.justify-center {
+    justify-content: center;
+  }
+  .logo-lockup.is-lg {
+    height: auto;
+    gap: 12px;
+  }
+  .logo-mark {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    display: block;
+    overflow: visible;
+  }
+  .logo-lockup.is-lg .logo-mark {
+    width: 52px;
+    height: 52px;
+  }
+  .logo-word {
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-weight: 700;
+    font-size: 1.35rem;
+    letter-spacing: -0.03em;
+    color: var(--navy);
+    line-height: 1;
+  }
+  .logo-lockup.is-lg .logo-word {
+    font-size: 2rem;
+  }
+  .logo-word .dot-ai {
+    font-weight: 500;
+    color: var(--teal);
+  }
+  .logo-lockup.is-on-dark .logo-word { color: #F3EDE3; }
+  .logo-lockup.is-on-dark .dot-ai { color: #7ECFC0; }
+  .logo-lockup.is-on-dark .logo-mark .bubble-stroke { stroke: #F3EDE3; }
+  .logo-lockup.is-on-dark .logo-mark .check-mid { stroke: #F3EDE3; }
+  .footer-logo.logo-lockup {
+    height: auto;
+    max-width: none;
+  }
+  .footer-logo .logo-mark { width: 32px; height: 32px; }
+  .footer-logo .logo-word { font-size: 1.2rem; }
+  @media (max-width: 640px) {
+    .logo-mark { width: 30px; height: 30px; }
+    .logo-word { font-size: 1.15rem; }
+    .logo-lockup.is-lg .logo-mark { width: 42px; height: 42px; }
+    .logo-lockup.is-lg .logo-word { font-size: 1.55rem; }
+  }
+  .site-nav {
+    display: none;
+    align-items: center;
+    gap: 0;
+    font-family: "Plus Jakarta Sans", "Space Grotesk", system-ui, sans-serif;
+    font-size: 14.5px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--mist);
+  }
+  @media (min-width: 768px) {
+    .site-nav { display: flex; }
+  }
+  .site-nav a {
+    position: relative;
+    color: inherit;
+    text-decoration: none;
+    padding: 7px 12px;
+    border-radius: 6px;
+    border: 1px dashed transparent;
+    background: transparent;
+    transition:
+      color 0.2s ease,
+      background-color 0.2s ease,
+      border-color 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+  .site-nav a::after { display: none; }
+  .site-nav a:not(:last-child)::before {
+    content: "";
+    position: absolute;
+    right: -1px;
+    top: 50%;
+    width: 1px;
+    height: 14px;
+    margin-top: -7px;
+    background:
+      repeating-linear-gradient(
+        to bottom,
+        rgba(106, 98, 88, 0.45) 0 2px,
+        transparent 2px 4px
+      );
+    pointer-events: none;
+  }
+  .site-nav a:hover,
+  .site-nav a:focus-visible {
+    color: var(--ink);
+    background: rgba(255, 253, 248, 0.95);
+    border-color: rgba(74, 44, 122, 0.28);
+    box-shadow: 2px 2px 0 rgba(74, 44, 122, 0.08);
+  }
+  .site-nav a:hover::after,
+  .site-nav a:focus-visible::after {
+    display: none;
+  }
+
   .btn-primary {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    border-radius: 999px;
-    background: #0F9F84;
+    border-radius: 10px;
+    background: var(--violet);
     color: #fff;
+    font-family: "Plus Jakarta Sans", "Space Grotesk", system-ui, sans-serif;
     font-weight: 600;
-    font-size: 0.875rem;
-    padding: 0.9rem 1.75rem;
+    font-size: 14.5px;
+    letter-spacing: -0.015em;
+    padding: 11px 18px;
     transition: transform 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease;
-    box-shadow: 0 10px 28px rgba(15, 159, 132, 0.28);
+    box-shadow: 0 12px 28px -14px rgba(74, 44, 122, 0.55);
   }
   .btn-primary:hover {
     filter: brightness(1.06);
     transform: translateY(-1px);
+    box-shadow: 0 16px 32px -14px rgba(74, 44, 122, 0.55);
   }
+  .btn-primary .material-symbols-outlined {
+    transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .btn-primary:hover .material-symbols-outlined {
+    transform: translateX(3px);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .site-header-bar,
+    .site-header-logo,
+    .site-nav a,
+    .site-nav a::after,
+    .btn-primary,
+    .btn-primary .material-symbols-outlined {
+      transition: none !important;
+    }
+    .site-header-bar:hover { transform: none; }
+    .site-header-logo:hover { transform: none; }
+    .btn-primary:hover { transform: none; }
+    .btn-primary:hover .material-symbols-outlined { transform: none; }
+  }
+
   .btn-wa {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    border-radius: 999px;
-    background: #25D366;
+    border-radius: 10px;
+    background: #1FA855;
     color: #fff;
+    font-family: "Plus Jakarta Sans", "Space Grotesk", system-ui, sans-serif;
     font-weight: 600;
-    font-size: 0.875rem;
-    padding: 0.9rem 1.75rem;
+    font-size: 14.5px;
+    letter-spacing: -0.015em;
+    padding: 11px 18px;
     transition: transform 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease;
-    box-shadow: 0 10px 28px rgba(37, 211, 102, 0.25);
+    box-shadow: 0 12px 28px -14px rgba(31, 168, 85, 0.45);
   }
-  .btn-wa:hover {
-    filter: brightness(1.06);
-    transform: translateY(-1px);
-  }
+  .btn-wa:hover { filter: brightness(1.05); transform: translateY(-1px); }
+
   .btn-ghost {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    border-radius: 999px;
-    border: 1px solid var(--line);
+    border-radius: 10px;
+    border: 1px solid rgba(28, 21, 40, 0.14);
     color: var(--ink);
+    font-family: "Plus Jakarta Sans", "Space Grotesk", system-ui, sans-serif;
     font-weight: 600;
-    font-size: 0.875rem;
-    padding: 0.9rem 1.75rem;
-    background: rgba(255,255,255,0.7);
+    font-size: 14.5px;
+    letter-spacing: -0.015em;
+    padding: 11px 18px;
+    background: rgba(255, 253, 248, 0.85);
     transition: border-color 0.2s ease, color 0.2s ease, transform 0.2s ease, background 0.2s ease;
   }
   .btn-ghost:hover {
-    border-color: rgba(15, 159, 132, 0.55);
-    color: var(--teal);
+    border-color: rgba(74, 44, 122, 0.35);
+    color: var(--violet);
     background: #fff;
     transform: translateY(-1px);
   }
-  .phone-shell {
+
+  .btn-on-dark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 10px;
+    background: #fff;
+    color: var(--violet-deep);
+    font-family: "Plus Jakarta Sans", "Space Grotesk", system-ui, sans-serif;
+    font-weight: 600;
+    font-size: 14.5px;
+    letter-spacing: -0.015em;
+    padding: 12px 20px;
+    transition: transform 0.2s ease, filter 0.2s ease;
+  }
+  .btn-on-dark:hover { filter: brightness(0.97); transform: translateY(-1px); }
+
+  .btn-ghost-on-dark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.32);
+    color: #fff;
+    font-family: "Plus Jakarta Sans", "Space Grotesk", system-ui, sans-serif;
+    font-weight: 600;
+    font-size: 14.5px;
+    letter-spacing: -0.015em;
+    padding: 12px 20px;
+    background: transparent;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  }
+  .btn-ghost-on-dark:hover {
+    background: rgba(255,255,255,0.07);
+    border-color: rgba(255,255,255,0.5);
+    transform: translateY(-1px);
+  }
+
+  .hero-visual {
+    position: relative;
+    padding-top: 0;
+  }
+  @media (min-width: 1024px) {
+    .hero-visual { padding-top: 6px; }
+  }
+  .hero-h1 {
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-size: clamp(2.5rem, 5.6vw, 58px);
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    line-height: 1.05;
+    text-transform: none;
+    margin: 0;
+  }
+  .section-h2 {
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-size: clamp(1.65rem, 3vw, 2.15rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.18;
+  }
+  .eyebrow {
+    font-family: "Plus Jakarta Sans", "Space Grotesk", system-ui, sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    text-transform: none;
+    color: var(--violet);
+    margin: 0;
+  }
+  .hero-copy {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    max-width: 36rem;
+    padding-right: 0.5rem;
+  }
+  @media (min-width: 1024px) {
+    .hero-copy { padding-right: 1.25rem; }
+  }
+  .hero-copy .eyebrow {
+    display: block;
+    margin-bottom: 18px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    font-size: 13.5px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    line-height: 1.4;
+    color: var(--violet);
+  }
+  .hero-copy .hero-punch {
+    margin: 14px 0 0;
+    font-family: "Plus Jakarta Sans", "Space Grotesk", system-ui, sans-serif;
+    font-size: clamp(1.1rem, 2.1vw, 1.3rem);
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    line-height: 1.4;
+    color: var(--ink);
+  }
+  .hero-copy .hero-lead {
+    margin: 18px 0 0;
+    max-width: 30rem;
+    font-size: 1.125rem;
+    line-height: 1.7;
+    color: var(--mist);
+  }
+  .hero-copy .hero-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 32px;
+    width: 100%;
+  }
+  @media (min-width: 640px) {
+    .hero-copy .hero-actions {
+      flex-direction: row;
+      flex-wrap: wrap;
+      width: auto;
+    }
+  }
+  .hero-copy .btn-wa,
+  .hero-copy .btn-ghost {
+    font-size: 15px;
+    padding: 14px 22px;
+    border-radius: 10px;
+  }
+  .hero-copy .btn-wa {
+    box-shadow: 0 16px 32px -16px rgba(31, 168, 85, 0.55);
+  }
+  .hero-copy .hero-trust {
+    margin: 20px 0 0;
+    font-family: "Plus Jakarta Sans", "Space Grotesk", system-ui, sans-serif;
+    font-size: 13.5px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    line-height: 1.45;
+    color: var(--mist);
+  }
+  .page-shell {
+    width: 100%;
+    max-width: 72rem;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+  @media (min-width: 640px) {
+    .page-shell {
+      padding-left: 32px;
+      padding-right: 32px;
+    }
+  }
+  @media (min-width: 768px) {
+    .page-shell {
+      padding-left: 40px;
+      padding-right: 40px;
+    }
+  }
+  .section-intro {
+    max-width: 36rem;
+  }
+  .section-intro .eyebrow {
+    display: block;
+    margin-bottom: 16px;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    line-height: 1.35;
+    color: var(--violet);
+  }
+  .section-intro .section-h2 {
+    margin: 0;
+  }
+  .section-intro .section-lead {
+    margin: 16px 0 0;
+    font-size: 1.1rem;
+    line-height: 1.7;
+    color: var(--mist);
+  }
+  .hero-shell {
+    width: 100%;
+    max-width: 72rem;
+    margin: 0 auto;
+    padding: 48px 20px 56px;
+    display: grid;
+    gap: 2.75rem;
+    align-items: center;
+  }
+  @media (min-width: 640px) {
+    .hero-shell { padding: 56px 32px 64px; }
+  }
+  @media (min-width: 768px) {
+    .hero-shell { padding: 64px 40px 72px; }
+  }
+  @media (min-width: 1024px) {
+    .hero-shell {
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 3.5rem;
+      padding: 72px 40px 80px;
+    }
+  }
+
+  /* ── Thermal receipt ── */
+  .receipt-stage {
     position: relative;
     width: min(100%, 340px);
     margin-left: auto;
-    border-radius: 36px;
-    padding: 12px;
-    background: linear-gradient(160deg, #E8EEF5 0%, #F8FAFC 100%);
-    border: 1px solid rgba(15, 159, 132, 0.2);
-    box-shadow:
-      0 0 0 1px rgba(255,255,255,0.8) inset,
-      0 28px 60px rgba(11, 18, 32, 0.12),
-      0 0 40px rgba(15, 159, 132, 0.08);
-    animation: phone-float 7s ease-in-out infinite;
   }
-  @keyframes phone-float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
-  }
-  .phone-notch {
-    width: 96px;
-    height: 8px;
-    border-radius: 999px;
-    background: #0B1220;
-    margin: 4px auto 10px;
-    opacity: 0.85;
-  }
-  .phone-screen {
-    border-radius: 26px;
+  .printer-unit {
+    position: relative;
+    background: var(--slip);
+    border: 1px solid rgba(214, 203, 184, 0.85);
+    border-radius: 16px;
     overflow: hidden;
-    background: #0b141a;
-    min-height: 460px;
-    display: flex;
-    flex-direction: column;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.8) inset,
+      0 18px 40px -24px rgba(28, 21, 40, 0.28),
+      0 40px 64px -40px rgba(28, 21, 40, 0.18);
   }
-  .wa-top {
+  .printer-slot {
+    position: relative;
+    z-index: 4;
+    margin: 0;
+    padding: 10px 16px;
+    background: linear-gradient(180deg, #2A2438 0%, #1C1528 100%);
+    border-radius: 0;
+    border: none;
+    border-bottom: 1px solid #3D3550;
+    box-shadow: none;
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 10px;
-    padding: 12px 14px;
-    background: #1f2c34;
   }
-  .wa-avatar {
-    width: 36px;
-    height: 36px;
+  .printer-slot::after { display: none; }
+  .printer-led {
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #12B89A, #0F9F84);
+    background: rgba(74, 44, 122, 0.35);
+    flex-shrink: 0;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.3);
+  }
+  .printer-unit.is-printing .printer-led {
+    background: #6EE7A8;
+    box-shadow: 0 0 8px rgba(110, 231, 168, 0.7);
+    animation: printer-led 0.9s ease-in-out infinite;
+  }
+  @keyframes printer-led {
+    0%, 100% { opacity: 0.45; }
+    50% { opacity: 1; }
+  }
+  .receipt-stack {
+    position: relative;
+    perspective: 900px;
+    margin-top: 0;
+  }
+  .ncr-peel {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    pointer-events: none;
+    transform-origin: left center;
+    opacity: 0;
+    visibility: hidden;
+  }
+  .ncr-peel.is-visible {
+    opacity: 1;
+    visibility: visible;
+  }
+  .ncr-peel.is-peeling {
+    animation: ncr-peel-off 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+  @keyframes ncr-peel-off {
+    0% {
+      transform: rotateY(0deg) rotateZ(0deg) translateX(0);
+      opacity: 1;
+    }
+    35% {
+      transform: rotateY(-28deg) rotateZ(-2deg) translateX(6px);
+      opacity: 1;
+    }
+    100% {
+      transform: rotateY(-72deg) rotateZ(-6deg) translateX(48px);
+      opacity: 0;
+    }
+  }
+  .ncr-sheet {
+    height: 100%;
+    min-height: 420px;
+    background:
+      linear-gradient(135deg, rgba(74, 44, 122, 0.14), rgba(74, 44, 122, 0.06)),
+      var(--slip);
+    border: 1px dashed rgba(74, 44, 122, 0.45);
+    border-top: none;
+    padding: 22px;
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    box-shadow: 0 18px 40px -24px rgba(74, 44, 122, 0.35);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  .ncr-sheet .ncr-title {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--violet);
+    text-transform: none;
+    font-family: "Space Grotesk", system-ui, sans-serif;
+  }
+  .ncr-sheet .ncr-sub {
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--mist);
+    letter-spacing: 0;
+    font-family: "Space Grotesk", system-ui, sans-serif;
+  }
+  .ca-file-badge {
+    position: absolute;
+    left: 20px;
+    top: 18px;
+    z-index: 3;
+    font-family: "Plus Jakarta Sans", "Space Grotesk", system-ui, sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--violet);
+    border: 1px solid rgba(74, 44, 122, 0.22);
+    background: rgba(255, 253, 248, 0.92);
+    padding: 4px 9px;
+    border-radius: 6px;
+    opacity: 0;
+    transform: scale(0.92);
+    transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.22, 1.4, 0.36, 1);
+  }
+  .ca-file-badge.is-shown {
+    opacity: 0.92;
+    transform: scale(1);
+  }
+  .receipt-feed-window {
+    overflow: hidden;
+    max-height: 118px;
+    transition: max-height 0.12s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .receipt-feed-window.is-expanded {
+    max-height: 560px;
+  }
+  .receipt-wrap {
+    position: relative;
+    width: 100%;
+    filter: drop-shadow(0 22px 40px rgba(28, 21, 40, 0.18));
+    transition: filter 0.35s ease;
+  }
+  .receipt-wrap.is-entering {
+    animation: paper-slide-in 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  @keyframes paper-slide-in {
+    0% {
+      opacity: 0;
+      transform: translateY(48px) rotate(3deg) scale(0.94);
+      filter: drop-shadow(0 8px 16px rgba(28, 21, 40, 0.08));
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) rotate(0.35deg) scale(1);
+      filter: drop-shadow(0 22px 40px rgba(28, 21, 40, 0.18));
+    }
+  }
+  .receipt-wrap.is-floating {
+    animation: receipt-float 5.5s ease-in-out infinite;
+  }
+  .receipt-wrap.is-calculating {
+    animation: receipt-glow-pulse 0.65s ease-in-out infinite;
+  }
+  @keyframes receipt-float {
+    0%, 100% { transform: translateY(0) rotate(0.35deg); }
+    50% { transform: translateY(-8px) rotate(-0.35deg); }
+  }
+  @keyframes receipt-glow-pulse {
+    0%, 100% {
+      filter:
+        drop-shadow(0 18px 36px rgba(28, 21, 40, 0.16))
+        drop-shadow(0 0 10px rgba(74, 44, 122, 0.22));
+    }
+    50% {
+      filter:
+        drop-shadow(0 18px 36px rgba(28, 21, 40, 0.16))
+        drop-shadow(0 0 22px rgba(74, 44, 122, 0.42));
+    }
+  }
+  .receipt-wrap.is-shaking {
+    animation: receipt-shake 0.18s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  }
+  @keyframes receipt-shake {
+    0%, 100% { transform: translate(0, 0) rotate(0.4deg); }
+    15% { transform: translate(-5px, 2px) rotate(-1.2deg); }
+    30% { transform: translate(6px, -3px) rotate(1.4deg); }
+    45% { transform: translate(-4px, 1px) rotate(-0.8deg); }
+    60% { transform: translate(3px, -2px) rotate(0.9deg); }
+    75% { transform: translate(-2px, 1px) rotate(-0.3deg); }
+  }
+  .receipt {
+    position: relative;
+    background:
+      linear-gradient(180deg, rgba(255,253,248,0.92), rgba(255,253,248,0.98)),
+      radial-gradient(rgba(28, 21, 40, 0.04) 0.7px, transparent 0.7px);
+    background-size: auto, 10px 10px;
+    color: var(--ink);
+    padding: 28px 26px 32px;
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    min-height: 420px;
+    overflow: hidden;
+  }
+  .receipt::before,
+  .receipt::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 12px;
+    background:
+      linear-gradient(45deg, transparent 33.333%, var(--slip) 33.333%, var(--slip) 66.667%, transparent 66.667%),
+      linear-gradient(-45deg, transparent 33.333%, var(--slip) 33.333%, var(--slip) 66.667%, transparent 66.667%);
+    background-size: 14px 24px;
+    background-position: 0 -12px, 0 -12px;
+    background-repeat: repeat-x;
+    z-index: 2;
+  }
+  .receipt::before { display: none; }
+  .receipt::after {
+    bottom: -12px;
+    transform: rotate(180deg);
+  }
+  .receipt-merchant {
+    text-align: center;
+    border-bottom: 1px dashed var(--line);
+    padding-bottom: 16px;
+    margin-bottom: 16px;
+  }
+  .receipt-merchant .brand {
+    display: flex;
+    justify-content: center;
+    margin: 0 auto 2px;
+  }
+  .receipt-merchant .brand img {
+    height: 28px;
+    width: auto;
+    object-fit: contain;
+  }
+  .receipt-merchant .meta {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--mist);
+    line-height: 1.6;
+    letter-spacing: 0;
+  }
+  .receipt-merchant .meta .data {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 11.5px;
+  }
+  .receipt-status {
+    min-height: 1.35rem;
+    margin: 0 0 14px;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--violet);
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+  .receipt-status.is-idle { color: var(--mist); font-weight: 500; }
+  .receipt-cursor {
+    display: inline-block;
+    width: 0.55em;
+    margin-left: 1px;
+    border-right: 2px solid currentColor;
+    height: 1em;
+    vertical-align: -0.1em;
+    opacity: 0;
+  }
+  .receipt-status.is-busy .receipt-cursor {
+    animation: cursor-blink 0.85s step-end infinite;
+  }
+  @keyframes cursor-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+  .receipt-row,
+  .receipt-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    font-size: 13px;
+    line-height: 1.4;
+    margin: 0 0 12px;
+    padding: 0;
+    border-radius: 4px;
+    opacity: 0;
+    transform: translateY(10px);
+    transition:
+      opacity 0.12s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.12s cubic-bezier(0.22, 1, 0.36, 1),
+      background-color 0.12s ease;
+  }
+  .receipt-row.is-visible,
+  .receipt-total.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .receipt-row.is-flash,
+  .receipt-total.is-flash {
+    background-color: rgba(74, 44, 122, 0.1);
+    padding: 2px 6px;
+    margin-left: -6px;
+    margin-right: -6px;
+  }
+  .receipt-row .k {
+    color: var(--mist);
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  .receipt-row .v {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-weight: 600;
+    font-size: 12.5px;
+    text-align: right;
+  }
+  .receipt-total {
+    font-size: 14px;
+    font-weight: 700;
+    margin-top: 0;
+    margin-bottom: 12px;
+  }
+  .receipt-total .data {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 13.5px;
+  }
+  .receipt-divider {
+    border: none;
+    border-top: 1px dashed var(--line);
+    margin: 6px 0 14px;
+    opacity: 0;
+    transform: scaleX(0.92);
+    transition: opacity 0.35s ease, transform 0.35s ease;
+  }
+  .receipt-divider.is-visible {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  .receipt-footer {
+    margin-top: 18px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--mist);
+    letter-spacing: 0;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.45s ease, transform 0.45s ease;
+  }
+  .receipt-footer.is-visible {
+    opacity: 1;
+    transform: none;
+  }
+  .ink-stamp {
+    position: absolute;
+    right: 16px;
+    bottom: 68px;
+    width: 84px;
+    height: 84px;
+    border: 2px solid var(--violet);
+    border-radius: 50%;
+    color: var(--violet);
     display: grid;
     place-items: center;
+    text-align: center;
+    font-family: "Plus Jakarta Sans", "Space Grotesk", system-ui, sans-serif;
     font-size: 11px;
-    font-weight: 800;
-    color: #fff;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    line-height: 1.15;
+    text-transform: none;
+    opacity: 0;
+    transform: rotate(-14deg) scale(1.4) translateY(-14px);
+    box-shadow: inset 0 0 0 1px rgba(74, 44, 122, 0.16);
+    background: rgba(255, 253, 248, 0.4);
+    pointer-events: none;
+    mix-blend-mode: multiply;
+    will-change: transform, opacity;
+    z-index: 3;
+  }
+  .ink-stamp.is-slammed {
+    animation: stamp-slam 0.22s cubic-bezier(0.22, 1.4, 0.36, 1) forwards;
+  }
+  @keyframes stamp-slam {
+    0% {
+      opacity: 0;
+      transform: rotate(-22deg) scale(1.45) translateY(-20px);
+    }
+    55% {
+      opacity: 0.7;
+      transform: rotate(-12deg) scale(0.96) translateY(1px);
+    }
+    100% {
+      opacity: 0.55;
+      transform: rotate(-14deg) scale(1) translateY(0);
+    }
+  }
+  .ink-stamp span {
+    display: block;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    opacity: 0.85;
+    margin-top: 2px;
+  }
+  .ink-splatter {
+    position: absolute;
+    right: 8px;
+    bottom: 58px;
+    width: 120px;
+    height: 120px;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 2;
+  }
+  .ink-splatter.is-burst {
+    animation: splatter-fade 0.9s ease-out forwards;
+  }
+  .ink-splatter i {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    border-radius: 50% 40% 55% 45%;
+    background: rgba(74, 44, 122, 0.35);
+    top: 50%;
+    left: 50%;
+  }
+  .ink-splatter.is-burst i:nth-child(1) { animation: speck 0.7s ease-out forwards; --dx: -38px; --dy: -22px; --s: 0.7; }
+  .ink-splatter.is-burst i:nth-child(2) { animation: speck 0.75s ease-out 0.02s forwards; --dx: 34px; --dy: -28px; --s: 0.9; }
+  .ink-splatter.is-burst i:nth-child(3) { animation: speck 0.72s ease-out 0.04s forwards; --dx: -28px; --dy: 30px; --s: 0.55; }
+  .ink-splatter.is-burst i:nth-child(4) { animation: speck 0.78s ease-out 0.03s forwards; --dx: 42px; --dy: 18px; --s: 0.8; }
+  .ink-splatter.is-burst i:nth-child(5) { animation: speck 0.7s ease-out 0.05s forwards; --dx: 8px; --dy: -40px; --s: 0.45; }
+  .ink-splatter.is-burst i:nth-child(6) { animation: speck 0.76s ease-out 0.06s forwards; --dx: -12px; --dy: 38px; --s: 0.65; }
+  .ink-splatter.is-burst i:nth-child(7) { animation: speck 0.8s ease-out 0.04s forwards; --dx: 28px; --dy: 36px; --s: 0.5; }
+  .ink-splatter.is-burst i:nth-child(8) { animation: speck 0.74s ease-out 0.07s forwards; --dx: -40px; --dy: 8px; --s: 0.75; }
+  @keyframes speck {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.2); }
+    35% { opacity: 0.9; }
+    100% { opacity: 0.35; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(var(--s)); }
+  }
+  @keyframes splatter-fade {
+    0%, 60% { opacity: 1; }
+    100% { opacity: 0.55; }
+  }
+  .receipt-row.is-print-tick::before,
+  .receipt-total.is-print-tick::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(74, 44, 122, 0.08), transparent);
+    animation: print-scan 0.16s ease-out;
+    pointer-events: none;
+  }
+  .receipt-row,
+  .receipt-total { position: relative; }
+  @keyframes print-scan {
+    from { opacity: 0; transform: translateX(-12%); }
+    40% { opacity: 1; }
+    to { opacity: 0; transform: translateX(12%); }
+  }
+  .ink-ripple {
+    position: absolute;
+    right: 30px;
+    bottom: 84px;
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    border: 2px solid rgba(194, 59, 42, 0.55);
+    pointer-events: none;
+    opacity: 0;
+    transform: scale(0.35);
+    z-index: 2;
+  }
+  .ink-ripple.is-burst {
+    animation: ink-ripple 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  .ink-ripple.is-burst::before,
+  .ink-ripple.is-burst::after {
+    content: "";
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 1px solid rgba(194, 59, 42, 0.35);
+    animation: ink-ripple-ring 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  .ink-ripple.is-burst::after {
+    inset: -14px;
+    animation-delay: 0.06s;
+    border-color: rgba(194, 59, 42, 0.22);
+  }
+  @keyframes ink-ripple {
+    0% { opacity: 0.85; transform: scale(0.35); }
+    100% { opacity: 0; transform: scale(2.35); }
+  }
+  @keyframes ink-ripple-ring {
+    0% { opacity: 0.7; transform: scale(0.8); }
+    100% { opacity: 0; transform: scale(1.55); }
+  }
+  .btn-replay {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    margin-top: 12px;
+    width: 100%;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: rgba(255, 253, 248, 0.85);
+    color: var(--ink);
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-size: 13.5px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    padding: 10px 14px;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(6px);
+    transition:
+      opacity 0.35s ease,
+      transform 0.25s ease,
+      box-shadow 0.25s ease,
+      border-color 0.2s ease,
+      background 0.2s ease,
+      color 0.2s ease;
+  }
+  .btn-replay.is-ready {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+  .btn-replay:hover {
+    transform: translateY(-3px);
+    border-color: var(--violet);
+    color: var(--violet);
+    background: #fff;
+    box-shadow: 0 14px 28px -18px rgba(74, 44, 122, 0.55);
+  }
+  .btn-replay:active {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px -14px rgba(74, 44, 122, 0.4);
+  }
+  .btn-replay .material-symbols-outlined { font-size: 16px; }
+
+  /* ── WhatsApp → receipt handoff ── */
+  .wa-handoff {
+    position: absolute;
+    left: -18px;
+    top: 108px;
+    z-index: 8;
+    max-width: 200px;
+    padding: 10px 12px;
+    background: #DCF8C6;
+    color: var(--ink);
+    border-radius: 14px 14px 14px 4px;
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-size: 12.5px;
+    line-height: 1.35;
+    box-shadow: 0 12px 28px -16px rgba(28, 21, 40, 0.45);
+    opacity: 0;
+    transform: translate(-36px, 18px) scale(0.92);
+    pointer-events: none;
+  }
+  .wa-handoff.is-show {
+    animation: wa-appear 0.28s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+  .wa-handoff.is-fly {
+    animation: wa-fly-in 0.55s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+  .wa-handoff .wa-file {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11.5px;
+    font-weight: 600;
+  }
+  .wa-handoff .wa-file-icon {
+    width: 28px;
+    height: 34px;
+    border-radius: 3px;
+    background: linear-gradient(160deg, #fff 0%, #f0ebe3 100%);
+    border: 1px solid var(--line);
+    position: relative;
     flex-shrink: 0;
   }
-  .bubble {
-    max-width: 86%;
-    padding: 10px 12px;
-    font-size: 12px;
-    line-height: 1.45;
-    animation: bubble-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  .wa-handoff .wa-file-icon::after {
+    content: "PDF";
+    position: absolute;
+    left: 2px;
+    bottom: 3px;
+    font-size: 7px;
+    font-weight: 700;
+    color: var(--stamp);
+    letter-spacing: 0.04em;
   }
-  .bubble-in {
-    align-self: flex-start;
-    background: #202c33;
-    border-radius: 14px 14px 14px 4px;
-    color: #e9edef;
-    border: 1px solid rgba(255,255,255,0.04);
+  .wa-handoff .wa-time {
+    margin-top: 4px;
+    font-size: 10px;
+    color: var(--mist);
+    text-align: right;
+    font-family: "IBM Plex Mono", monospace;
   }
-  .bubble-out {
-    align-self: flex-end;
-    background: #005c4b;
-    border-radius: 14px 14px 4px 14px;
-    color: #e9edef;
+  @keyframes wa-appear {
+    to { opacity: 1; transform: translate(0, 0) scale(1); }
   }
-  .bubble-delay-1 { animation-delay: 0.15s; }
-  .bubble-delay-2 { animation-delay: 0.45s; }
-  .bubble-delay-3 { animation-delay: 0.85s; }
-  @keyframes bubble-in {
-    from { opacity: 0; transform: translateY(10px) scale(0.98); }
-    to { opacity: 1; transform: none; }
+  @keyframes wa-fly-in {
+    0% { opacity: 1; transform: translate(0, 0) scale(1) rotate(0deg); }
+    70% { opacity: 0.85; transform: translate(42px, 58px) scale(0.72) rotate(4deg); }
+    100% { opacity: 0; transform: translate(58px, 92px) scale(0.45) rotate(8deg); }
   }
-  .typing {
-    display: inline-flex;
-    gap: 4px;
-    padding: 4px 2px;
+  .receipt-wrap.is-catching {
+    animation: receipt-catch 0.32s cubic-bezier(0.22, 1.2, 0.36, 1) both;
   }
-  .typing span {
-    width: 6px; height: 6px; border-radius: 50%;
-    background: #8696a0;
-    animation: blink 1.2s infinite ease-in-out;
+  @keyframes receipt-catch {
+    0% { transform: translateY(0) scale(1); }
+    40% { transform: translateY(4px) scale(0.985); }
+    100% { transform: translateY(0) scale(1); }
   }
-  .typing span:nth-child(2) { animation-delay: 0.15s; }
-  .typing span:nth-child(3) { animation-delay: 0.3s; }
-  @keyframes blink {
-    0%, 80%, 100% { opacity: 0.35; transform: translateY(0); }
-    40% { opacity: 1; transform: translateY(-2px); }
+
+  /* ── Before / after ── */
+  .transform-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+    align-items: center;
   }
-  .step-num {
-    width: 32px;
-    height: 32px;
-    border-radius: 10px;
+  @media (min-width: 900px) {
+    .transform-grid {
+      grid-template-columns: 1fr auto 1fr;
+      gap: 1.5rem;
+    }
+  }
+  .messy-bill {
+    position: relative;
+    background: #E8DFD0;
+    border: 1px solid #C9BBA6;
+    padding: 18px 16px 22px;
+    transform: rotate(-2.5deg);
+    box-shadow: 0 18px 40px -28px rgba(28, 21, 40, 0.35);
+    font-family: "IBM Plex Mono", monospace;
+    overflow: hidden;
+  }
+  .messy-bill::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 40% 30% at 70% 20%, rgba(28,21,40,0.06), transparent),
+      repeating-linear-gradient(0deg, transparent, transparent 13px, rgba(28,21,40,0.04) 13px, rgba(28,21,40,0.04) 14px);
+    pointer-events: none;
+  }
+  .messy-bill .photo-tag {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #fff;
+    background: rgba(28, 21, 40, 0.55);
+    padding: 3px 7px;
+    border-radius: 2px;
+  }
+  .messy-bill .scribble {
+    height: 8px;
+    background: rgba(28, 21, 40, 0.18);
+    border-radius: 2px;
+    margin: 8px 0;
+    filter: blur(0.4px);
+  }
+  .messy-bill .scribble.w-80 { width: 80%; }
+  .messy-bill .scribble.w-55 { width: 55%; }
+  .messy-bill .scribble.w-90 { width: 90%; }
+  .messy-bill .scribble.w-40 { width: 40%; }
+  .messy-bill .scribble.thick {
+    height: 14px;
+    background: rgba(28, 21, 40, 0.12);
+    margin-top: 16px;
+  }
+  .messy-bill .stamp-faint {
+    position: absolute;
+    right: 16px;
+    bottom: 28px;
+    width: 56px;
+    height: 56px;
+    border: 1.5px dashed rgba(74, 44, 122, 0.28);
+    border-radius: 50%;
+    color: rgba(74, 44, 122, 0.35);
     display: grid;
     place-items: center;
-    font-family: "IBM Plex Mono", monospace;
+    font-family: "Plus Jakarta Sans", "Space Grotesk", system-ui, sans-serif;
+    font-size: 8px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: none;
+    transform: rotate(10deg);
+  }
+  .messy-bill .bill-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgba(28, 21, 40, 0.55);
+    margin-bottom: 10px;
+  }
+  .transform-arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    font-family: "Space Grotesk", system-ui, sans-serif;
     font-size: 12px;
     font-weight: 600;
-    color: var(--teal);
-    background: rgba(15, 159, 132, 0.1);
-    border: 1px solid rgba(15, 159, 132, 0.28);
-    flex-shrink: 0;
+    letter-spacing: -0.01em;
+    text-transform: none;
+    color: var(--violet);
   }
+  .transform-arrow .material-symbols-outlined {
+    font-size: 28px;
+  }
+  @media (max-width: 899px) {
+    .transform-arrow .material-symbols-outlined {
+      transform: rotate(90deg);
+    }
+  }
+  .clean-slip {
+    position: relative;
+    background: var(--slip);
+    padding: 18px 18px 22px;
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    box-shadow: 0 18px 40px -28px rgba(28, 21, 40, 0.3);
+  }
+  .clean-slip::before,
+  .clean-slip::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 10px;
+    background:
+      linear-gradient(45deg, transparent 33.333%, var(--slip) 33.333%, var(--slip) 66.667%, transparent 66.667%),
+      linear-gradient(-45deg, transparent 33.333%, var(--slip) 33.333%, var(--slip) 66.667%, transparent 66.667%);
+    background-size: 12px 20px;
+    background-position: 0 -10px, 0 -10px;
+    background-repeat: repeat-x;
+  }
+  .clean-slip::before { top: -10px; }
+  .clean-slip::after {
+    bottom: -10px;
+    transform: rotate(180deg);
+  }
+  .clean-slip .slip-head {
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    text-transform: none;
+    border-bottom: 1px dashed var(--line);
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+  }
+  .clean-slip .slip-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12.5px;
+    margin: 6px 0;
+  }
+  .clean-slip .slip-row .k { color: var(--mist); font-weight: 500; }
+  .clean-slip .slip-row .v {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-weight: 600;
+    font-size: 12px;
+  }
+  .clean-slip .slip-ok {
+    margin-top: 12px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0;
+    color: var(--violet);
+  }
+
+  /* ── Sample ITC slips ── */
+  .sample-slips {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+  @media (min-width: 768px) {
+    .sample-slips {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.1rem;
+    }
+  }
+  .sample-slip {
+    position: relative;
+    background: var(--slip);
+    padding: 16px 14px 18px;
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    box-shadow: 0 16px 36px -28px rgba(28, 21, 40, 0.32);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+  }
+  .sample-slip:hover {
+    transform: translateY(-4px);
+    box-shadow:
+      5px 5px 0 rgba(74, 44, 122, 0.08),
+      0 22px 40px -24px rgba(28, 21, 40, 0.38);
+  }
+  .sample-slip::before,
+  .sample-slip::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 9px;
+    background:
+      linear-gradient(45deg, transparent 33.333%, var(--slip) 33.333%, var(--slip) 66.667%, transparent 66.667%),
+      linear-gradient(-45deg, transparent 33.333%, var(--slip) 33.333%, var(--slip) 66.667%, transparent 66.667%);
+    background-size: 11px 18px;
+    background-position: 0 -9px, 0 -9px;
+    background-repeat: repeat-x;
+  }
+  .sample-slip::before { top: -9px; }
+  .sample-slip::after {
+    bottom: -9px;
+    transform: rotate(180deg);
+  }
+  .sample-slip .ss-ref {
+    font-size: 11px;
+    color: var(--mist);
+    letter-spacing: 0;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+  }
+  .sample-slip .ss-party {
+    margin-top: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: "Space Grotesk", system-ui, sans-serif;
+  }
+  .sample-slip .ss-note {
+    margin-top: 6px;
+    font-size: 11px;
+    color: var(--mist);
+  }
+  .sample-slip .ss-amt {
+    margin-top: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    text-align: right;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+  }
+  .sample-slip .ss-badge {
+    position: absolute;
+    top: 14px;
+    right: 12px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1.5px solid currentColor;
+    transform: rotate(8deg);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  .sample-slip.is-stamped .ss-badge { opacity: 1; }
+  .ss-rubber-stamp {
+    position: absolute;
+    right: 10px;
+    bottom: 22px;
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    border: 1.5px solid currentColor;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    font-family: "Plus Jakarta Sans", "Space Grotesk", system-ui, sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1.2;
+    text-transform: none;
+    opacity: 0;
+    transform: rotate(-12deg) scale(1.4) translateY(-12px);
+    mix-blend-mode: multiply;
+    pointer-events: none;
+    background: rgba(255, 253, 248, 0.35);
+  }
+  .ss-rubber-stamp.is-eligible { color: var(--violet); }
+  .ss-rubber-stamp.is-blocked { color: var(--stamp); }
+  .ss-rubber-stamp.is-review { color: #9A5B12; }
+  .sample-slip.is-stamped .ss-rubber-stamp {
+    animation: ss-stamp-slam 0.42s cubic-bezier(0.22, 1.4, 0.36, 1) forwards;
+  }
+  @keyframes ss-stamp-slam {
+    0% {
+      opacity: 0;
+      transform: rotate(-20deg) scale(1.45) translateY(-18px);
+    }
+    55% {
+      opacity: 0.7;
+      transform: rotate(-8deg) scale(0.96) translateY(1px);
+    }
+    100% {
+      opacity: 0.58;
+      transform: rotate(-12deg) scale(1) translateY(0);
+    }
+  }
+  .sample-slip.is-eligible .ss-badge { color: var(--violet); background: rgba(74, 44, 122, 0.06); }
+  .sample-slip.is-blocked .ss-badge { color: var(--stamp); background: var(--stamp-tint); }
+  .sample-slip.is-review .ss-badge { color: #9A5B12; background: #FBEEDA; }
+  .sample-slip.is-eligible { border-left: 3px solid var(--violet); }
+  .sample-slip.is-blocked { border-left: 3px solid var(--stamp); }
+  .sample-slip.is-review { border-left: 3px solid #9A5B12; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .receipt-wrap.is-floating,
+    .receipt-wrap.is-shaking,
+    .receipt-wrap.is-calculating,
+    .ink-stamp.is-slammed,
+    .ink-ripple.is-burst,
+    .ink-ripple.is-burst::before,
+    .ink-ripple.is-burst::after,
+    .receipt-status.is-busy .receipt-cursor,
+    .wa-handoff.is-show,
+    .wa-handoff.is-fly,
+    .receipt-wrap.is-catching,
+    .receipt-wrap.is-entering,
+    .ink-splatter.is-burst,
+    .ink-splatter.is-burst i,
+    .accent-word::after,
+    .ncr-peel.is-peeling,
+    .sample-slip.is-stamped .ss-rubber-stamp,
+    .printer-unit.is-printing .printer-led {
+      animation: none !important;
+    }
+    .receipt-feed-window { max-height: none !important; }
+    .ncr-peel { opacity: 0 !important; visibility: hidden !important; }
+    .ca-file-badge.is-shown { opacity: 1; transform: none; }
+    .sample-slip .ss-badge,
+    .sample-slip .ss-rubber-stamp { opacity: 0.58 !important; transform: rotate(-12deg) scale(1) !important; }
+    .wa-handoff { opacity: 0 !important; }
+    .receipt-row,
+    .receipt-total,
+    .receipt-divider,
+    .receipt-footer {
+      opacity: 1 !important;
+      transform: none !important;
+      transition: none !important;
+    }
+    .ink-stamp {
+      opacity: 0.55 !important;
+      transform: rotate(-14deg) scale(1) !important;
+    }
+    .btn-replay.is-ready { opacity: 1; pointer-events: auto; }
+  }
+
+  /* ── Ticket stubs ── */
+  .tickets {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  @media (min-width: 768px) {
+    .tickets {
+      grid-template-columns: 1fr auto 1fr auto 1fr;
+      align-items: stretch;
+    }
+  }
+  .ticket {
+    position: relative;
+    background: var(--slip);
+    border: 1px solid var(--line);
+    padding: 22px 20px 24px;
+    box-shadow: 0 16px 36px -28px rgba(28, 21, 40, 0.28);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+  }
+  .ticket::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(74, 44, 122, 0.04);
+    border: 1px solid rgba(74, 44, 122, 0.12);
+    transform: translate(4px, 4px);
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    pointer-events: none;
+  }
+  .ticket:hover {
+    transform: translate(-1px, -2px);
+    box-shadow: 0 20px 40px -26px rgba(28, 21, 40, 0.35);
+  }
+  .ticket:hover::after {
+    opacity: 1;
+    transform: translate(6px, 6px);
+  }
+  .ticket-num {
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    color: var(--violet);
+    line-height: 1;
+    margin-bottom: 12px;
+  }
+  .ticket h3 {
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin: 0 0 8px;
+  }
+  .ticket p {
+    margin: 0;
+    font-size: 13.5px;
+    color: var(--mist);
+    line-height: 1.55;
+  }
+  .perforation {
+    display: none;
+    width: 28px;
+    position: relative;
+    align-self: stretch;
+  }
+  @media (min-width: 768px) {
+    .perforation { display: block; }
+  }
+  .perforation::before {
+    content: "";
+    position: absolute;
+    top: 10%;
+    bottom: 10%;
+    left: 50%;
+    width: 0;
+    border-left: 2px dashed var(--line);
+    transform: translateX(-50%);
+  }
+  .perforation .punch {
+    position: absolute;
+    left: 50%;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--paper);
+    border: 1.5px solid var(--line);
+    transform: translateX(-50%);
+    box-shadow: inset 0 1px 2px rgba(28, 21, 40, 0.08);
+  }
+  .perforation .punch:nth-child(1) { top: 18%; }
+  .perforation .punch:nth-child(2) { top: 50%; margin-top: -7px; }
+  .perforation .punch:nth-child(3) { bottom: 18%; }
+
+  /* ── Ledger ── */
+  .ledger {
+    background: var(--slip);
+    border: 1px solid var(--line);
+    box-shadow: 0 20px 50px -32px rgba(28, 21, 40, 0.3);
+    overflow: hidden;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+  }
+  .ledger:hover {
+    transform: translateY(-3px);
+    box-shadow:
+      6px 6px 0 rgba(74, 44, 122, 0.07),
+      0 24px 50px -28px rgba(28, 21, 40, 0.35);
+  }
+  .ledger-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 18px 12px;
+    border-bottom: 2px solid var(--ink);
+    font-family: "Space Grotesk", system-ui, sans-serif;
+  }
+  .ledger-cols {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) 0.9fr 0.7fr 0.85fr;
+    gap: 8px;
+    padding: 8px 18px;
+    border-bottom: 1px solid var(--ink);
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--mist);
+  }
+  .ledger-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) 0.9fr 0.7fr 0.85fr;
+    gap: 8px;
+    align-items: center;
+    padding: 13px 18px;
+    border-bottom: 1px solid var(--line);
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-size: 12px;
+  }
+  .ledger-row:last-child { border-bottom: none; }
+  .ledger-row .party {
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink);
+    min-width: 0;
+  }
+  .ledger-row .party small {
+    display: block;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 10.5px;
+    color: var(--mist);
+    margin-top: 2px;
+    font-weight: 400;
+  }
+  .ledger-row .amt {
+    text-align: right;
+    font-weight: 600;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+  }
+  .flag {
+    display: inline-flex;
+    align-items: center;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+    padding: 2px 0;
+  }
+  .flag.is-ok { color: var(--violet); }
+  .flag.is-blocked { color: var(--stamp); }
+  .flag.is-review { color: #9A5B12; }
+
+  .check-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 14px;
+    color: var(--ink);
+  }
+  .check-mark {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    margin-top: 1px;
+    border: 1.5px solid var(--violet);
+    border-radius: 2px;
+    display: grid;
+    place-items: center;
+    color: var(--violet);
+    font-size: 12px;
+    line-height: 1;
+    font-family: "IBM Plex Mono", monospace;
+    font-weight: 700;
+  }
+
+  .cta-band {
+    background: linear-gradient(160deg, #2A1B45 0%, #3D2A5C 55%, #2A1B45 100%);
+    border-radius: 18px;
+    padding: 56px 40px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 28px 56px -30px rgba(42, 27, 69, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  .cta-band::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 50% 60% at 15% 20%, rgba(255,255,255,0.07), transparent 55%),
+      radial-gradient(ellipse 40% 50% at 90% 80%, rgba(74, 44, 122, 0.35), transparent 50%);
+    pointer-events: none;
+  }
+  .cta-band::after { display: none; }
+  .cta-band h2 { color: #fff; position: relative; }
+  .cta-band p { color: rgba(243, 237, 227, 0.72); position: relative; max-width: 32rem; margin-left: auto; margin-right: auto; }
+  .cta-band .cta-actions { position: relative; }
+
   .section-rule {
     border: none;
-    border-top: 1px solid var(--line);
+    border-top: 1px solid rgba(214, 203, 184, 0.75);
+    margin: 0;
+    width: 100%;
   }
-  .card-surface {
-    background: var(--surface);
-    border: 1px solid var(--line);
-    box-shadow: 0 12px 40px rgba(11, 18, 32, 0.06);
+  #how, #product, #transform, #samples { scroll-margin-top: 88px; }
+  main { position: relative; z-index: 1; }
+
+  .footer-logo { height: auto; }
+  .footer-logo-link {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
   }
-  .footer-logo { height: 40px; max-width: 200px; }
+  .footer-brand-logo {
+    height: 40px;
+    width: auto;
+    object-fit: contain;
+    display: block;
+  }
+  .cta-brand {
+    display: flex;
+    justify-content: center;
+  }
+  .cta-brand-logo {
+    height: 44px;
+    width: auto;
+    object-fit: contain;
+    display: block;
+  }
   .site-footer {
     position: relative;
     z-index: 2;
-    background: #fff;
+    background: #FFFDF8;
     border-top: 1px solid var(--line);
+  }
+  .site-footer::before {
+    content: "";
+    display: block;
+    height: 10px;
+    background:
+      linear-gradient(45deg, transparent 33.333%, #FFFDF8 33.333%, #FFFDF8 66.667%, transparent 66.667%),
+      linear-gradient(-45deg, transparent 33.333%, #FFFDF8 33.333%, #FFFDF8 66.667%, transparent 66.667%);
+    background-size: 12px 20px;
+    background-position: 0 -10px, 0 -10px;
+    background-repeat: repeat-x;
+    margin-top: -10px;
   }
   .site-footer a {
     color: var(--mist);
@@ -325,15 +1838,63 @@ tailwind.config = {
     transition: color 0.15s ease;
     cursor: pointer;
   }
-  .site-footer a:hover { color: var(--teal); }
-  .footer-col-title {
-    font-family: "IBM Plex Mono", monospace;
-    font-size: 11px;
+  .site-footer a:hover { color: var(--violet); }
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+  }
+  @media (min-width: 768px) {
+    .footer-grid {
+      grid-template-columns: minmax(220px, 1.4fr) repeat(3, minmax(0, 1fr));
+      gap: 2rem 2.5rem;
+      align-items: start;
+    }
+  }
+  .footer-brand p {
+    margin: 1rem 0 0;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--mist);
+    max-width: 280px;
+  }
+  .footer-contact-list {
+    list-style: none;
+    margin: 1.25rem 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+  .footer-contact-list a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--ink);
+  }
+  .footer-contact-list a:hover { color: var(--violet); }
+  .footer-contact-list .material-symbols-outlined {
+    font-size: 18px;
+    color: var(--violet);
+  }
+  .footer-contact-list .footer-email {
+    font-family: "Plus Jakarta Sans", "Space Grotesk", system-ui, sans-serif;
+    font-size: 0.875rem;
     font-weight: 600;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
+    letter-spacing: -0.01em;
+  }
+  .footer-col-title {
+    font-family: "Plus Jakarta Sans", "Space Grotesk", system-ui, sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    text-transform: none;
     color: var(--ink);
     margin: 0 0 1rem;
+    padding-bottom: 0.55rem;
+    border-bottom: 1px dashed var(--line);
   }
   .footer-links {
     list-style: none;
@@ -341,131 +1902,94 @@ tailwind.config = {
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
+    gap: 0.15rem;
   }
   .footer-links a {
     font-size: 0.875rem;
     display: inline-block;
-    padding: 0.35rem 0;
-    min-height: 1.75rem;
-  }
-  #how, #product {
-    scroll-margin-top: 88px;
-  }
-  main {
-    position: relative;
-    z-index: 1;
+    padding: 0.4rem 0;
+    line-height: 1.35;
   }
   .footer-bottom {
-    border-top: 1px solid var(--line);
+    border-top: 1px dashed var(--line);
     padding-top: 1.25rem;
-    margin-top: 2.5rem;
+    margin-top: 2.75rem;
     display: flex;
     flex-wrap: wrap;
     gap: 0.75rem 1.5rem;
     align-items: center;
     justify-content: space-between;
   }
-  .footer-social {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.55rem;
-    margin-top: 1.25rem;
-    padding: 0.45rem 0.85rem;
-    border-radius: 999px;
-    border: 1px solid var(--line);
-    background: #fff;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    color: #0A66C2 !important;
-    transition: border-color 0.15s ease, background 0.15s ease;
-  }
-  .footer-social:hover {
-    border-color: rgba(10, 102, 194, 0.45);
-    background: rgba(10, 102, 194, 0.06);
-    color: #004182 !important;
-  }
-  .footer-social svg {
-    width: 16px;
-    height: 16px;
-    flex-shrink: 0;
-  }
-  /* Align with other footer links — no pill (pill was clipping in narrow columns) */
-  .footer-links a.footer-wa {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
+  .footer-bottom p {
     margin: 0;
-    padding: 0.35rem 0;
-    min-height: 1.75rem;
-    border: none;
-    border-radius: 0;
-    background: transparent;
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: #128C7E !important;
-    white-space: nowrap;
+    font-size: 0.75rem;
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    color: var(--mist);
   }
-  .footer-links a.footer-wa:hover {
-    color: #075E54 !important;
-    background: transparent;
-  }
-  .footer-links a.footer-wa .material-symbols-outlined {
-    font-size: 18px;
-    line-height: 1;
-    flex-shrink: 0;
-  }
-  .footer-brand-actions {
-    display: flex;
+  .footer-bottom-links {
+    display: inline-flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.75rem;
-    margin-top: 1.5rem;
+    gap: 0.35rem 0.65rem;
   }
-  .footer-brand-actions .btn-primary {
-    margin-top: 0;
+  .footer-bottom-links span {
+    color: var(--line);
   }
-  .footer-brand-actions .footer-social {
-    margin-top: 0;
+
+  @media (max-width: 640px) {
+    .ledger-cols,
+    .ledger-row {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+    .ledger-cols span:nth-child(2),
+    .ledger-cols span:nth-child(3),
+    .ledger-row > :nth-child(2),
+    .ledger-row > :nth-child(3) {
+      display: none;
+    }
+    .ledger-row .amt { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
   }
 </style>
 </head>
 <body>
 <div class="site-bg" aria-hidden="true"></div>
 
-<header class="fixed top-0 inset-x-0 z-50 header-blur">
-  <div class="mx-auto max-w-6xl px-4 md:px-10 h-[72px] flex items-center justify-between gap-4">
-    <a href="/" class="flex items-center shrink-0" aria-label="Taxova.ai home">
-      <img src="/static/logo-on-light.png?v=1" alt="Taxova.ai" class="logo-lockup"/>
-    </a>
-    <nav class="hidden md:flex items-center gap-8 text-sm text-mist">
-      <a href="/#how" class="hover:text-ink transition-colors">How it works</a>
-      <a href="/#product" class="hover:text-ink transition-colors">Product</a>
-      <a href="/privacy" class="hover:text-ink transition-colors">Privacy</a>
-      <a href="/dashboard" class="hover:text-ink transition-colors">CA login</a>
-    </nav>
-    <a href="/onboarding" class="btn-primary !py-2.5 !px-4 text-sm shrink-0">
-      Get started
-      <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
-    </a>
+<header class="site-header">
+  <div class="site-header-bar">
+    <div class="site-header-inner">
+      <a href="/" class="site-header-logo shrink-0" aria-label="Taxova.ai home">
+        <img src="/static/logo-on-light.png?v=2" alt="Taxova.ai" class="logo-img"/>
+      </a>
+      <nav class="site-nav">
+        <a href="/#how">How it works</a>
+        <a href="/#product">Product</a>
+        <a href="/careers">Careers</a>
+        <a href="/dashboard">CA login</a>
+      </nav>
+      <a href="/onboarding" class="btn-primary !py-2.5 !px-4 text-sm shrink-0">
+        Get started
+        <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+      </a>
+    </div>
   </div>
 </header>
 
 <main>
   <section class="relative min-h-[100svh] flex items-center pt-[72px] overflow-hidden">
-    <div class="orb orb-a" aria-hidden="true"></div>
-    <div class="orb orb-b" aria-hidden="true"></div>
-
-    <div class="relative z-10 mx-auto max-w-6xl w-full px-4 md:px-10 py-14 md:py-20 grid lg:grid-cols-[1.05fr_0.95fr] gap-12 lg:gap-10 items-center">
-      <div>
-        <img src="/static/logo-on-light.png?v=1" alt="Taxova.ai" class="h-14 md:h-16 w-auto max-w-[320px] object-contain mb-8 reveal"/>
-        <h1 class="max-w-xl text-[2.35rem] sm:text-5xl md:text-[3.4rem] font-extrabold tracking-tight leading-[1.05] text-ink reveal" style="transition-delay:60ms">
-          GST filing on <span class="accent-word">WhatsApp</span>.
+    <div class="relative z-10 hero-shell">
+      <div class="hero-copy">
+        <p class="eyebrow reveal" style="transition-delay:40ms">WhatsApp-native GST filing</p>
+        <h1 class="hero-h1 text-ink reveal" style="transition-delay:60ms">
+          GST compliance,<br/>
+          <span class="accent-word">on autopilot</span>.
         </h1>
-        <p class="mt-5 max-w-md text-base md:text-lg text-mist leading-relaxed reveal" style="transition-delay:120ms">
-          Snap an invoice, send it in chat. Taxova.ai extracts fields, checks ITC, and prepares clean data for your CA.
+        <p class="hero-punch reveal" style="transition-delay:90ms">
+          No new app. Just WhatsApp and your CA.
         </p>
-        <div class="mt-9 flex flex-col sm:flex-row gap-3 reveal" style="transition-delay:180ms">
+        <p class="hero-lead reveal" style="transition-delay:120ms">
+          Snap an invoice, send it in chat. Taxova.ai extracts fields, checks ITC, and prepares clean data — before your CA has to ask.
+        </p>
+        <div class="hero-actions reveal" style="transition-delay:180ms">
           <a href="{{WA_ME_URL}}" class="btn-wa" target="_blank" rel="noopener noreferrer">
             <span class="material-symbols-outlined text-[20px]" style="font-variation-settings:'FILL' 1">chat</span>
             Start on WhatsApp
@@ -475,260 +1999,379 @@ tailwind.config = {
             Open CA dashboard
           </a>
         </div>
+        <p class="hero-trust reveal" style="transition-delay:220ms">
+          WhatsApp in · filing-ready out
+        </p>
       </div>
 
-      <div class="reveal relative" style="transition-delay:220ms">
-        <div class="phone-shell" aria-hidden="true">
-          <div class="phone-notch"></div>
-          <div class="phone-screen">
-            <div class="wa-top">
-              <div class="wa-avatar">TX</div>
-              <div class="min-w-0">
-                <div class="text-[13px] font-semibold text-white truncate">Taxova.ai</div>
-                <div class="text-[11px] text-[#8696a0]">online</div>
-              </div>
+      <div class="hero-visual reveal" style="transition-delay:220ms">
+        <div class="receipt-stage">
+          <div class="wa-handoff" id="wa-handoff" aria-hidden="true">
+            <div class="wa-file">
+              <span class="wa-file-icon"></span>
+              <span>Invoice_July.pdf</span>
             </div>
-            <div class="flex-1 p-3.5 flex flex-col gap-2.5 bg-[#0b141a]">
-              <div class="bubble bubble-out bubble-delay-1">
-                📎 Invoice_July.pdf
-                <div class="text-[10px] text-[#8ecc9f] mt-1 text-right">10:42</div>
+            <div class="wa-time">10:42 ✓✓</div>
+          </div>
+          <div class="printer-unit" id="printer-unit">
+            <div class="printer-slot" aria-hidden="true">
+              <span class="printer-led"></span>
+            </div>
+            <div class="receipt-stack" id="receipt-stack">
+              <div class="ncr-peel" id="ncr-peel" aria-hidden="true">
+                <div class="ncr-sheet">
+                  <div class="ncr-title">CA copy</div>
+                  <div class="ncr-sub">NCR · Duplicate sheet</div>
+                </div>
               </div>
-              <div class="bubble bubble-in bubble-delay-2">
-                <div class="typing mb-1"><span></span><span></span><span></span></div>
-                Reading invoice…
-              </div>
-              <div class="bubble bubble-in bubble-delay-3">
-                <p class="font-semibold text-[#36D6AE] mb-1">Invoice summary</p>
-                <p class="text-[#aebac1] text-[11.5px] leading-relaxed">
-                  Vendor verified · GSTIN OK<br/>
-                  Taxable ₹42,000 · GST ₹7,560<br/>
-                  ITC eligible · sent to CA queue
-                </p>
-                <div class="text-[10px] text-[#8696a0] mt-2">10:42</div>
+              <div class="receipt-wrap" id="receipt-demo" aria-hidden="true">
+                <div class="receipt-feed-window" id="receipt-feed">
+                  <div class="receipt">
+                    <div class="ca-file-badge" id="ca-file-badge">CA file</div>
+                    <div class="receipt-merchant">
+                      <div class="brand">
+                        <img src="/static/logo-on-light.png?v=2" alt="Taxova.ai"/>
+                      </div>
+                      <div class="meta">
+                        GST extract · WhatsApp<br/>
+                        <span class="data" id="receipt-inv">INV-2048</span> · <span class="data" id="receipt-clock">10:42 IST</span>
+                      </div>
+                    </div>
+                    <div class="receipt-status is-idle" id="receipt-status" aria-live="polite">
+                      <span id="receipt-status-text">waiting for invoice</span><span class="receipt-cursor" aria-hidden="true"></span>
+                    </div>
+                    <div class="receipt-row" data-reveal="supplier">
+                      <span class="k">Supplier</span>
+                      <span class="v" data-final="Sharma Traders">Sharma Traders</span>
+                    </div>
+                    <div class="receipt-row" data-reveal="gstin">
+                      <span class="k">GSTIN</span>
+                      <span class="v" data-final="27AABCU9603R1ZM">27AABCU9603R1ZM</span>
+                    </div>
+                    <div class="receipt-row" data-reveal="hsn">
+                      <span class="k">HSN</span>
+                      <span class="v" data-final="9983">9983</span>
+                    </div>
+                    <hr class="receipt-divider" data-reveal="div1"/>
+                    <div class="receipt-row" data-reveal="taxable">
+                      <span class="k">Taxable</span>
+                      <span class="v" data-count="42000" data-final="₹42,000.00">₹0.00</span>
+                    </div>
+                    <div class="receipt-row" data-reveal="cgst">
+                      <span class="k">CGST 9%</span>
+                      <span class="v" data-count="3780" data-final="₹3,780.00">₹0.00</span>
+                    </div>
+                    <div class="receipt-row" data-reveal="sgst">
+                      <span class="k">SGST 9%</span>
+                      <span class="v" data-count="3780" data-final="₹3,780.00">₹0.00</span>
+                    </div>
+                    <hr class="receipt-divider" data-reveal="div2"/>
+                    <div class="receipt-total" data-reveal="total">
+                      <span>Total GST</span>
+                      <span class="data" data-count="7560" data-final="₹7,560.00">₹0.00</span>
+                    </div>
+                    <div class="receipt-row" data-reveal="itc">
+                      <span class="k">ITC status</span>
+                      <span class="v" style="color:var(--violet)" data-final="Eligible">Eligible</span>
+                    </div>
+                    <div class="receipt-footer" data-reveal="footer">End of extract</div>
+                    <div class="ink-ripple" id="receipt-ripple" aria-hidden="true"></div>
+                    <div class="ink-splatter" id="receipt-splatter" aria-hidden="true">
+                      <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+                    </div>
+                    <div class="ink-stamp" id="receipt-stamp">Eligible<span>ITC OK</span></div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
+          <button type="button" class="btn-replay" id="receipt-replay" aria-label="Replay receipt animation">
+            <span class="material-symbols-outlined" aria-hidden="true">replay</span>
+            Replay animation
+          </button>
         </div>
       </div>
     </div>
   </section>
 
-  <hr class="section-rule max-w-6xl mx-auto"/>
+  <div class="page-shell"><hr class="section-rule"/></div>
 
-  <section id="how" class="py-20 md:py-28">
-    <div class="mx-auto max-w-6xl px-4 md:px-10">
-      <div class="max-w-xl reveal">
-        <p class="font-mono text-xs uppercase tracking-[0.2em] text-teal mb-3">How it works</p>
-        <h2 class="text-2xl md:text-3xl font-bold tracking-tight text-ink">Photo in. Filing-ready out.</h2>
-        <p class="mt-3 text-mist">Three steps. No portal hopping for every bill.</p>
+  <section id="transform" class="py-20 md:py-24">
+    <div class="page-shell">
+      <div class="section-intro reveal">
+        <p class="eyebrow">From photo to GST fields</p>
+        <h2 class="section-h2 text-ink">From messy bill to filing-ready data.</h2>
+        <p class="section-lead">Clients send whatever they have. Taxova.ai turns it into structured GST fields your CA can trust.</p>
       </div>
-
-      <ol class="mt-14 grid md:grid-cols-3 gap-10 md:gap-8">
-        <li class="flex md:flex-col gap-4 reveal">
-          <span class="step-num">01</span>
-          <div>
-            <h3 class="text-lg font-semibold text-ink">Send on WhatsApp</h3>
-            <p class="mt-2 text-sm text-mist leading-relaxed">Clients photograph invoices and message Taxova.ai. No new app to learn.</p>
-          </div>
-        </li>
-        <li class="flex md:flex-col gap-4 reveal" style="transition-delay:80ms">
-          <span class="step-num" style="color:#C8892A;border-color:rgba(200,137,42,0.35);background:rgba(200,137,42,0.1)">02</span>
-          <div>
-            <h3 class="text-lg font-semibold text-ink">AI extracts &amp; checks ITC</h3>
-            <p class="mt-2 text-sm text-mist leading-relaxed">GSTIN, lines, and tax — then Section 17(5) rules before anything reaches your CA.</p>
-          </div>
-        </li>
-        <li class="flex md:flex-col gap-4 reveal" style="transition-delay:140ms">
-          <span class="step-num">03</span>
-          <div>
-            <h3 class="text-lg font-semibold text-ink">CA reviews &amp; exports</h3>
-            <p class="mt-2 text-sm text-mist leading-relaxed">Approve exceptions, reconcile GSTR-2B, export GSTR-1 / 3B drafts when ready.</p>
-          </div>
-        </li>
-      </ol>
+      <div class="transform-grid mt-12 reveal" style="transition-delay:80ms">
+        <div class="messy-bill" aria-hidden="true">
+          <span class="photo-tag">WhatsApp photo</span>
+          <div class="bill-title">TAX INVOICE — JUL 2026</div>
+          <div class="scribble w-80"></div>
+          <div class="scribble w-55"></div>
+          <div class="scribble w-90"></div>
+          <div class="scribble w-40"></div>
+          <div class="scribble thick w-90"></div>
+          <div class="scribble w-55"></div>
+          <div class="stamp-faint">Unread</div>
+        </div>
+        <div class="transform-arrow" aria-hidden="true">
+          <span class="material-symbols-outlined">arrow_forward</span>
+          <span>Extract</span>
+        </div>
+        <div class="clean-slip" aria-hidden="true">
+          <div class="slip-head">Taxova extract</div>
+          <div class="slip-row"><span class="k">GSTIN</span><span class="v">27AABCU9603R1ZM</span></div>
+          <div class="slip-row"><span class="k">Taxable</span><span class="v">₹42,000.00</span></div>
+          <div class="slip-row"><span class="k">CGST + SGST</span><span class="v">₹7,560.00</span></div>
+          <div class="slip-row"><span class="k">HSN</span><span class="v">9983</span></div>
+          <div class="slip-ok">ITC eligible · Ready</div>
+        </div>
+      </div>
     </div>
   </section>
 
-  <hr class="section-rule max-w-6xl mx-auto"/>
+  <div class="page-shell"><hr class="section-rule"/></div>
+
+  <section id="samples" class="py-20 md:py-24">
+    <div class="page-shell">
+      <div class="section-intro reveal">
+        <p class="eyebrow">ITC outcomes</p>
+        <h2 class="section-h2 text-ink">Every credit, clearly stamped.</h2>
+        <p class="section-lead">Eligible, blocked, or needs review — so your team spends time where it matters.</p>
+      </div>
+      <div class="sample-slips mt-12" id="sample-slips">
+        <article class="sample-slip is-eligible reveal" data-stamp-delay="0" aria-label="Eligible ITC sample">
+          <span class="ss-badge">Eligible</span>
+          <div class="ss-rubber-stamp is-eligible">Eligible</div>
+          <div class="ss-ref">INV-2048</div>
+          <div class="ss-party">Sharma Traders</div>
+          <div class="ss-note">Supplier GSTIN verified</div>
+          <div class="ss-amt">₹12,480</div>
+        </article>
+        <article class="sample-slip is-blocked reveal" data-stamp-delay="280" style="transition-delay:80ms" aria-label="Blocked ITC sample">
+          <span class="ss-badge">Blocked</span>
+          <div class="ss-rubber-stamp is-blocked">Blocked</div>
+          <div class="ss-ref">INV-2051</div>
+          <div class="ss-party">Metro Supplies</div>
+          <div class="ss-note">Sec 17(5) — motor vehicle</div>
+          <div class="ss-amt">₹3,210</div>
+        </article>
+        <article class="sample-slip is-review reveal" data-stamp-delay="560" style="transition-delay:140ms" aria-label="Review ITC sample">
+          <span class="ss-badge">Review</span>
+          <div class="ss-rubber-stamp is-review">Review</div>
+          <div class="ss-ref">INV-2055</div>
+          <div class="ss-party">Advantage Tuff</div>
+          <div class="ss-note">2B mismatch · amount</div>
+          <div class="ss-amt">₹28,900</div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <div class="page-shell"><hr class="section-rule"/></div>
+
+  <section id="how" class="py-20 md:py-28">
+    <div class="page-shell">
+      <div class="section-intro reveal">
+        <p class="eyebrow">How it works</p>
+        <h2 class="section-h2 text-ink">Photo in. Filing-ready out.</h2>
+        <p class="section-lead">Three steps. No portal hopping for every bill.</p>
+      </div>
+
+      <div class="tickets mt-14">
+        <div class="ticket reveal">
+          <div class="ticket-num">01</div>
+          <h3>Send on WhatsApp</h3>
+          <p>Clients photograph invoices and message Taxova.ai. No new app to learn.</p>
+        </div>
+        <div class="perforation" aria-hidden="true">
+          <span class="punch"></span><span class="punch"></span><span class="punch"></span>
+        </div>
+        <div class="ticket reveal" style="transition-delay:80ms">
+          <div class="ticket-num">02</div>
+          <h3>AI extracts &amp; checks ITC</h3>
+          <p>GSTIN, lines, and tax — then Section 17(5) rules before anything reaches your CA.</p>
+        </div>
+        <div class="perforation" aria-hidden="true">
+          <span class="punch"></span><span class="punch"></span><span class="punch"></span>
+        </div>
+        <div class="ticket reveal" style="transition-delay:140ms">
+          <div class="ticket-num">03</div>
+          <h3>CA reviews &amp; exports</h3>
+          <p>Approve exceptions, reconcile GSTR-2B, export GSTR-1 / 3B drafts when ready.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="page-shell"><hr class="section-rule"/></div>
 
   <section id="product" class="py-20 md:py-28">
-    <div class="mx-auto max-w-6xl px-4 md:px-10 grid lg:grid-cols-2 gap-14 items-center">
-      <div class="reveal">
-        <p class="font-mono text-xs uppercase tracking-[0.2em] text-teal mb-3">For CAs &amp; firms</p>
-        <h2 class="text-2xl md:text-3xl font-bold tracking-tight leading-tight text-ink">
+    <div class="page-shell grid lg:grid-cols-2 gap-14 items-center">
+      <div class="section-intro reveal">
+        <p class="eyebrow">For CAs &amp; firms</p>
+        <h2 class="section-h2 text-ink leading-tight">
           Month-close without the chase.
         </h2>
-        <p class="mt-4 text-mist leading-relaxed max-w-md">
+        <p class="section-lead max-w-md">
           Taxova.ai flags blocked credits, queues exceptions, and keeps WhatsApp as the client front door — so your team reviews what matters.
         </p>
-        <ul class="mt-8 space-y-3 text-sm text-ink/90">
-          <li class="flex items-start gap-3">
-            <span class="material-symbols-outlined text-teal text-[20px] mt-0.5">check_circle</span>
+        <ul class="mt-8 space-y-3.5">
+          <li class="check-row">
+            <span class="check-mark" aria-hidden="true">✓</span>
             <span>HITL audit queue with edit, approve, skip</span>
           </li>
-          <li class="flex items-start gap-3">
-            <span class="material-symbols-outlined text-teal text-[20px] mt-0.5">check_circle</span>
+          <li class="check-row">
+            <span class="check-mark" aria-hidden="true">✓</span>
             <span>GSTR-2B import &amp; reconcile</span>
           </li>
-          <li class="flex items-start gap-3">
-            <span class="material-symbols-outlined text-teal text-[20px] mt-0.5">check_circle</span>
+          <li class="check-row">
+            <span class="check-mark" aria-hidden="true">✓</span>
             <span>GSTR-1 / 3B draft JSON export</span>
           </li>
         </ul>
-        <a href="/onboarding" class="mt-10 inline-flex items-center gap-2 text-teal font-semibold hover:gap-3 transition-all">
+        <a href="/onboarding" class="mt-10 inline-flex items-center gap-2 text-sm font-semibold text-violet hover:gap-3 transition-all">
           Create your account
           <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
         </a>
       </div>
 
-      <div class="reveal relative" style="transition-delay:100ms">
-        <div class="absolute -inset-4 rounded-[28px] bg-gradient-to-br from-teal/10 via-transparent to-amber/10 blur-xl pointer-events-none"></div>
-        <div class="relative rounded-2xl overflow-hidden card-surface">
-          <div class="px-5 py-4 border-b border-line flex items-center justify-between bg-[#F3F6FA]">
+      <div class="reveal" style="transition-delay:100ms">
+        <div class="ledger" aria-hidden="true">
+          <div class="ledger-head">
             <div>
-              <div class="text-[11px] font-mono uppercase tracking-widest text-muted">CA workspace</div>
-              <div class="text-sm font-semibold mt-0.5 text-ink">Needs review · July 2026</div>
+              <div class="text-[12px] font-medium text-mist">CA ledger</div>
+              <div class="text-sm font-semibold mt-1">Needs review · July 2026</div>
             </div>
-            <span class="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-amber/10 text-amber border border-amber/25">3 pending</span>
+            <div class="text-[12px] font-semibold text-stamp">3 open</div>
           </div>
-          <div class="divide-y divide-line bg-white">
-            <div class="px-5 py-4 flex items-center justify-between gap-3 hover:bg-[#F7F9FC] transition-colors">
-              <div class="min-w-0">
-                <div class="text-sm font-medium truncate text-ink">INV-2048 · Sharma Traders</div>
-                <div class="text-xs text-mist mt-0.5">ITC check · supplier GSTIN</div>
-              </div>
-              <span class="text-xs font-mono text-teal shrink-0">₹12,480</span>
-            </div>
-            <div class="px-5 py-4 flex items-center justify-between gap-3 hover:bg-[#F7F9FC] transition-colors">
-              <div class="min-w-0">
-                <div class="text-sm font-medium truncate text-ink">INV-2051 · Metro Supplies</div>
-                <div class="text-xs text-mist mt-0.5">Blocked credit · Sec 17(5)</div>
-              </div>
-              <span class="text-xs font-mono text-amber shrink-0">₹3,210</span>
-            </div>
-            <div class="px-5 py-4 flex items-center justify-between gap-3 hover:bg-[#F7F9FC] transition-colors">
-              <div class="min-w-0">
-                <div class="text-sm font-medium truncate text-ink">INV-2055 · Advantage Tuff</div>
-                <div class="text-xs text-mist mt-0.5">2B mismatch · amount</div>
-              </div>
-              <span class="text-xs font-mono text-ink shrink-0">₹28,900</span>
-            </div>
+          <div class="ledger-cols">
+            <span>Party / Ref</span>
+            <span>Note</span>
+            <span>Status</span>
+            <span class="text-right">Amount</span>
+          </div>
+          <div class="ledger-row">
+            <div class="party">Sharma Traders<small>INV-2048</small></div>
+            <div class="text-mist text-[11px]">GSTIN ok</div>
+            <span class="flag is-ok">Eligible</span>
+            <span class="amt">₹12,480</span>
+          </div>
+          <div class="ledger-row">
+            <div class="party">Metro Supplies<small>INV-2051</small></div>
+            <div class="text-mist text-[11px]">Sec 17(5)</div>
+            <span class="flag is-blocked">Blocked</span>
+            <span class="amt">₹3,210</span>
+          </div>
+          <div class="ledger-row">
+            <div class="party">Advantage Tuff<small>INV-2055</small></div>
+            <div class="text-mist text-[11px]">2B mismatch</div>
+            <span class="flag is-review">Review</span>
+            <span class="amt">₹28,900</span>
           </div>
         </div>
       </div>
     </div>
   </section>
 
-  <hr class="section-rule max-w-6xl mx-auto"/>
-
-  <section class="py-20 md:py-28">
-    <div class="mx-auto max-w-3xl px-4 md:px-10 text-center reveal">
-      <img src="/static/logo-on-light.png?v=1" alt="" class="h-12 w-auto max-w-[240px] object-contain mx-auto mb-8"/>
-      <h2 class="text-2xl md:text-4xl font-bold tracking-tight text-ink">Ready to put GST on autopilot?</h2>
-      <p class="mt-4 text-mist max-w-lg mx-auto">Onboard your WhatsApp number, link your CA, and start sending invoices today.</p>
-      <div class="mt-9 flex flex-col sm:flex-row gap-3 justify-center">
-        <a href="/onboarding" class="btn-primary">Get started free</a>
-        <a href="/dashboard" class="btn-ghost">CA dashboard</a>
+  <section class="py-16 md:py-24">
+    <div class="page-shell">
+      <div class="cta-band text-center reveal">
+        <div class="cta-brand mx-auto mb-7 relative" aria-hidden="true">
+          <img src="/static/logo-on-dark.png?v=2" alt="" class="cta-brand-logo"/>
+        </div>
+        <h2 class="section-h2">Ready to put GST on autopilot?</h2>
+        <p class="mt-4 max-w-lg mx-auto">Onboard your WhatsApp number, link your CA, and start sending invoices today.</p>
+        <div class="mt-9 flex flex-col sm:flex-row gap-3 justify-center cta-actions">
+          <a href="/onboarding" class="btn-on-dark">Get started free</a>
+          <a href="/dashboard" class="btn-ghost-on-dark">CA dashboard</a>
+        </div>
       </div>
     </div>
   </section>
 </main>
 
 <footer class="site-footer">
-  <div class="mx-auto max-w-6xl px-4 md:px-10 pt-14 pb-8">
-    <div class="grid grid-cols-2 md:grid-cols-12 gap-10 md:gap-8">
-      <div class="col-span-2 md:col-span-4">
-        <a href="/" aria-label="Taxova.ai home">
-          <img src="/static/logo-on-light.png?v=1" alt="Taxova.ai" class="logo-lockup footer-logo"/>
+  <div class="page-shell pt-14 pb-8">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="/" class="footer-logo-link" aria-label="Taxova.ai home">
+          <img src="/static/logo-on-light.png?v=2" alt="Taxova.ai" class="footer-brand-logo"/>
         </a>
-        <p class="mt-4 text-sm text-mist leading-relaxed max-w-xs">
-          WhatsApp-native GST compliance for Indian businesses and CA firms — invoice in, filing-ready out.
+        <p>
+          WhatsApp-native GST for Indian businesses and CA firms —
+          invoice in, filing-ready out.
         </p>
-        <div class="footer-brand-actions">
-          <a href="/onboarding" class="btn-primary !py-2.5 !px-4 text-sm inline-flex">
-            Get started
-            <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
-          </a>
-          <a
-            class="footer-social"
-            href="https://www.linkedin.com/company/taxova-ai/"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Taxova.ai on LinkedIn"
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path fill="currentColor" d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.32 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.79M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77Z"/>
-            </svg>
-            Follow on LinkedIn
-          </a>
-        </div>
-      </div>
-
-      <div class="md:col-span-2">
-        <h3 class="footer-col-title">Product</h3>
-        <ul class="footer-links">
-          <li><a href="/#how">How it works</a></li>
-          <li><a href="/#product">For CAs</a></li>
-          <li><a href="/onboarding">Onboarding</a></li>
-          <li><a href="/simulator">WA Simulator</a></li>
-        </ul>
-      </div>
-
-      <div class="md:col-span-2">
-        <h3 class="footer-col-title">Workspace</h3>
-        <ul class="footer-links">
-          <li><a href="/dashboard">CA dashboard</a></li>
-          <li><a href="/dashboard">Audit queue</a></li>
-          <li><a href="/ca-assign">Assign your CA</a></li>
-          <li><a href="/onboarding">Get started</a></li>
-        </ul>
-      </div>
-
-      <div class="md:col-span-2">
-        <h3 class="footer-col-title">Contact us</h3>
-        <ul class="footer-links">
+        <ul class="footer-contact-list">
           <li>
             <a
-              class="footer-wa"
               href="https://wa.me/917050674803?text=Hi%20Taxova.ai%20%E2%80%94%20I%20have%20a%20question"
               target="_blank"
               rel="noopener noreferrer"
-              aria-label="Chat with Taxova on WhatsApp"
             >
               <span class="material-symbols-outlined" aria-hidden="true">chat</span>
               Chat on WhatsApp
             </a>
           </li>
-          <li><a href="mailto:hello@taxova.ai">hello@taxova.ai</a></li>
-        </ul>
-      </div>
-
-      <div class="md:col-span-2">
-        <h3 class="footer-col-title">Legal</h3>
-        <ul class="footer-links">
-          <li><a href="/privacy">Privacy policy</a></li>
-          <li><a href="/terms">Terms of service</a></li>
-          <li><a href="/data-deletion">Data deletion</a></li>
           <li>
-            <a href="https://www.linkedin.com/company/taxova-ai/" target="_blank" rel="noopener noreferrer">
+            <a class="footer-email" href="mailto:taxova.ai@gmail.com">
+              <span class="material-symbols-outlined" aria-hidden="true">mail</span>
+              taxova.ai@gmail.com
+            </a>
+          </li>
+          <li>
+            <a
+              href="https://www.linkedin.com/company/taxova-ai/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">work</span>
               LinkedIn
             </a>
           </li>
         </ul>
       </div>
+
+      <div>
+        <h3 class="footer-col-title">Product</h3>
+        <ul class="footer-links">
+          <li><a href="/#how">How it works</a></li>
+          <li><a href="/#product">For CAs</a></li>
+          <li><a href="/#samples">ITC outcomes</a></li>
+          <li><a href="/onboarding">Get started</a></li>
+          <li><a href="/simulator">WA Simulator</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h3 class="footer-col-title">Company</h3>
+        <ul class="footer-links">
+          <li><a href="/careers">Careers</a></li>
+          <li><a href="/dashboard">CA dashboard</a></li>
+          <li><a href="/ca-assign">Assign your CA</a></li>
+          <li><a href="mailto:taxova.ai@gmail.com">Contact</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h3 class="footer-col-title">Legal</h3>
+        <ul class="footer-links">
+          <li><a href="/privacy">Privacy policy</a></li>
+          <li><a href="/terms">Terms of service</a></li>
+          <li><a href="/data-deletion">Data deletion</a></li>
+        </ul>
+      </div>
     </div>
 
     <div class="footer-bottom">
-      <p class="text-xs text-muted m-0">© 2026 Taxova.ai. All rights reserved.</p>
-      <p class="text-xs text-muted m-0">
-        <a
-          href="https://wa.me/917050674803?text=Hi%20Taxova.ai%20%E2%80%94%20I%20have%20a%20question"
-          target="_blank"
-          rel="noopener noreferrer"
-        >Chat on WhatsApp</a>
-        ·
-        <a href="https://www.linkedin.com/company/taxova-ai/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
-        · Built for Indian GST
+      <p>© 2026 Taxova.ai. All rights reserved.</p>
+      <p class="footer-bottom-links">
+        <a href="/careers">Careers</a>
+        <span aria-hidden="true">·</span>
+        <a href="mailto:taxova.ai@gmail.com">taxova.ai@gmail.com</a>
+        <span aria-hidden="true">·</span>
+        Built for Indian GST
       </p>
     </div>
   </div>
@@ -741,6 +2384,373 @@ tailwind.config = {
     });
   }, { threshold: 0.12, rootMargin: "0px 0px -36px 0px" });
   document.querySelectorAll(".reveal").forEach((el) => observer.observe(el));
+
+  (function parallaxPaper() {
+    const bg = document.querySelector(".site-bg");
+    if (!bg || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let ticking = false;
+    window.addEventListener("scroll", function () {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(function () {
+        const y = window.scrollY * 0.12;
+        bg.style.transform = "translate3d(0," + y + "px,0)";
+        ticking = false;
+      });
+    }, { passive: true });
+  })();
+
+  (function runReceiptExtraction() {
+    const wrap = document.getElementById("receipt-demo");
+    const replayBtn = document.getElementById("receipt-replay");
+    const handoff = document.getElementById("wa-handoff");
+    const invEl = document.getElementById("receipt-inv");
+    const clockEl = document.getElementById("receipt-clock");
+    const feed = document.getElementById("receipt-feed");
+    const printerUnit = document.getElementById("printer-unit");
+    const ncrPeel = document.getElementById("ncr-peel");
+    const caBadge = document.getElementById("ca-file-badge");
+    if (!wrap) return;
+
+    const statusEl = document.getElementById("receipt-status");
+    const statusText = document.getElementById("receipt-status-text");
+    const stamp = document.getElementById("receipt-stamp");
+    const ripple = document.getElementById("receipt-ripple");
+    const splatter = document.getElementById("receipt-splatter");
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let playing = false;
+    let runId = 0;
+    let invNo = 2048;
+    let firstPlay = true;
+
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+    function resetFeed() {
+      if (!feed) return;
+      feed.classList.remove("is-expanded");
+      feed.style.maxHeight = "118px";
+    }
+
+    function updateFeed(forceFull) {
+      if (!feed) return;
+      const receipt = feed.querySelector(".receipt");
+      if (!receipt) return;
+      if (forceFull) {
+        feed.classList.add("is-expanded");
+        feed.style.maxHeight = receipt.scrollHeight + 24 + "px";
+        return;
+      }
+      let maxBottom = 0;
+      [receipt.querySelector(".receipt-merchant"), receipt.querySelector(".receipt-status")].forEach(function (node) {
+        if (node) maxBottom = Math.max(maxBottom, node.offsetTop + node.offsetHeight);
+      });
+      receipt.querySelectorAll(".is-visible").forEach(function (node) {
+        maxBottom = Math.max(maxBottom, node.offsetTop + node.offsetHeight);
+      });
+      feed.style.maxHeight = Math.max(118, maxBottom + 32) + "px";
+    }
+
+    function setPrinting(on) {
+      if (printerUnit) printerUnit.classList.toggle("is-printing", on);
+    }
+
+    async function playNcrPeel(id) {
+      if (id !== runId) return;
+      if (reduceMotion) {
+        if (caBadge) caBadge.classList.add("is-shown");
+        return;
+      }
+      if (!ncrPeel) return;
+      ncrPeel.classList.add("is-visible");
+      await wait(80);
+      if (id !== runId) return;
+      ncrPeel.classList.add("is-peeling");
+      if (caBadge) caBadge.classList.add("is-shown");
+      await wait(280);
+      if (id !== runId) return;
+      ncrPeel.classList.remove("is-peeling", "is-visible");
+    }
+
+    function resetPeel() {
+      if (ncrPeel) ncrPeel.classList.remove("is-visible", "is-peeling");
+      if (caBadge) caBadge.classList.remove("is-shown");
+    }
+
+    function tickClock() {
+      if (!clockEl) return;
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2, "0");
+      const mm = String(now.getMinutes()).padStart(2, "0");
+      clockEl.textContent = hh + ":" + mm + " IST";
+    }
+    tickClock();
+    setInterval(tickClock, 30000);
+
+    function setStatus(text, busy) {
+      statusText.textContent = text;
+      statusEl.classList.toggle("is-idle", !busy);
+      statusEl.classList.toggle("is-busy", busy);
+    }
+
+    function el(key) {
+      return wrap.querySelector('[data-reveal="' + key + '"]');
+    }
+
+    function formatINR(n) {
+      return "₹" + n.toLocaleString("en-IN", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+    }
+
+    function setReplayReady(ready) {
+      if (!replayBtn) return;
+      replayBtn.classList.toggle("is-ready", ready);
+      replayBtn.disabled = !ready;
+    }
+
+    function bumpInvoice() {
+      if (!invEl) return;
+      invEl.textContent = "INV-" + invNo;
+      invNo += 1;
+    }
+
+    async function playHandoff(id) {
+      if (!handoff || reduceMotion) return;
+      handoff.classList.remove("is-show", "is-fly");
+      void handoff.offsetWidth;
+      setStatus("invoice received on WhatsApp...", true);
+      handoff.classList.add("is-show");
+      await wait(420);
+      if (id !== runId) return;
+      handoff.classList.remove("is-show");
+      handoff.classList.add("is-fly");
+      await wait(320);
+      if (id !== runId) return;
+      wrap.classList.add("is-catching");
+      await wait(180);
+      wrap.classList.remove("is-catching");
+      handoff.classList.remove("is-fly");
+    }
+
+    async function revealRow(node) {
+      if (!node) return;
+      node.classList.add("is-visible", "is-print-tick");
+      updateFeed(false);
+      await wait(10);
+      node.classList.add("is-flash");
+      await wait(70);
+      node.classList.remove("is-flash", "is-print-tick");
+      updateFeed(false);
+    }
+
+    async function countUp(node, target, duration) {
+      const valueEl = node.matches("[data-count]") ? node : node.querySelector("[data-count]");
+      if (!valueEl) return;
+      node.classList.add("is-visible", "is-print-tick");
+      updateFeed(false);
+      const start = performance.now();
+      return new Promise(function (resolve) {
+        function frame(now) {
+          const t = Math.min(1, (now - start) / duration);
+          const eased = 1 - Math.pow(1 - t, 3);
+          valueEl.textContent = formatINR(Math.round(target * eased));
+          if (t < 1) requestAnimationFrame(frame);
+          else {
+            valueEl.textContent = valueEl.dataset.final || formatINR(target);
+            node.classList.add("is-flash");
+            setTimeout(function () {
+              node.classList.remove("is-flash", "is-print-tick");
+              updateFeed(false);
+              resolve();
+            }, 40);
+          }
+        }
+        requestAnimationFrame(frame);
+      });
+    }
+
+    function burstRipple() {
+      if (ripple) {
+        ripple.classList.remove("is-burst");
+        void ripple.offsetWidth;
+        ripple.classList.add("is-burst");
+      }
+      if (splatter) {
+        splatter.classList.remove("is-burst");
+        void splatter.offsetWidth;
+        splatter.classList.add("is-burst");
+      }
+    }
+
+    function showFinal() {
+      wrap.querySelectorAll("[data-reveal]").forEach(function (node) {
+        node.classList.add("is-visible");
+        const counted = node.matches("[data-count]") ? node : node.querySelector("[data-count]");
+        if (counted && counted.dataset.final) counted.textContent = counted.dataset.final;
+        const v = node.querySelector(".v[data-final]");
+        if (v) v.textContent = v.dataset.final;
+      });
+      stamp.classList.add("is-slammed");
+      stamp.style.opacity = "0.55";
+      stamp.style.transform = "rotate(-14deg) scale(1)";
+      if (splatter) splatter.classList.add("is-burst");
+      updateFeed(true);
+      if (caBadge) caBadge.classList.add("is-shown");
+      setStatus("extract complete", false);
+      setPrinting(false);
+      wrap.classList.add("is-floating");
+      wrap.classList.remove("is-calculating", "is-entering");
+      setReplayReady(true);
+      playing = false;
+    }
+
+    async function play() {
+      if (playing) return;
+      playing = true;
+      const id = ++runId;
+      setReplayReady(false);
+      bumpInvoice();
+      tickClock();
+
+      if (reduceMotion) {
+        showFinal();
+        return;
+      }
+
+      wrap.classList.remove("is-floating", "is-shaking", "is-calculating", "is-catching");
+      stamp.classList.remove("is-slammed");
+      stamp.style.opacity = "";
+      stamp.style.transform = "";
+      if (ripple) ripple.classList.remove("is-burst");
+      if (splatter) splatter.classList.remove("is-burst");
+      if (handoff) handoff.classList.remove("is-show", "is-fly");
+      resetPeel();
+      resetFeed();
+      setPrinting(false);
+      wrap.querySelectorAll("[data-reveal]").forEach(function (node) {
+        node.classList.remove("is-visible", "is-flash", "is-print-tick");
+      });
+      wrap.querySelectorAll("[data-count]").forEach(function (node) {
+        node.textContent = "₹0.00";
+      });
+
+      if (firstPlay) {
+        wrap.classList.add("is-entering");
+        await wait(180);
+        wrap.classList.remove("is-entering");
+        firstPlay = false;
+        if (id !== runId) return;
+      }
+
+      await wait(30);
+      if (id !== runId) return;
+      await playHandoff(id);
+      if (id !== runId) return;
+
+      setStatus("reading invoice...", true);
+      setPrinting(true);
+      await wait(120);
+      if (id !== runId) return;
+
+      await revealRow(el("supplier"));
+      await wait(20);
+      await revealRow(el("gstin"));
+      await wait(20);
+      await revealRow(el("hsn"));
+      await wait(30);
+      if (id !== runId) return;
+
+      el("div1").classList.add("is-visible");
+      updateFeed(false);
+      setStatus("checking ITC eligibility...", true);
+      await wait(100);
+      const taxableV = el("taxable").querySelector("[data-count]");
+      if (taxableV) taxableV.textContent = taxableV.dataset.final;
+      await revealRow(el("taxable"));
+      if (id !== runId) return;
+
+      await wait(30);
+      setStatus("calculating GST...", true);
+      wrap.classList.add("is-calculating");
+      await wait(20);
+      await Promise.all([
+        countUp(el("cgst"), 3780, 140),
+        countUp(el("sgst"), 3780, 140),
+      ]);
+      if (id !== runId) return;
+      el("div2").classList.add("is-visible");
+      updateFeed(false);
+      await wait(15);
+      await countUp(el("total"), 7560, 110);
+      wrap.classList.remove("is-calculating");
+      if (id !== runId) return;
+
+      await wait(30);
+      await revealRow(el("itc"));
+      setStatus("sending to CA queue...", true);
+      await wait(120);
+      if (id !== runId) return;
+
+      el("footer").classList.add("is-visible");
+      updateFeed(true);
+      wrap.classList.add("is-shaking");
+      stamp.classList.add("is-slammed");
+      await wait(25);
+      burstRipple();
+      await wait(120);
+      wrap.classList.remove("is-shaking");
+      setStatus("extract complete", false);
+      setPrinting(false);
+      wrap.classList.add("is-floating");
+      setReplayReady(true);
+      playing = false;
+      playNcrPeel(id);
+    }
+
+    if (replayBtn) {
+      replayBtn.addEventListener("click", function () {
+        runId += 1;
+        playing = false;
+        play();
+      });
+    }
+
+    play();
+  })();
+
+  (function stampCarousel() {
+    const section = document.getElementById("samples");
+    const slips = document.querySelectorAll("#sample-slips .sample-slip");
+    if (!section || !slips.length) return;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let played = false;
+
+    function runStamps() {
+      if (played) return;
+      played = true;
+      if (reduceMotion) {
+        slips.forEach(function (slip) { slip.classList.add("is-stamped"); });
+        return;
+      }
+      slips.forEach(function (slip) {
+        const delay = parseInt(slip.dataset.stampDelay || "0", 10);
+        setTimeout(function () {
+          slip.classList.add("is-stamped");
+        }, delay);
+      });
+    }
+
+    const obs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          runStamps();
+          obs.disconnect();
+        }
+      });
+    }, { threshold: 0.35, rootMargin: "0px 0px -40px 0px" });
+    obs.observe(section);
+  })();
 </script>
 </body>
 </html>
