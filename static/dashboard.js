@@ -1242,7 +1242,6 @@ function setupEventListeners() {
         elements.navGstrBtn.addEventListener('click', (e) => {
             e.preventDefault();
             setSidebarNavActive('gstr');
-            if (typeof setModule === 'function') setModule('gst');
             jumpToGstFiling();
         });
     }
@@ -3269,7 +3268,7 @@ function updateWorkflowGuide({ needCa, imported, ready, scopeAll, bills }) {
         hint = `${needCa} still need a CA check`;
     } else if (!imported) {
         active = 'import';
-        hint = 'Queue clear — import GSTR-2B next';
+        hint = 'Import GSTR-2B for this month';
     } else if (!ready) {
         active = 'close';
         hint = 'Finish month-close blockers';
@@ -3470,7 +3469,8 @@ function saveGstFilingStatus(st) {
 
 function jumpToGstFiling() {
     setSidebarNavActive('gstr');
-    const panel = elements.gstFilingPanel;
+    if (typeof setModule === 'function') setModule('gst');
+    const panel = elements.gstFilingPanel || document.getElementById('month-close-strip');
     if (panel) {
         panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
         panel.classList.add('ring-pulse');
@@ -3536,7 +3536,7 @@ function renderGstFilingPanel(metrics) {
     if (elements.gstFilingStatBills) elements.gstFilingStatBills.textContent = String(bills);
     if (elements.gstFilingStatNeedCa) {
         elements.gstFilingStatNeedCa.textContent = String(needCa);
-        elements.gstFilingStatNeedCa.style.color = needCa > 0 ? '#F0B35A' : '#36D6AE';
+        elements.gstFilingStatNeedCa.style.color = needCa > 0 ? '#A85C10' : '#33604A';
     }
     if (elements.gstFilingStat2b) {
         elements.gstFilingStat2b.textContent = scopeAll ? '—' : (imported ? 'Yes' : 'No');
@@ -3544,7 +3544,7 @@ function renderGstFilingPanel(metrics) {
     if (elements.gstFilingStatGaps) {
         const gaps = missing + mismatch;
         elements.gstFilingStatGaps.textContent = scopeAll ? '—' : String(gaps);
-        elements.gstFilingStatGaps.style.color = gaps > 0 ? '#F0B35A' : '#36D6AE';
+        elements.gstFilingStatGaps.style.color = gaps > 0 ? '#A85C10' : '#33604A';
     }
     if (elements.gstFilingBlockers) {
         if (!state.selectedClientPhone) {
@@ -3673,6 +3673,10 @@ function setSidebarNavActive(navKey) {
     });
     if (elements.navClientsBtn) {
         elements.navClientsBtn.classList.toggle('is-active', navKey === 'clients');
+    }
+    // Swap main content focus for Dashboard / Audit Queue / GSTR Filing
+    if (navKey === 'dashboard' || navKey === 'queue' || navKey === 'gstr') {
+        document.body.setAttribute('data-view', navKey);
     }
 }
 
@@ -3822,7 +3826,11 @@ function setupSidebarNavigation() {
         });
     }
     if (elements.navDashboardBtn) {
-        elements.navDashboardBtn.addEventListener('click', () => setSidebarNavActive('dashboard'));
+        elements.navDashboardBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            setSidebarNavActive('dashboard');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
     }
     if (elements.navSimulatorBtn) {
         elements.navSimulatorBtn.addEventListener('click', () => setSidebarNavActive('simulator'));
@@ -3834,6 +3842,36 @@ function setupSidebarNavigation() {
                 showToast(err.message || 'Sign out failed', true);
             });
         });
+    }
+
+    const collapseBtn = document.getElementById('sidebar-collapse-btn');
+    const collapseIcon = document.getElementById('sidebar-collapse-icon');
+    const openBtn = document.getElementById('sidebar-open-btn');
+
+    function setSidebarCollapsed(collapsed) {
+        document.body.classList.toggle('sidebar-collapsed', collapsed);
+        localStorage.setItem('TAXOVA_SIDEBAR_COLLAPSED', collapsed ? '1' : '0');
+        if (collapseIcon) {
+            collapseIcon.textContent = collapsed ? 'left_panel_open' : 'left_panel_close';
+        }
+        if (collapseBtn) {
+            collapseBtn.title = collapsed ? 'Open sidebar' : 'Hide sidebar';
+            collapseBtn.setAttribute('aria-label', collapsed ? 'Open sidebar' : 'Hide sidebar');
+        }
+        if (openBtn) {
+            openBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        }
+    }
+
+    if (collapseBtn) {
+        const stored = localStorage.getItem('TAXOVA_SIDEBAR_COLLAPSED') === '1';
+        setSidebarCollapsed(stored);
+        collapseBtn.addEventListener('click', () => {
+            setSidebarCollapsed(!document.body.classList.contains('sidebar-collapsed'));
+        });
+    }
+    if (openBtn) {
+        openBtn.addEventListener('click', () => setSidebarCollapsed(false));
     }
 }
 
@@ -3862,7 +3900,7 @@ function updateDashboardMetrics(metrics) {
 
     // KPI Numbers — same scope as the invoice table
     animateMetricText(elements.kpiPendingCount, metrics.pending_review ?? 0);
-    elements.kpiPendingSubtext.textContent = `${metrics.pending_review ?? 0} in your review queue · ${periodLabel}`;
+        elements.kpiPendingSubtext.textContent = `${metrics.pending_review ?? 0} in your review queue for ${periodLabel}`;
     elements.kpiPendingTrend.textContent = `${metrics.invoice_count ?? 0} invoices in view`;
 
     if (elements.kpiFlaggedCount) {
@@ -3890,11 +3928,11 @@ function updateDashboardMetrics(metrics) {
     const salesChip = document.getElementById('kpi-sales-chip');
     if (hasGstin) {
         if (salesLabel) salesLabel.textContent = 'Sales Taxable';
-        elements.kpiSalesSubtext.textContent = `${formatCurrency(displayTaxable)} approved outward · ${periodLabel}`;
-        if (salesChip) salesChip.textContent = 'Approved + supplier GSTIN match';
+        elements.kpiSalesSubtext.textContent = `${formatCurrency(displayTaxable)} approved outward for ${periodLabel}`;
+        if (salesChip) salesChip.textContent = 'Approved with supplier GSTIN match';
     } else {
         if (salesLabel) salesLabel.textContent = 'Total Taxable';
-        elements.kpiSalesSubtext.textContent = `${formatCurrency(displayTaxable)} all invoices · set valid GSTIN for sales/ITC`;
+        elements.kpiSalesSubtext.textContent = `${formatCurrency(displayTaxable)} all invoices — set a valid GSTIN for sales/ITC`;
         if (salesChip) salesChip.textContent = 'No valid GSTIN — sales/ITC not classified';
     }
 
@@ -3906,11 +3944,11 @@ function updateDashboardMetrics(metrics) {
         if (itcChip) itcChip.textContent = 'Unclassified without GSTIN';
     } else {
         elements.kpiItcSubtext.textContent = displayItc > 0
-            ? `${formatCurrency(displayItc)} line-eligible · approved · buyer match`
+            ? `${formatCurrency(displayItc)} eligible on approved bills`
             : 'Approve purchases where client is recipient (mixed bills split by line)';
         if (itcChip) itcChip.textContent = displayBlocked > 0
-            ? `Line-level · blocked ${formatCurrency(displayBlocked)}`
-            : 'Line-level · approved + buyer match';
+            ? `Blocked ${formatCurrency(displayBlocked)}`
+            : 'Approved with buyer match';
     }
     if (itcProv) {
         if (hasGstin && displayProvisional > 0) {
@@ -4305,18 +4343,31 @@ function renderInvoiceTable() {
     const pendingCount = state.invoices.filter(isPendingReview).length;
     const exceptionCount = state.invoices.filter(isExceptionInvoice).length;
     const itcIssueCount = state.invoices.filter(hasItcIssue).length;
+    const periodLabel = formatYearMonthLabel(state.selectedMonth);
+    const scopeAll = !state.selectedMonth || state.selectedMonth === 'all';
+    const periodPlain = scopeAll ? 'all months' : periodLabel;
+
     if (isItcTab) {
-        elements.recordCountTxt.textContent = `${itcIssueCount} ITC flags · ${filtered.length} shown · ${formatYearMonthLabel(state.selectedMonth)}`;
-        elements.recordCountTxt.style.color = itcIssueCount > 0 ? '#F0B35A' : '#2BB896';
+        elements.recordCountTxt.textContent = itcIssueCount > 0
+            ? `${itcIssueCount} bills need ITC attention for ${periodPlain}. Showing ${filtered.length}.`
+            : `No ITC flags for ${periodPlain}. Showing ${filtered.length} bills.`;
+        elements.recordCountTxt.style.color = itcIssueCount > 0 ? '#A85C10' : '#33604A';
     } else if (isExceptionTab) {
         const ready = state.invoices.filter((inv) => isExceptionInvoice(inv) && isReadyToApprove(inv)).length;
-        elements.recordCountTxt.textContent = ready
-            ? `${exceptionCount} need review · ${ready} ready to approve first · ${formatYearMonthLabel(state.selectedMonth)}`
-            : `${exceptionCount} need review · highest risk first · ${formatYearMonthLabel(state.selectedMonth)}`;
-        elements.recordCountTxt.style.color = exceptionCount > 0 ? '#F0B35A' : '#2BB896';
+        if (exceptionCount === 0) {
+            elements.recordCountTxt.textContent = `Nothing is waiting on your review for ${periodPlain}.`;
+        } else if (ready > 0) {
+            elements.recordCountTxt.textContent =
+                `${exceptionCount} bills need review for ${periodPlain}. ${ready} ${ready === 1 ? 'is' : 'are'} ready to approve first.`;
+        } else {
+            elements.recordCountTxt.textContent =
+                `${exceptionCount} bills need review for ${periodPlain}. Highest risk first.`;
+        }
+        elements.recordCountTxt.style.color = exceptionCount > 0 ? '#A85C10' : '#33604A';
     } else {
-        elements.recordCountTxt.textContent = `${pendingCount} pending · ${filtered.length} shown · ${formatYearMonthLabel(state.selectedMonth)}`;
-        elements.recordCountTxt.style.color = exceptionCount > 0 ? '#F0B35A' : '#2BB896';
+        elements.recordCountTxt.textContent =
+            `${pendingCount} pending in this view for ${periodPlain}. Showing ${filtered.length}.`;
+        elements.recordCountTxt.style.color = exceptionCount > 0 ? '#A85C10' : '#33604A';
     }
     if (elements.queueViewCount) {
         elements.queueViewCount.textContent = `${filtered.length} in this view`;
@@ -4485,21 +4536,21 @@ function renderInvoiceTable() {
                 <input type="checkbox" class="queue-check row-select" data-invoice-id="${inv.id}" ${checked} />
             </td>
             <td class="py-2 px-3">
-                <span style="font-size:13px;font-weight:700;color:#F2F5F8;font-family:'IBM Plex Mono',monospace;">INV-${inv.invoice_number || 'N/A'}</span>
+                <span style="font-size:13px;font-weight:700;color:#17233B;font-family:'IBM Plex Mono',monospace;">INV-${inv.invoice_number || 'N/A'}</span>
             </td>
             <td class="py-2 px-3">
-                <div style="font-size:13px;font-weight:700;color:#F2F5F8;">${inv.supplier_name || 'Not Detected'}</div>
-                <div style="font-size:11px;color:#8B9BB0;font-family:'IBM Plex Mono',monospace;">${inv.supplier_gstin || 'No GSTIN'}</div>
+                <div style="font-size:13px;font-weight:700;color:#17233B;">${inv.supplier_name || 'Not Detected'}</div>
+                <div style="font-size:11px;color:#6B6459;font-family:'IBM Plex Mono',monospace;">${inv.supplier_gstin || 'No GSTIN'}</div>
                 ${reasonHtml}
             </td>
-            <td class="py-2 px-3" style="font-size:13px;color:#8B9BB0;white-space:nowrap;">${invDate}</td>
+            <td class="py-2 px-3" style="font-size:13px;color:#6B6459;white-space:nowrap;">${invDate}</td>
             <td class="py-2 px-3">
-                <span style="display:inline-block;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600;background:rgba(255,255,255,0.03);border:1px solid #2A3848;color:#8B9BB0;">${inv.business_category || 'Other'}</span>
-                ${inv.itc_partial ? '<span style="display:inline-block;margin-left:4px;padding:3px 6px;border-radius:6px;font-size:10px;font-weight:700;background:rgba(240,179,90,0.12);border:1px solid rgba(240,179,90,0.35);color:#F0B35A;">Partial</span>' : ''}
+                <span style="display:inline-block;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600;background:#FFFFFF;border:1px solid #DAD3C3;color:#17233B;">${inv.business_category || 'Other'}</span>
+                ${inv.itc_partial ? '<span style="display:inline-block;margin-left:4px;padding:3px 6px;border-radius:6px;font-size:10px;font-weight:700;background:rgba(168,92,16,0.12);border:1px solid rgba(168,92,16,0.35);color:#A85C10;">Partial</span>' : ''}
                 ${gstr2bBadgeHtml(inv.gstr2b_match_status)}
             </td>
-            <td class="py-2 px-3" style="text-align:right;font-size:13px;font-weight:700;color:#F2F5F8;font-variant-numeric:tabular-nums;">₹${formatNumber(inv.total_taxable_value)}</td>
-            <td class="py-2 px-3" style="text-align:right;font-size:13px;font-weight:800;color:#2BB896;font-variant-numeric:tabular-nums;">₹${formatNumber(inv.grand_total)}</td>
+            <td class="py-2 px-3" style="text-align:right;font-size:13px;font-weight:700;color:#17233B;font-variant-numeric:tabular-nums;">₹${formatNumber(inv.total_taxable_value)}</td>
+            <td class="py-2 px-3" style="text-align:right;font-size:13px;font-weight:700;color:#33604A;font-variant-numeric:tabular-nums;">₹${formatNumber(inv.grand_total)}</td>
             <td class="py-2 px-3" style="text-align:center;">${statusBadge}</td>
             <td class="py-2 px-3 actions-cell" style="text-align:right;">
                 ${actionsHtml}
@@ -4525,16 +4576,16 @@ function renderInvoiceTable() {
 function gstr2bBadgeHtml(status) {
     const s = (status || 'none').toLowerCase();
     if (s === 'matched') {
-        return '<span style="display:inline-block;margin-left:6px;padding:4px 8px;border-radius:6px;font-size:10px;font-weight:700;background:rgba(43,184,150,0.12);border:1px solid rgba(43,184,150,0.35);color:#2BB896;">2B OK</span>';
+        return '<span style="display:inline-block;margin-left:6px;padding:4px 8px;border-radius:6px;font-size:10px;font-weight:700;background:rgba(51,96,74,0.12);border:1px solid rgba(51,96,74,0.35);color:#33604A;">2B OK</span>';
     }
     if (s === 'unmatched') {
-        return '<span style="display:inline-block;margin-left:6px;padding:4px 8px;border-radius:6px;font-size:10px;font-weight:700;background:rgba(237,106,106,0.12);border:1px solid rgba(237,106,106,0.35);color:#FFA8A0;">Not in 2B</span>';
+        return '<span style="display:inline-block;margin-left:6px;padding:4px 8px;border-radius:6px;font-size:10px;font-weight:700;background:rgba(140,47,47,0.12);border:1px solid rgba(140,47,47,0.35);color:#8C2F2F;">Not in 2B</span>';
     }
     if (s === 'mismatch') {
-        return '<span style="display:inline-block;margin-left:6px;padding:4px 8px;border-radius:6px;font-size:10px;font-weight:700;background:rgba(240,179,90,0.12);border:1px solid rgba(240,179,90,0.35);color:#F0B35A;">2B Mismatch</span>';
+        return '<span style="display:inline-block;margin-left:6px;padding:4px 8px;border-radius:6px;font-size:10px;font-weight:700;background:rgba(168,92,16,0.12);border:1px solid rgba(168,92,16,0.35);color:#A85C10;">2B Mismatch</span>';
     }
     if (s === 'mismatch_accepted') {
-        return '<span style="display:inline-block;margin-left:6px;padding:4px 8px;border-radius:6px;font-size:10px;font-weight:700;background:rgba(147,164,184,0.12);border:1px solid rgba(147,164,184,0.35);color:#8B9BB0;">2B Noted</span>';
+        return '<span style="display:inline-block;margin-left:6px;padding:4px 8px;border-radius:6px;font-size:10px;font-weight:700;background:rgba(107,100,89,0.12);border:1px solid rgba(107,100,89,0.35);color:#6B6459;">2B Noted</span>';
     }
     return '';
 }
@@ -5104,11 +5155,11 @@ function validateGstinField(inputElem, validationLabelElem) {
     if (validateGstinString(val)) {
         inputElem.className = 'gstin-input valid';
         validationLabelElem.textContent = '✓ GSTIN Format Valid';
-        validationLabelElem.style.color = 'var(--color-green)';
+        validationLabelElem.style.color = '#33604A';
     } else {
         inputElem.className = 'gstin-input invalid';
         validationLabelElem.textContent = '✗ Invalid GSTIN Format';
-        validationLabelElem.style.color = 'var(--color-red)';
+        validationLabelElem.style.color = '#8C2F2F';
     }
 }
 

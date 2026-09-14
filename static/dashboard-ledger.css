@@ -1,0 +1,1638 @@
+/* Taxova CA Dashboard — Ledger aesthetic
+   Paper, ink navy, brass. No neon glow. */
+
+:root {
+  --paper: #F6F3EC;
+  --ink-navy: #17233B;
+  --ink: #F6F3EC; /* maps old --ink usages to paper where body bg used it */
+  --body: #1E1B16;
+  --text: #1E1B16;
+  --muted: #6B6459;
+  --brass: #9C7A3C;
+  --brass-deep: #826432;
+  --brass-soft: rgba(156, 122, 60, 0.14);
+  --line: #DAD3C3;
+  --panel: #FFFcf7;
+  --panel-raised: #FFFFFF;
+  --success: #33604A;
+  --success-dim: rgba(51, 96, 74, 0.12);
+  --amber: #A85C10;
+  --amber-dim: rgba(168, 92, 16, 0.12);
+  --rose: #8C2F2F;
+  --rose-dim: rgba(140, 47, 47, 0.12);
+  /* Compatibility aliases from old teal theme */
+  --teal: #9C7A3C;
+  --teal-soft: #33604A;
+  --teal-dim: rgba(156, 122, 60, 0.12);
+  --teal-glow: transparent;
+  --font: "IBM Plex Sans", system-ui, sans-serif;
+  --serif: "Source Serif 4", "Iowan Old Style", Georgia, serif;
+  --mono: "IBM Plex Sans", system-ui, sans-serif;
+  --sidebar-w: 240px;
+  --sidebar-w-collapsed: 72px;
+}
+
+html.ledger,
+html.ledger.dark {
+  color-scheme: light;
+}
+
+html.ledger body {
+  background-color: var(--paper) !important;
+  background-image: none !important;
+  color: var(--body) !important;
+  font-family: var(--font) !important;
+}
+
+html.ledger body::before,
+html.ledger body::after {
+  display: none !important;
+}
+
+html.ledger .num,
+html.ledger .kpi-value,
+html.ledger .gstin-mono,
+html.ledger .val,
+html.ledger td.amount,
+html.ledger .ledger-figure {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+html.ledger ::-webkit-scrollbar-thumb {
+  background: #C8C0B0;
+  border-radius: 6px;
+}
+html.ledger ::-webkit-scrollbar-thumb:hover {
+  background: var(--brass);
+}
+
+/* ── Sidebar (ink navy) ── */
+html.ledger .sidebar-shell {
+  width: var(--sidebar-w) !important;
+  background: var(--ink-navy) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
+  box-shadow: none !important;
+  transition: transform 0.22s ease, visibility 0.22s ease;
+  will-change: transform;
+}
+html.ledger body.sidebar-collapsed .sidebar-shell {
+  transform: translateX(-100%);
+  pointer-events: none;
+  visibility: hidden;
+}
+html.ledger body.sidebar-collapsed header.glass-header {
+  left: 0 !important;
+}
+html.ledger body.sidebar-collapsed main.dashboard-main {
+  margin-left: 0 !important;
+}
+html.ledger .sidebar-open-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-raised);
+  color: var(--ink-navy);
+  cursor: pointer;
+  flex-shrink: 0;
+  font-family: inherit;
+}
+html.ledger body.sidebar-collapsed .sidebar-open-btn {
+  display: inline-flex;
+}
+html.ledger .sidebar-open-btn:hover {
+  border-color: var(--brass);
+  color: var(--brass);
+  background: var(--brass-soft);
+}
+
+html.ledger .brand-hero {
+  border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+}
+html.ledger .brand-mark .brand-sub,
+html.ledger .brand-mark .brand-name {
+  display: block !important;
+  text-transform: none !important;
+  letter-spacing: -0.01em !important;
+  font-weight: 600 !important;
+  font-size: 12px !important;
+  color: rgba(246, 243, 236, 0.72) !important;
+  font-family: var(--font) !important;
+}
+html.ledger .brand-mark .brand-name {
+  display: none !important;
+}
+html.ledger .brand-mark img {
+  max-height: 40px !important;
+  filter: none;
+}
+
+html.ledger .sidebar-client-card {
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+  transition: border-color 0.16s ease, background-color 0.16s ease !important;
+  transform: none !important;
+}
+html.ledger .sidebar-client-card:hover {
+  border-color: rgba(156, 122, 60, 0.55) !important;
+  transform: none !important;
+  box-shadow: none !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+html.ledger .sidebar-client-card:active {
+  transform: none !important;
+}
+html.ledger .sidebar-client-card .scc-kicker {
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  font-weight: 500 !important;
+  font-size: 11px !important;
+  color: rgba(246, 243, 236, 0.55) !important;
+}
+html.ledger .sidebar-client-card .scc-switch {
+  color: #D4B56A !important;
+  font-weight: 600 !important;
+}
+html.ledger .sidebar-client-card .scc-name {
+  color: #F6F3EC !important;
+  font-weight: 600 !important;
+  font-family: var(--serif) !important;
+  letter-spacing: -0.02em !important;
+}
+html.ledger .sidebar-client-card .scc-meta {
+  color: rgba(246, 243, 236, 0.5) !important;
+}
+html.ledger .sidebar-client-card .scc-avatar {
+  background: rgba(156, 122, 60, 0.2) !important;
+  color: #D4B56A !important;
+  border-radius: 6px !important;
+}
+
+html.ledger .nav-link {
+  color: rgba(246, 243, 236, 0.62) !important;
+  border-radius: 0 !important;
+  border: none !important;
+  border-left: 3px solid transparent !important;
+  padding: 10px 12px !important;
+  font-weight: 500 !important;
+  background: transparent !important;
+  transition:
+    color 0.16s ease,
+    background-color 0.16s ease,
+    border-color 0.16s ease !important;
+  transform: none !important;
+}
+html.ledger .nav-link .nav-ico,
+html.ledger .nav-link .nav-ico .material-symbols-outlined,
+html.ledger .nav-link > .material-symbols-outlined {
+  color: rgba(246, 243, 236, 0.48) !important;
+  transition: color 0.16s ease !important;
+}
+html.ledger .nav-link .nav-label {
+  color: inherit !important;
+  transition: color 0.16s ease !important;
+}
+html.ledger .nav-link:hover {
+  color: #F6F3EC !important;
+  background: rgba(255, 255, 255, 0.07) !important;
+  border-left-color: rgba(156, 122, 60, 0.55) !important;
+  transform: none !important;
+}
+html.ledger .nav-link:hover .nav-ico,
+html.ledger .nav-link:hover .nav-ico .material-symbols-outlined,
+html.ledger .nav-link:hover > .material-symbols-outlined {
+  color: #D4B56A !important;
+}
+html.ledger .nav-link:active {
+  transform: none !important;
+}
+html.ledger .nav-link.active {
+  color: #F6F3EC !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-left-color: var(--brass) !important;
+  box-shadow: none !important;
+}
+html.ledger .nav-link.active .nav-ico,
+html.ledger .nav-link.active .nav-ico .material-symbols-outlined,
+html.ledger .nav-link.active > .material-symbols-outlined {
+  color: #D4B56A !important;
+}
+
+html.ledger .sidebar-foot {
+  border-top-color: rgba(255, 255, 255, 0.1) !important;
+  background: transparent !important;
+}
+html.ledger .sidebar-foot-links .nav-link {
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-left-width: 1px !important;
+  border-radius: 6px !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  justify-content: center !important;
+}
+html.ledger .sidebar-foot-links .nav-link:hover {
+  border-color: rgba(156, 122, 60, 0.45) !important;
+  background: rgba(156, 122, 60, 0.12) !important;
+  color: #F6F3EC !important;
+}
+html.ledger .sidebar-foot-links .nav-link:hover .nav-ico,
+html.ledger .sidebar-foot-links .nav-link:hover .material-symbols-outlined {
+  color: #D4B56A !important;
+}
+html.ledger .sidebar-cta {
+  background: var(--brass) !important;
+  color: #FFF !important;
+  border-radius: 8px !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
+  font-weight: 600 !important;
+  transition: background-color 0.16s ease, box-shadow 0.16s ease !important;
+  transform: none !important;
+}
+html.ledger .sidebar-cta:hover {
+  background: var(--brass-deep) !important;
+  filter: none !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.14) !important;
+  transform: none !important;
+}
+html.ledger .sidebar-cta:active {
+  transform: none !important;
+}
+
+html.ledger .sidebar-collapse-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-top: 6px;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(246, 243, 236, 0.55);
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.16s ease, border-color 0.16s ease, background-color 0.16s ease;
+}
+html.ledger .sidebar-collapse-btn:hover {
+  color: #D4B56A;
+  border-color: rgba(156, 122, 60, 0.55);
+  background: rgba(156, 122, 60, 0.1);
+}
+
+/* ── Header (paper) ── */
+html.ledger header.glass-header {
+  left: var(--sidebar-w) !important;
+  background: var(--paper) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-bottom: 1px solid var(--line) !important;
+  box-shadow: none !important;
+  transition: left 0.22s ease;
+}
+html.ledger main.dashboard-main {
+  margin-left: var(--sidebar-w) !important;
+  background: var(--paper);
+  transition: margin-left 0.22s ease;
+}
+
+html.ledger .workspace-label .text-primary,
+html.ledger .workspace-label [class*="uppercase"] {
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: var(--muted) !important;
+}
+html.ledger .workspace-label .text-on-surface {
+  font-family: var(--serif) !important;
+  font-weight: 600 !important;
+  color: var(--ink-navy) !important;
+}
+
+html.ledger .module-switch {
+  background: #EFEAE0 !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 8px !important;
+  padding: 3px !important;
+}
+html.ledger .module-switch-btn {
+  color: var(--muted) !important;
+  border-radius: 6px !important;
+  font-weight: 600 !important;
+}
+html.ledger .module-switch-btn.is-active {
+  background: var(--panel-raised) !important;
+  color: var(--ink-navy) !important;
+  box-shadow: none !important;
+  border: 1px solid var(--line) !important;
+}
+
+html.ledger .header-control,
+html.ledger .month-picker-wrap,
+html.ledger .header-client-wrap {
+  background: var(--panel-raised) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 8px !important;
+  color: var(--body) !important;
+}
+html.ledger #client-select,
+html.ledger .month-display {
+  color: var(--body) !important;
+  background: transparent !important;
+}
+html.ledger .header-search-wrap input {
+  background: var(--panel-raised) !important;
+  border-color: var(--line) !important;
+  color: var(--body) !important;
+  border-radius: 8px !important;
+}
+html.ledger #sync-btn {
+  background: var(--brass) !important;
+  color: #FFF !important;
+  border-radius: 8px !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
+  transition: background-color 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease !important;
+}
+html.ledger #sync-btn:hover {
+  background: var(--brass-deep) !important;
+  filter: none !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.14) !important;
+  transform: none !important;
+}
+html.ledger .header-actions .rounded-\[10px\].bg-gradient-to-br,
+html.ledger .header-actions [title="CA session"] {
+  background: var(--ink-navy) !important;
+  color: #F6F3EC !important;
+  border-color: var(--line) !important;
+}
+
+/* ── Panels / cards → ledger surfaces ── */
+html.ledger .panel {
+  background: var(--panel) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+}
+html.ledger .panel:hover {
+  border-color: #C9C0AE !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+html.ledger .page-title-accent,
+html.ledger h2.page-title-accent {
+  font-family: var(--serif) !important;
+  font-weight: 600 !important;
+  color: var(--ink-navy) !important;
+  letter-spacing: -0.03em !important;
+}
+html.ledger .text-white {
+  color: var(--ink-navy) !important;
+}
+html.ledger .text-on-surface {
+  color: var(--body) !important;
+}
+html.ledger .text-on-surface-variant {
+  color: var(--muted) !important;
+}
+html.ledger .text-primary {
+  color: var(--brass) !important;
+}
+html.ledger .text-secondary {
+  color: var(--success) !important;
+}
+html.ledger .text-tertiary {
+  color: var(--amber) !important;
+}
+html.ledger .text-error {
+  color: var(--rose) !important;
+}
+
+/* Kill ALL-CAPS tracking eyebrows in ledger */
+html.ledger .uppercase.tracking-widest,
+html.ledger .uppercase.tracking-wider,
+html.ledger [class*="uppercase"][class*="tracking"] {
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  font-weight: 600 !important;
+}
+
+/* Status stamps (quiet bordered) */
+html.ledger .metric-chip,
+html.ledger .gst-filing-badge,
+html.ledger .month-close-ready,
+html.ledger .pilot-status-pill,
+html.ledger .badge-approved,
+html.ledger .badge-flagged,
+html.ledger .badge-pending,
+html.ledger .badge-hitl {
+  border-radius: 4px !important;
+  box-shadow: none !important;
+  background: var(--panel-raised) !important;
+  border: 1px solid var(--line) !important;
+  color: var(--body) !important;
+  font-weight: 600 !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+}
+html.ledger .month-close-ready.is-ready,
+html.ledger .gst-filing-badge.is-ready,
+html.ledger .badge-approved {
+  border-color: rgba(51, 96, 74, 0.45) !important;
+  color: var(--success) !important;
+  background: var(--success-dim) !important;
+}
+html.ledger .month-close-ready.is-blocked,
+html.ledger .gst-filing-badge.is-blocked,
+html.ledger .badge-flagged {
+  border-color: rgba(140, 47, 47, 0.4) !important;
+  color: var(--rose) !important;
+  background: var(--rose-dim) !important;
+}
+html.ledger .month-close-ready.is-pending,
+html.ledger .gst-filing-badge.is-pending,
+html.ledger .badge-pending {
+  border-color: rgba(168, 92, 16, 0.4) !important;
+  color: var(--amber) !important;
+  background: var(--amber-dim) !important;
+}
+
+/* ── Ledger KPI strip ── */
+html.ledger .ledger-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  overflow: hidden;
+}
+html.ledger .ledger-strip .ledger-cell {
+  padding: 18px 20px;
+  border-right: 1px solid var(--line);
+  min-width: 0;
+}
+html.ledger .ledger-strip .ledger-cell:last-child {
+  border-right: none;
+}
+html.ledger .ledger-strip .ledger-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+html.ledger .ledger-strip .ledger-figure {
+  font-family: var(--serif);
+  font-size: clamp(1.45rem, 2.2vw, 1.85rem);
+  font-weight: 600;
+  color: var(--ink-navy);
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+html.ledger .ledger-strip .ledger-note {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+@media (max-width: 900px) {
+  html.ledger .ledger-strip {
+    grid-template-columns: 1fr 1fr;
+  }
+  html.ledger .ledger-strip .ledger-cell:nth-child(2) {
+    border-right: none;
+  }
+  html.ledger .ledger-strip .ledger-cell:nth-child(1),
+  html.ledger .ledger-strip .ledger-cell:nth-child(2) {
+    border-bottom: 1px solid var(--line);
+  }
+}
+@media (max-width: 560px) {
+  html.ledger .ledger-strip {
+    grid-template-columns: 1fr;
+  }
+  html.ledger .ledger-strip .ledger-cell {
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+  }
+  html.ledger .ledger-strip .ledger-cell:last-child {
+    border-bottom: none;
+  }
+}
+
+/* Hide old kpi card chrome when using ledger strip */
+html.ledger .kpi-card::before,
+html.ledger .kpi-card:hover .kpi-icon {
+  display: none !important;
+  box-shadow: none !important;
+}
+
+/* ── Month-close sequence ── */
+html.ledger .workflow-guide {
+  display: none !important; /* replaced by month-close numbered sequence */
+}
+
+html.ledger .month-close-strip {
+  background: var(--panel-raised) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 1px 0 rgba(23, 35, 59, 0.04) !important;
+  padding: 18px 20px !important;
+  gap: 16px !important;
+}
+html.ledger .month-close-strip::before {
+  display: none !important;
+}
+html.ledger .month-close-icon {
+  color: var(--brass) !important;
+  font-variation-settings: "FILL" 0 !important;
+}
+html.ledger .month-close-title {
+  font-family: var(--serif) !important;
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  color: var(--ink-navy) !important;
+  text-transform: none !important;
+  letter-spacing: -0.02em !important;
+  line-height: 1.2 !important;
+}
+html.ledger .month-close-period {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: var(--muted) !important;
+  margin-top: 2px !important;
+}
+html.ledger .month-close-stats {
+  display: grid !important;
+  grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+  gap: 0 !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 8px !important;
+  background: var(--panel) !important;
+  overflow: hidden;
+}
+html.ledger .month-close-stat {
+  padding: 14px 16px !important;
+  border-radius: 0 !important;
+  border: none !important;
+  border-right: 1px solid var(--line) !important;
+  background: transparent !important;
+  min-width: 0;
+}
+html.ledger .month-close-stat:last-child {
+  border-right: none !important;
+}
+html.ledger .month-close-stat .lbl {
+  display: block !important;
+  font-size: 11px !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  color: var(--muted) !important;
+  font-weight: 600 !important;
+  margin-bottom: 6px !important;
+}
+html.ledger .month-close-stat .val {
+  display: block !important;
+  font-family: var(--serif) !important;
+  font-size: 22px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.03em !important;
+  color: var(--ink-navy) !important;
+  line-height: 1.1 !important;
+}
+html.ledger .month-close-stat .val.is-ok {
+  color: var(--success) !important;
+}
+html.ledger .month-close-stat .val.is-warn {
+  color: var(--amber) !important;
+}
+html.ledger .month-close-stat .val.is-bad {
+  color: var(--rose) !important;
+}
+html.ledger .month-close-blockers {
+  color: var(--muted) !important;
+  font-size: 13px !important;
+}
+@media (max-width: 1099px) {
+  html.ledger .month-close-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+  html.ledger .month-close-stat:nth-child(3n) {
+    border-right: none !important;
+  }
+  html.ledger .month-close-stat:nth-child(-n + 3) {
+    border-bottom: 1px solid var(--line) !important;
+  }
+}
+@media (max-width: 767px) {
+  html.ledger .month-close-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  html.ledger .month-close-stat {
+    border-right: 1px solid var(--line) !important;
+    border-bottom: 1px solid var(--line) !important;
+  }
+  html.ledger .month-close-stat:nth-child(2n) {
+    border-right: none !important;
+  }
+  html.ledger .month-close-stat:nth-last-child(-n + 2) {
+    border-bottom: none !important;
+  }
+}
+html.ledger .month-close-steps {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 0 !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 8px !important;
+  overflow: hidden;
+  background: var(--panel) !important;
+}
+html.ledger .month-close-step {
+  border: none !important;
+  border-right: 1px solid var(--line) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  padding: 14px 14px 14px 12px !important;
+  box-shadow: none !important;
+  position: relative;
+  opacity: 1 !important;
+}
+html.ledger .month-close-step:last-child {
+  border-right: none !important;
+}
+html.ledger .month-close-step .step-dot {
+  width: 22px !important;
+  height: 22px !important;
+  margin-top: 0 !important;
+  border-radius: 50% !important;
+  border: 1.5px solid var(--line) !important;
+  background: var(--panel-raised) !important;
+  color: var(--muted) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  display: grid !important;
+  place-items: center !important;
+  box-shadow: none !important;
+  flex-shrink: 0;
+}
+html.ledger .month-close-step.is-done {
+  background: var(--success-dim) !important;
+}
+html.ledger .month-close-step.is-done .step-dot {
+  background: var(--success) !important;
+  border-color: var(--success) !important;
+  color: #fff !important;
+}
+html.ledger .month-close-step.is-active {
+  background: var(--brass-soft) !important;
+}
+html.ledger .month-close-step.is-active .step-dot {
+  border-color: var(--brass) !important;
+  color: var(--brass) !important;
+  background: #fff !important;
+}
+html.ledger .month-close-step.is-pending {
+  opacity: 0.85 !important;
+}
+html.ledger .month-close-step .step-title {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: var(--ink-navy) !important;
+  text-transform: none !important;
+}
+html.ledger .month-close-step .step-sub {
+  font-size: 12px !important;
+  color: var(--muted) !important;
+  margin-top: 2px !important;
+}
+html.ledger .month-close-btn {
+  border: 1px solid var(--line) !important;
+  background: var(--panel-raised) !important;
+  color: var(--ink-navy) !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+  font-weight: 600 !important;
+  transition: border-color 0.16s ease, background-color 0.16s ease, color 0.16s ease !important;
+}
+html.ledger .month-close-btn .material-symbols-outlined {
+  color: inherit;
+  transition: color 0.16s ease;
+}
+html.ledger .month-close-btn:hover:not(.is-primary):not(:disabled) {
+  border-color: var(--brass) !important;
+  background: var(--brass-soft) !important;
+  color: var(--brass) !important;
+}
+html.ledger .month-close-btn:hover:not(.is-primary):not(:disabled) .material-symbols-outlined {
+  color: var(--brass) !important;
+}
+html.ledger .month-close-btn.is-primary {
+  background: var(--brass) !important;
+  border-color: var(--brass) !important;
+  color: #fff !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
+  transition: background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease !important;
+}
+html.ledger .month-close-btn.is-primary:hover {
+  background: var(--brass-deep) !important;
+  border-color: var(--brass-deep) !important;
+  filter: none !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.14) !important;
+  transform: none !important;
+}
+
+/* Month-scope banner + context bar */
+html.ledger .month-scope-banner {
+  background: var(--amber-dim) !important;
+  border: 1px solid rgba(168, 92, 16, 0.28) !important;
+  border-radius: 8px !important;
+  color: var(--body) !important;
+}
+html.ledger .month-scope-banner .msb-text {
+  color: var(--body) !important;
+}
+html.ledger .month-scope-banner .msb-text strong {
+  color: var(--ink-navy) !important;
+  font-weight: 700 !important;
+}
+html.ledger .month-scope-banner .msb-btn {
+  border: 1px solid var(--line) !important;
+  background: var(--panel-raised) !important;
+  color: var(--ink-navy) !important;
+  border-radius: 6px !important;
+  font-weight: 600 !important;
+  transition: border-color 0.16s ease, background-color 0.16s ease, color 0.16s ease !important;
+}
+html.ledger .month-scope-banner .msb-btn:hover:not(.is-primary) {
+  border-color: var(--brass) !important;
+  background: var(--brass-soft) !important;
+  color: var(--brass) !important;
+}
+html.ledger .month-scope-banner .msb-btn.is-primary {
+  background: var(--amber) !important;
+  border-color: var(--amber) !important;
+  color: #fff !important;
+}
+html.ledger .client-context-bar {
+  padding: 14px 16px !important;
+}
+html.ledger .client-context-bar .gstin-mono {
+  color: var(--ink-navy) !important;
+  font-weight: 600 !important;
+}
+html.ledger .metric-chip {
+  background: var(--panel-raised) !important;
+  border: 1px solid var(--line) !important;
+  padding: 8px 12px !important;
+  gap: 6px !important;
+}
+html.ledger .metric-chip .text-secondary {
+  color: var(--success) !important;
+}
+html.ledger .metric-chip .text-tertiary {
+  color: var(--amber) !important;
+}
+
+/* Queue / tables */
+html.ledger .queue-table,
+html.ledger table {
+  color: var(--body);
+}
+html.ledger .queue-table thead th,
+html.ledger .tab-btn {
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  color: var(--muted) !important;
+  font-weight: 600 !important;
+}
+html.ledger .tab-btn.active {
+  color: var(--ink-navy) !important;
+  border-bottom-color: var(--brass) !important;
+}
+html.ledger .queue-table tbody td {
+  color: var(--body) !important;
+}
+html.ledger .queue-table tbody tr {
+  cursor: pointer;
+  transition: background-color 0.18s ease, box-shadow 0.18s ease;
+}
+html.ledger .queue-table tbody tr:hover {
+  background-color: rgba(156, 122, 60, 0.08) !important;
+  box-shadow: inset 3px 0 0 var(--brass);
+}
+html.ledger .queue-table tbody tr:hover td {
+  color: var(--ink-navy) !important;
+}
+html.ledger #invoice-rows-body tr:hover {
+  background-color: rgba(156, 122, 60, 0.08) !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  html.ledger .queue-table tbody tr {
+    transition: none;
+  }
+}
+html.ledger .audit-btn {
+  background: var(--brass) !important;
+  color: #fff !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
+  transition: background-color 0.16s ease, box-shadow 0.16s ease !important;
+  transform: none !important;
+}
+html.ledger .audit-btn:hover {
+  background: var(--brass-deep) !important;
+  filter: none !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.14) !important;
+  transform: none !important;
+}
+html.ledger .row-icon-btn {
+  border-color: var(--line) !important;
+  background: var(--panel-raised) !important;
+  color: var(--ink-navy) !important;
+  transition: border-color 0.16s ease, background-color 0.16s ease, color 0.16s ease !important;
+}
+html.ledger .row-icon-btn:hover {
+  border-color: var(--brass) !important;
+  background: var(--brass-soft) !important;
+  color: var(--brass) !important;
+}
+html.ledger .row-icon-btn:hover .material-symbols-outlined {
+  color: var(--brass) !important;
+}
+html.ledger .row-icon-btn.is-approve {
+  border-color: rgba(51, 96, 74, 0.45) !important;
+  color: var(--success) !important;
+}
+html.ledger .row-icon-btn.is-approve:hover {
+  border-color: var(--success) !important;
+  background: var(--success-dim) !important;
+  color: var(--success) !important;
+}
+
+/* Drawers / overlays — Ledger audit workspace */
+html.ledger #audit-drawer {
+  background: var(--paper) !important;
+  border-left: 1px solid var(--line) !important;
+  color: var(--body) !important;
+  box-shadow: -12px 0 32px rgba(23, 35, 59, 0.12) !important;
+}
+html.ledger #audit-drawer-overlay {
+  background: rgba(23, 35, 59, 0.35) !important;
+}
+html.ledger .audit-drawer-header {
+  background: var(--panel-raised) !important;
+  border-bottom: 1px solid var(--line) !important;
+}
+html.ledger .audit-drawer-title {
+  font-family: var(--serif) !important;
+  font-weight: 600 !important;
+  color: var(--ink-navy) !important;
+  letter-spacing: -0.02em !important;
+}
+html.ledger .audit-forms-pane {
+  background: var(--paper) !important;
+}
+html.ledger .audit-card {
+  background: var(--panel-raised) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 8px !important;
+}
+html.ledger .audit-card-title,
+html.ledger .audit-section-label {
+  font-family: var(--serif) !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: var(--ink-navy) !important;
+  text-transform: none !important;
+  letter-spacing: -0.01em !important;
+  margin: 0 0 8px !important;
+}
+html.ledger .audit-form label {
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  color: var(--muted) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+html.ledger .audit-form input,
+html.ledger .audit-form select,
+html.ledger .audit-form textarea {
+  background: var(--panel-raised) !important;
+  border: 1px solid var(--line) !important;
+  color: var(--ink-navy) !important;
+  border-radius: 8px !important;
+}
+html.ledger .audit-form input:focus,
+html.ledger .audit-form select:focus,
+html.ledger .audit-form textarea:focus {
+  border-color: var(--brass) !important;
+  box-shadow: 0 0 0 3px var(--brass-soft) !important;
+}
+html.ledger .audit-form select option {
+  background: #fff !important;
+  color: var(--ink-navy) !important;
+}
+html.ledger .audit-form input[type="date"] {
+  color-scheme: light !important;
+}
+html.ledger .gstin-input.valid {
+  border-color: var(--success) !important;
+}
+html.ledger .gstin-input.invalid {
+  border-color: var(--rose) !important;
+}
+html.ledger .validation-label {
+  color: var(--muted) !important;
+}
+
+html.ledger .drawer-issue {
+  border-radius: 8px !important;
+}
+html.ledger .drawer-issue.is-ok {
+  border-color: rgba(51, 96, 74, 0.35) !important;
+  background: var(--success-dim) !important;
+}
+html.ledger .drawer-issue.is-bad {
+  border-color: rgba(140, 47, 47, 0.35) !important;
+  background: var(--rose-dim) !important;
+}
+html.ledger .drawer-issue.is-warn,
+html.ledger .drawer-issue:not(.is-ok):not(.is-bad) {
+  border-color: rgba(168, 92, 16, 0.28) !important;
+  background: var(--amber-dim) !important;
+}
+html.ledger .drawer-issue-label {
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  color: var(--muted) !important;
+  font-weight: 600 !important;
+}
+html.ledger .drawer-issue-title {
+  color: var(--ink-navy) !important;
+  font-family: var(--serif) !important;
+  font-weight: 600 !important;
+}
+html.ledger .drawer-issue.is-ok .drawer-issue-icon { color: var(--success) !important; }
+html.ledger .drawer-issue.is-bad .drawer-issue-icon { color: var(--rose) !important; }
+html.ledger .drawer-issue-icon { color: var(--amber) !important; }
+
+html.ledger .drawer-fold {
+  background: var(--panel-raised) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 8px !important;
+}
+html.ledger .drawer-fold > summary {
+  color: var(--ink-navy) !important;
+  font-weight: 600 !important;
+}
+html.ledger .drawer-fold > summary:hover {
+  background: var(--brass-soft) !important;
+}
+html.ledger .drawer-fold-meta {
+  color: var(--muted) !important;
+}
+html.ledger .drawer-fold-body {
+  border-top-color: var(--line) !important;
+}
+
+html.ledger .doc-viewer-pane {
+  background: var(--panel) !important;
+  border-right: 1px solid var(--line) !important;
+}
+html.ledger #invoice-doc-viewport {
+  background: var(--paper) !important;
+}
+html.ledger .doc-stage {
+  background: #fff !important;
+  border: 1px solid var(--line) !important;
+  box-shadow: 0 1px 0 rgba(23, 35, 59, 0.04) !important;
+  border-radius: 10px !important;
+}
+html.ledger .doc-stage::before {
+  display: none !important;
+}
+html.ledger #invoice-doc-download,
+html.ledger .invoice-doc-fallback a {
+  color: var(--brass) !important;
+  font-weight: 600 !important;
+}
+
+html.ledger .drawer-sticky-footer {
+  background: var(--panel-raised) !important;
+  border-top: 1px solid var(--line) !important;
+  box-shadow: none !important;
+}
+html.ledger .audit-sec-btn {
+  background: var(--panel-raised) !important;
+  color: var(--ink-navy) !important;
+  border: 1px solid var(--line) !important;
+}
+html.ledger .audit-sec-btn:hover {
+  border-color: var(--brass) !important;
+  background: var(--brass-soft) !important;
+  color: var(--brass) !important;
+}
+html.ledger .audit-reject-btn {
+  color: var(--rose) !important;
+  border: 1px solid rgba(140, 47, 47, 0.35) !important;
+  background: var(--panel-raised) !important;
+}
+html.ledger .audit-reject-btn:hover {
+  background: var(--rose-dim) !important;
+  border-color: var(--rose) !important;
+}
+html.ledger .drawer-approve-btn {
+  background: var(--brass) !important;
+  color: #fff !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
+}
+html.ledger .drawer-approve-btn:hover {
+  background: var(--brass-deep) !important;
+  filter: none !important;
+}
+html.ledger .audit-icon-btn {
+  border: 1px solid transparent !important;
+  background: transparent !important;
+  color: var(--muted) !important;
+}
+html.ledger .audit-icon-btn:hover {
+  color: var(--brass) !important;
+  background: var(--brass-soft) !important;
+  border-color: var(--brass) !important;
+}
+html.ledger .supplier-portal-check {
+  background: var(--panel) !important;
+  border-color: var(--line) !important;
+}
+html.ledger .supplier-portal-check .spc-head {
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  color: var(--muted) !important;
+}
+html.ledger .supplier-portal-check .spc-body {
+  color: var(--ink-navy) !important;
+}
+html.ledger .supplier-portal-check .spc-recheck {
+  color: var(--brass) !important;
+  text-transform: none !important;
+}
+html.ledger #timeline-empty,
+html.ledger .timeline-empty {
+  color: var(--muted) !important;
+}
+
+/* View switching */
+html.ledger body[data-view="queue"] .view-hide-on-queue,
+html.ledger body[data-view="gstr"] .view-hide-on-gstr {
+  display: none !important;
+}
+html.ledger body[data-view="gstr"] #gst-filing-panel,
+html.ledger body[data-view="gstr"] #month-close-strip {
+  display: block !important;
+}
+
+/* GST filing / pilot quieter */
+html.ledger .gst-filing-panel,
+html.ledger .pilot-panel {
+  box-shadow: none !important;
+  border-color: var(--line) !important;
+}
+html.ledger .gst-filing-card {
+  background: var(--panel) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 10px !important;
+}
+html.ledger .gst-filing-card-title {
+  color: var(--ink-navy) !important;
+  font-family: var(--serif) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  text-transform: none !important;
+  letter-spacing: -0.01em !important;
+}
+html.ledger .gst-filing-stats li {
+  color: var(--muted) !important;
+  font-size: 13px !important;
+}
+html.ledger .gst-filing-stats strong {
+  color: var(--ink-navy) !important;
+}
+html.ledger .gst-filing-blockers {
+  color: var(--amber) !important;
+}
+html.ledger .gst-filing-blockers.is-ok {
+  color: var(--success) !important;
+}
+html.ledger .gst-filing-portal-steps {
+  color: var(--body) !important;
+}
+html.ledger .gst-filing-portal-steps a {
+  color: var(--brass) !important;
+  font-weight: 600 !important;
+}
+html.ledger .gst-filing-check {
+  color: var(--body) !important;
+}
+html.ledger .gst-filing-check input {
+  accent-color: var(--brass) !important;
+}
+html.ledger .gst-filing-arn-row label {
+  color: var(--muted) !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+html.ledger .gst-filing-arn-row input {
+  background: var(--panel-raised) !important;
+  border: 1px solid var(--line) !important;
+  color: var(--ink-navy) !important;
+  border-radius: 8px !important;
+}
+html.ledger .gst-filing-arn-row input::placeholder {
+  color: var(--muted) !important;
+}
+html.ledger .gst-filing-btn.is-primary {
+  background: var(--brass) !important;
+  color: #fff !important;
+  border-color: var(--brass) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
+  transition: background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease !important;
+}
+html.ledger .gst-filing-btn.is-primary:hover:not(:disabled) {
+  background: var(--brass-deep) !important;
+  border-color: var(--brass-deep) !important;
+  color: #fff !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.14) !important;
+  transform: none !important;
+}
+html.ledger .gst-filing-btn {
+  border: 1px solid var(--line) !important;
+  background: var(--panel-raised) !important;
+  color: var(--ink-navy) !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  transition: border-color 0.16s ease, background-color 0.16s ease, color 0.16s ease !important;
+}
+html.ledger .gst-filing-btn .material-symbols-outlined {
+  color: inherit;
+  transition: color 0.16s ease;
+}
+html.ledger .gst-filing-btn:hover:not(:disabled):not(.is-primary) {
+  border-color: var(--brass) !important;
+  background: var(--brass-soft) !important;
+  color: var(--brass) !important;
+}
+html.ledger .gst-filing-btn:hover:not(:disabled):not(.is-primary) .material-symbols-outlined {
+  color: var(--brass) !important;
+}
+
+html.ledger .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+html.ledger .month-close-step[data-step="bills"] .step-dot::after { content: "1"; }
+html.ledger .month-close-step[data-step="gstr2b"] .step-dot::after { content: "2"; }
+html.ledger .month-close-step[data-step="queue"] .step-dot::after { content: "3"; }
+html.ledger .month-close-step[data-step="export"] .step-dot::after { content: "4"; }
+html.ledger .month-close-step.is-done .step-dot::after { content: "✓"; }
+html.ledger .month-close-step .step-dot::after {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Soften selection + form controls on paper */
+html.ledger input,
+html.ledger select,
+html.ledger textarea,
+html.ledger button {
+  font-family: inherit;
+}
+html.ledger .bg-surface-container-low,
+html.ledger .bg-surface-container,
+html.ledger .bg-surface {
+  background-color: #FFFCF7 !important;
+}
+html.ledger .border-outline-variant {
+  border-color: #DAD3C3 !important;
+}
+html.ledger .hover\:text-white:hover {
+  color: var(--ink-navy) !important;
+}
+html.ledger .hover\:bg-white\/5:hover {
+  background: rgba(23, 35, 59, 0.05) !important;
+}
+
+/* Empty queue / All clear */
+html.ledger .empty-state {
+  color: var(--muted) !important;
+}
+html.ledger .empty-state .empty-illu {
+  background: var(--success-dim) !important;
+  border: 1px solid rgba(51, 96, 74, 0.28) !important;
+  color: var(--success) !important;
+  box-shadow: none !important;
+  border-radius: 16px !important;
+}
+html.ledger .empty-state .empty-illu::after {
+  display: none !important;
+}
+html.ledger .empty-state.is-clear .empty-illu {
+  color: var(--success) !important;
+}
+html.ledger .empty-state.is-muted .empty-illu {
+  color: var(--muted) !important;
+  background: var(--panel) !important;
+  border-color: var(--line) !important;
+}
+html.ledger .empty-state .empty-title {
+  color: var(--ink-navy) !important;
+  font-family: var(--serif) !important;
+  font-weight: 600 !important;
+}
+html.ledger .empty-state .empty-sub {
+  color: var(--muted) !important;
+}
+html.ledger .empty-state .empty-btn {
+  border: 1px solid var(--line) !important;
+  background: var(--panel-raised) !important;
+  color: var(--ink-navy) !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  transition: border-color 0.16s ease, background-color 0.16s ease, color 0.16s ease !important;
+}
+html.ledger .empty-state .empty-btn .material-symbols-outlined {
+  color: inherit;
+  transition: color 0.16s ease;
+}
+html.ledger .empty-state .empty-btn:hover:not(.is-primary) {
+  border-color: var(--brass) !important;
+  background: var(--brass-soft) !important;
+  color: var(--brass) !important;
+  transform: none !important;
+}
+html.ledger .empty-state .empty-btn:hover:not(.is-primary) .material-symbols-outlined {
+  color: var(--brass) !important;
+}
+html.ledger .empty-state .empty-btn.is-primary {
+  border-color: var(--brass) !important;
+  background: var(--brass) !important;
+  color: #fff !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
+  transition: background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease !important;
+}
+html.ledger .empty-state .empty-btn.is-primary:hover {
+  background: var(--brass-deep) !important;
+  border-color: var(--brass-deep) !important;
+  filter: none !important;
+  color: #fff !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.14) !important;
+  transform: none !important;
+}
+
+/* Shared primary CTAs (drawer approve, export, ITR open/save, chat send) */
+html.ledger #drawer-approve-btn,
+html.ledger #export-gstr-json-btn,
+html.ledger #ca-form-modal-submit,
+html.ledger #itr-open-btn,
+html.ledger #itr-save-btn,
+html.ledger #chatbot-trigger-btn,
+html.ledger .month-scope-banner .msb-btn.is-primary {
+  background: var(--brass) !important;
+  color: #fff !important;
+  border-color: var(--brass) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
+  transition: background-color 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease !important;
+}
+html.ledger #drawer-approve-btn:hover,
+html.ledger #export-gstr-json-btn:hover,
+html.ledger #ca-form-modal-submit:hover,
+html.ledger #itr-open-btn:hover,
+html.ledger #itr-save-btn:hover:not(:disabled),
+html.ledger #chatbot-trigger-btn:hover,
+html.ledger .month-scope-banner .msb-btn.is-primary:hover {
+  background: var(--brass-deep) !important;
+  filter: none !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.14) !important;
+  transform: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  html.ledger #sync-btn,
+  html.ledger .audit-btn,
+  html.ledger .month-close-btn.is-primary,
+  html.ledger .gst-filing-btn.is-primary,
+  html.ledger .empty-state .empty-btn.is-primary,
+  html.ledger #drawer-approve-btn,
+  html.ledger #export-gstr-json-btn,
+  html.ledger #ca-form-modal-submit,
+  html.ledger #itr-open-btn,
+  html.ledger #itr-save-btn,
+  html.ledger #chatbot-trigger-btn {
+    transition: none !important;
+  }
+}
+
+/* Secondary controls — border brass, soft fill, icon follows */
+html.ledger .advanced-toggle {
+  color: var(--muted) !important;
+  border: 1px solid transparent !important;
+  background: transparent !important;
+  transition: color 0.16s ease, border-color 0.16s ease, background-color 0.16s ease !important;
+}
+html.ledger .advanced-toggle:hover,
+html.ledger .advanced-toggle[aria-expanded="true"] {
+  color: var(--brass) !important;
+  border-color: var(--brass) !important;
+  background: var(--brass-soft) !important;
+}
+html.ledger .icon-btn {
+  color: var(--muted) !important;
+  border: 1px solid transparent !important;
+  transition: color 0.16s ease, border-color 0.16s ease, background-color 0.16s ease !important;
+}
+html.ledger .icon-btn:hover {
+  color: var(--brass) !important;
+  border-color: var(--brass) !important;
+  background: var(--brass-soft) !important;
+}
+html.ledger .bulk-bar {
+  border: 1px solid var(--line) !important;
+  background: var(--panel) !important;
+}
+html.ledger .bulk-bar-btn {
+  border: 1px solid var(--line) !important;
+  background: var(--panel-raised) !important;
+  color: var(--ink-navy) !important;
+  transition: border-color 0.16s ease, background-color 0.16s ease, color 0.16s ease, filter 0.16s ease !important;
+}
+html.ledger .bulk-bar-btn:hover {
+  border-color: var(--brass) !important;
+  background: var(--brass-soft) !important;
+  color: var(--brass) !important;
+  filter: none !important;
+}
+html.ledger .bulk-bar-btn.is-approve {
+  border-color: rgba(51, 96, 74, 0.45) !important;
+  color: var(--success) !important;
+}
+html.ledger .bulk-bar-btn.is-approve:hover {
+  background: var(--success-dim) !important;
+  border-color: var(--success) !important;
+  color: var(--success) !important;
+}
+html.ledger .drawer-nav {
+  border-color: var(--line) !important;
+  background: var(--panel) !important;
+}
+html.ledger .drawer-nav-btn {
+  color: var(--muted) !important;
+  background: transparent !important;
+  transition: color 0.16s ease, background-color 0.16s ease !important;
+}
+html.ledger .drawer-nav-btn:hover {
+  color: var(--brass) !important;
+  background: var(--brass-soft) !important;
+}
+html.ledger .client-context-bar button:not(.advanced-toggle):not(.is-primary) {
+  transition: border-color 0.16s ease, background-color 0.16s ease, color 0.16s ease !important;
+}
+html.ledger #edit-client-gstin-btn:hover,
+html.ledger #import-gstr2b-btn:hover,
+html.ledger #fetch-gstr2b-btn:hover,
+html.ledger #recompute-client-itc-btn:hover,
+html.ledger #gstin-lookup-btn:hover,
+html.ledger #gstin-lookup-client-btn:hover {
+  border-color: var(--brass) !important;
+  background: var(--brass-soft) !important;
+  color: var(--brass) !important;
+}
+html.ledger #edit-client-gstin-btn:hover .material-symbols-outlined,
+html.ledger #import-gstr2b-btn:hover .material-symbols-outlined,
+html.ledger #fetch-gstr2b-btn:hover .material-symbols-outlined,
+html.ledger #recompute-client-itc-btn:hover .material-symbols-outlined,
+html.ledger #gstin-lookup-btn:hover .material-symbols-outlined {
+  color: var(--brass) !important;
+}
+html.ledger .queue-check {
+  accent-color: var(--brass) !important;
+}
+
+/* ══════════════════════════════════════════════
+   Pending hover polish (#5–#10)
+══════════════════════════════════════════════ */
+
+/* #5 Ledger / KPI cells */
+html.ledger .ledger-strip .ledger-cell {
+  transition: background-color 0.16s ease, box-shadow 0.16s ease;
+  position: relative;
+}
+html.ledger .ledger-strip .ledger-cell:hover {
+  background: rgba(156, 122, 60, 0.06);
+  box-shadow: inset 0 -2px 0 var(--brass);
+}
+html.ledger .ledger-strip .ledger-cell:hover .ledger-figure {
+  color: var(--ink-navy);
+}
+html.ledger #kpi-itc-card:hover {
+  background: rgba(156, 122, 60, 0.08) !important;
+  box-shadow: inset 0 -2px 0 var(--brass) !important;
+  border-color: transparent !important;
+  cursor: pointer;
+}
+
+/* #6 Month-close steps */
+html.ledger .month-close-step {
+  transition: background-color 0.16s ease, opacity 0.16s ease !important;
+  cursor: default;
+}
+html.ledger .month-close-step:hover:not(.is-active) {
+  background: rgba(156, 122, 60, 0.06) !important;
+  opacity: 1 !important;
+}
+html.ledger .month-close-step.is-active:hover {
+  background: var(--brass-soft) !important;
+}
+html.ledger .month-close-stat {
+  transition: background-color 0.16s ease;
+}
+html.ledger .month-close-stat:hover {
+  background: rgba(156, 122, 60, 0.05) !important;
+}
+
+/* #7 Tabs */
+html.ledger .tab-btn {
+  position: relative !important;
+  border-radius: 0 !important;
+  border: none !important;
+  border-bottom: 2px solid transparent !important;
+  background: transparent !important;
+  color: var(--muted) !important;
+  padding: 8px 12px !important;
+  transition: color 0.16s ease, border-color 0.16s ease, background-color 0.16s ease !important;
+}
+html.ledger .tab-btn:hover {
+  color: var(--ink-navy) !important;
+  background: rgba(156, 122, 60, 0.06) !important;
+  border-bottom-color: rgba(156, 122, 60, 0.35) !important;
+}
+html.ledger .tab-btn.active {
+  color: var(--ink-navy) !important;
+  background: transparent !important;
+  border-bottom-color: var(--brass) !important;
+}
+
+/* #8 Metric chips / badges */
+html.ledger .metric-chip {
+  transition: border-color 0.16s ease, background-color 0.16s ease !important;
+}
+html.ledger .metric-chip:hover {
+  border-color: #C9C0AE !important;
+  background: #FFF !important;
+}
+html.ledger .badge,
+html.ledger .badge-approved,
+html.ledger .badge-flagged,
+html.ledger .badge-pending,
+html.ledger .badge-hitl,
+html.ledger .badge-rejected,
+html.ledger .badge-confirmed {
+  transition: border-color 0.16s ease, filter 0.16s ease !important;
+}
+html.ledger .badge:hover,
+html.ledger .badge-approved:hover,
+html.ledger .badge-flagged:hover,
+html.ledger .badge-pending:hover,
+html.ledger .badge-hitl:hover,
+html.ledger .badge-rejected:hover,
+html.ledger .badge-confirmed:hover {
+  filter: brightness(0.97);
+  border-color: #C9C0AE !important;
+}
+html.ledger .panel {
+  transition: border-color 0.16s ease !important;
+}
+html.ledger .panel:hover {
+  border-color: #C9C0AE !important;
+}
+
+/* #9 Client / month / module header controls */
+html.ledger .module-switch-btn {
+  transition: color 0.16s ease, background-color 0.16s ease, border-color 0.16s ease !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+}
+html.ledger .module-switch-btn:hover:not(.is-active) {
+  color: var(--ink-navy) !important;
+  background: rgba(255, 255, 255, 0.55) !important;
+}
+html.ledger .header-control,
+html.ledger .month-picker-wrap,
+html.ledger .header-client-wrap {
+  transition: border-color 0.16s ease, box-shadow 0.16s ease !important;
+}
+html.ledger .header-control:hover,
+html.ledger .month-picker-wrap:hover,
+html.ledger .header-client-wrap:hover {
+  border-color: var(--brass) !important;
+}
+html.ledger .header-control:focus-within,
+html.ledger .month-picker-wrap:focus-within,
+html.ledger .header-client-wrap:focus-within {
+  border-color: var(--brass) !important;
+  box-shadow: 0 0 0 3px var(--brass-soft) !important;
+}
+html.ledger .header-search-wrap input {
+  transition: border-color 0.16s ease, box-shadow 0.16s ease !important;
+}
+html.ledger .header-search-wrap input:hover,
+html.ledger .header-search-wrap input:focus {
+  border-color: var(--brass) !important;
+  box-shadow: 0 0 0 3px var(--brass-soft) !important;
+  outline: none !important;
+}
+html.ledger .header-client-wrap select:focus {
+  box-shadow: none !important;
+}
+html.ledger .header-client-wrap select option {
+  background: #FFFFFF !important;
+  color: var(--ink-navy) !important;
+}
+html.ledger .header-actions button[title="Notifications"] {
+  transition: color 0.16s ease, background-color 0.16s ease !important;
+  border-radius: 8px;
+}
+html.ledger .header-actions button[title="Notifications"]:hover {
+  color: var(--brass) !important;
+  background: var(--brass-soft) !important;
+}
+
+/* #10 Links */
+html.ledger a:not(.nav-link):not(.sidebar-cta) {
+  transition: color 0.16s ease, text-decoration-color 0.16s ease;
+}
+html.ledger a.hover\:text-primary:hover,
+html.ledger nav a:hover,
+html.ledger #invoice-doc-download:hover,
+html.ledger .invoice-doc-fallback a:hover,
+html.ledger .gst-filing-portal-steps a:hover,
+html.ledger .itr-review-link:hover,
+html.ledger .spc-recheck:hover {
+  color: var(--brass) !important;
+  text-decoration: underline;
+  text-decoration-color: rgba(156, 122, 60, 0.45);
+  text-underline-offset: 2px;
+}
+
+/* Soft motion — color/border only; honor reduced motion */
+html.ledger .tab-btn,
+html.ledger .metric-chip,
+html.ledger .ledger-strip .ledger-cell,
+html.ledger .month-close-step,
+html.ledger .module-switch-btn,
+html.ledger .header-control,
+html.ledger .month-picker-wrap,
+html.ledger .header-client-wrap {
+  will-change: auto;
+}
+@media (prefers-reduced-motion: reduce) {
+  html.ledger .ledger-strip .ledger-cell,
+  html.ledger .month-close-step,
+  html.ledger .month-close-stat,
+  html.ledger .tab-btn,
+  html.ledger .metric-chip,
+  html.ledger .module-switch-btn,
+  html.ledger .header-control,
+  html.ledger .month-picker-wrap,
+  html.ledger .header-client-wrap,
+  html.ledger .header-search-wrap input,
+  html.ledger .panel,
+  html.ledger a:not(.nav-link) {
+    transition: none !important;
+  }
+}

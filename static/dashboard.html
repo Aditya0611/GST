@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html class="dark" lang="en">
+<html class="ledger" lang="en">
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
@@ -11,7 +11,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png"/>
     <link href="https://fonts.googleapis.com" rel="preconnect"/>
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@450;500;600&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet"/>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
@@ -21,31 +21,27 @@
           theme: {
             extend: {
               colors: {
-                background: "#070B12",
-                surface: "#0E151E",
-                "surface-container": "#121A24",
-                "surface-container-low": "#0B1219",
-                "surface-container-high": "#182230",
-                "surface-container-highest": "#223040",
-                "surface-bright": "#2A3A4C",
-                "outline-variant": "#2A3848",
-                outline: "#7A8EA3",
-                "on-surface": "#F2F5F8",
-                "on-surface-variant": "#8B9BB0",
-                "on-background": "#F2F5F8",
-                /* CTA / brand bright — buttons, links, active focus */
-                primary: "#36D6AE",
-                "primary-container": "#1A9B7A",
-                "on-primary": "#04281F",
-                /* Success / matched / done — quieter than CTA */
-                secondary: "#2BB896",
-                "secondary-fixed-dim": "#7BE8C8",
-                "secondary-container": "#0E5544",
-                /* Needs CA / active step / attention */
-                tertiary: "#F0B35A",
-                /* Blocked / mismatch / hard fail only */
-                error: "#ED6A6A",
-                "error-container": "#5C1A1A"
+                background: "#F6F3EC",
+                surface: "#FFFCF7",
+                "surface-container": "#FFFCF7",
+                "surface-container-low": "#F6F3EC",
+                "surface-container-high": "#FFFFFF",
+                "surface-container-highest": "#FFFFFF",
+                "surface-bright": "#FFFFFF",
+                "outline-variant": "#DAD3C3",
+                outline: "#6B6459",
+                "on-surface": "#1E1B16",
+                "on-surface-variant": "#6B6459",
+                "on-background": "#1E1B16",
+                primary: "#9C7A3C",
+                "primary-container": "#7A5E2C",
+                "on-primary": "#FFFFFF",
+                secondary: "#33604A",
+                "secondary-fixed-dim": "#4A7A60",
+                "secondary-container": "#E4EDE7",
+                tertiary: "#A85C10",
+                error: "#8C2F2F",
+                "error-container": "#F3E0E0"
               },
               spacing: {
                 "container-max": "1440px",
@@ -55,71 +51,50 @@
                 "margin-mobile": "16px"
               },
               fontFamily: {
-                "label-sm": ["IBM Plex Mono"],
-                "label-md": ["IBM Plex Mono"],
-                "display-lg": ["Sora"],
-                "headline-md": ["Sora"],
-                "headline-lg": ["Sora"],
-                "body-md": ["Sora"],
-                "body-lg": ["Sora"]
+                "label-sm": ["IBM Plex Sans"],
+                "label-md": ["IBM Plex Sans"],
+                "display-lg": ["Source Serif 4"],
+                "headline-md": ["Source Serif 4"],
+                "headline-lg": ["Source Serif 4"],
+                "body-md": ["IBM Plex Sans"],
+                "body-lg": ["IBM Plex Sans"]
               }
             }
           }
         }
       </script>
+    <link rel="stylesheet" href="/static/dashboard-ledger.css?v=20260914-hover-all"/>
     <style>
         :root {
-            /* Surfaces */
-            --ink: #070B12;
-            --panel: #121A24;
-            --panel-raised: #182230;
-            --line: #2A3848;
-            /* Roles: CTA bright · success soft · warn · danger */
-            --teal: #36D6AE;
-            --teal-soft: #2BB896;
-            --teal-dim: rgba(54, 214, 174, 0.12);
-            --teal-glow: rgba(54, 214, 174, 0.22);
-            --amber: #F0B35A;
-            --amber-dim: rgba(240, 179, 90, 0.14);
-            --rose: #ED6A6A;
-            --rose-dim: rgba(237, 106, 106, 0.14);
-            --text: #F2F5F8;
-            --muted: #8B9BB0;
-            --font: "Sora", system-ui, sans-serif;
-            --mono: "IBM Plex Mono", ui-monospace, monospace;
+            /* Ledger tokens (mirrored in dashboard-ledger.css) */
+            --ink: #F6F3EC;
+            --panel: #FFFCF7;
+            --panel-raised: #FFFFFF;
+            --line: #DAD3C3;
+            --teal: #9C7A3C;
+            --teal-soft: #33604A;
+            --teal-dim: rgba(156, 122, 60, 0.12);
+            --teal-glow: transparent;
+            --amber: #A85C10;
+            --amber-dim: rgba(168, 92, 16, 0.12);
+            --rose: #8C2F2F;
+            --rose-dim: rgba(140, 47, 47, 0.12);
+            --text: #1E1B16;
+            --muted: #6B6459;
+            --font: "IBM Plex Sans", system-ui, sans-serif;
+            --mono: "IBM Plex Sans", system-ui, sans-serif;
         }
 
         body {
-            background-color: var(--ink);
-            background-image:
-                radial-gradient(ellipse 90% 55% at 12% -10%, rgba(54, 214, 174, 0.14), transparent 55%),
-                radial-gradient(ellipse 70% 45% at 100% 0%, rgba(240, 179, 90, 0.09), transparent 50%),
-                radial-gradient(ellipse 50% 40% at 70% 100%, rgba(43, 184, 150, 0.05), transparent 55%),
-                linear-gradient(180deg, #070B12 0%, #070B12 42%, #05080E 100%);
-            background-attachment: fixed;
+            background-color: #F6F3EC;
+            background-image: none;
             color: var(--text);
             font-family: var(--font);
             overflow-x: hidden;
             position: relative;
         }
-        body::before {
-            content: '';
-            position: fixed; inset: 0; z-index: 0; pointer-events: none;
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E");
-            opacity: 0.55;
-        }
-        body::after {
-            content: '';
-            position: fixed; inset: -20% -10%; z-index: 0; pointer-events: none;
-            background:
-                radial-gradient(circle at 20% 30%, rgba(54,214,174,0.08), transparent 28%),
-                radial-gradient(circle at 85% 15%, rgba(240,179,90,0.07), transparent 26%);
-            animation: auroraDrift 22s ease-in-out infinite alternate;
-        }
-        @keyframes auroraDrift {
-            from { transform: translate3d(0, 0, 0) scale(1); }
-            to { transform: translate3d(-2%, 3%, 0) scale(1.05); }
-        }
+        body::before,
+        body::after { display: none; }
         main.dashboard-main { position: relative; z-index: 1; }
 
         .material-symbols-outlined {
@@ -188,61 +163,62 @@
         #audit-drawer {
             position: fixed; top: 0; right: -100%; width: 860px; max-width: 96vw;
             height: 100vh; z-index: 200;
-            background: #0E151E;
-            border-left: 1px solid var(--line);
+            background: #F6F3EC;
+            border-left: 1px solid #DAD3C3;
             transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex; flex-direction: column; overflow: hidden;
-            box-shadow: -16px 0 48px rgba(0, 0, 0, 0.35);
+            box-shadow: -12px 0 32px rgba(23, 35, 59, 0.12);
         }
         #audit-drawer.active { right: 0; }
 
         .drawer-issue {
-            border-radius: 10px;
+            border-radius: 8px;
             padding: 12px 14px;
-            border: 1px solid rgba(240,179,90,0.35);
-            background: rgba(240,179,90,0.08);
+            border: 1px solid rgba(168, 92, 16, 0.28);
+            background: rgba(168, 92, 16, 0.1);
         }
         .drawer-issue.is-bad {
-            border-color: rgba(255,168,160,0.4);
-            background: rgba(255,168,160,0.08);
+            border-color: rgba(140, 47, 47, 0.35);
+            background: rgba(140, 47, 47, 0.1);
         }
         .drawer-issue.is-ok {
-            border-color: rgba(54,214,174,0.35);
-            background: rgba(54,214,174,0.08);
+            border-color: rgba(51, 96, 74, 0.35);
+            background: rgba(51, 96, 74, 0.1);
         }
         .drawer-issue-head {
             display: flex; align-items: flex-start; gap: 10px;
         }
         .drawer-issue-icon {
-            font-size: 20px; margin-top: 1px; color: #F0B35A;
+            font-size: 20px; margin-top: 1px; color: #A85C10;
         }
-        .drawer-issue.is-bad .drawer-issue-icon { color: #FFA8A0; }
-        .drawer-issue.is-ok .drawer-issue-icon { color: #36D6AE; }
+        .drawer-issue.is-bad .drawer-issue-icon { color: #8C2F2F; }
+        .drawer-issue.is-ok .drawer-issue-icon { color: #33604A; }
         .drawer-issue-label {
-            font-size: 10px; font-weight: 700; text-transform: uppercase;
-            letter-spacing: 0.06em; color: #8B9BB0; margin-bottom: 2px;
+            font-size: 12px; font-weight: 600; text-transform: none;
+            letter-spacing: 0; color: #6B6459; margin-bottom: 2px;
         }
         .drawer-issue-title {
-            font-size: 14px; font-weight: 700; color: #F2F5F8; line-height: 1.35;
+            font-size: 14px; font-weight: 600; color: #17233B; line-height: 1.35;
+            font-family: "Source Serif 4", Georgia, serif;
         }
         .drawer-issue-more {
             margin-top: 8px; padding-top: 8px;
-            border-top: 1px solid rgba(255,255,255,0.06);
+            border-top: 1px solid rgba(23, 35, 59, 0.08);
             display: flex; flex-wrap: wrap; gap: 4px;
         }
         .drawer-issue-chip {
             display: inline-block; max-width: 100%;
             padding: 2px 7px; border-radius: 4px;
-            font-size: 10px; font-weight: 600; color: #F0B35A;
-            background: rgba(240,179,90,0.12);
-            border: 1px solid rgba(240,179,90,0.28);
+            font-size: 10px; font-weight: 600; color: #A85C10;
+            background: rgba(168, 92, 16, 0.12);
+            border: 1px solid rgba(168, 92, 16, 0.28);
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
 
         .drawer-fold {
-            border-radius: 10px;
-            border: 1px solid #2A3848;
-            background: #0E131A;
+            border-radius: 8px;
+            border: 1px solid #DAD3C3;
+            background: #FFFFFF;
             overflow: hidden;
         }
         .drawer-fold > summary {
@@ -250,43 +226,43 @@
             padding: 10px 12px;
             cursor: pointer;
             list-style: none;
-            font-size: 12px; font-weight: 700; color: #F2F5F8;
+            font-size: 13px; font-weight: 600; color: #17233B;
             user-select: none;
         }
         .drawer-fold > summary::-webkit-details-marker { display: none; }
         .drawer-fold > summary::after {
             content: 'expand_more';
             font-family: 'Material Symbols Outlined';
-            font-size: 18px; margin-left: auto; color: #8B9BB0;
+            font-size: 18px; margin-left: auto; color: #6B6459;
         }
         .drawer-fold[open] > summary::after { content: 'expand_less'; }
-        .drawer-fold > summary:hover { background: rgba(255,255,255,0.03); }
+        .drawer-fold > summary:hover { background: rgba(156, 122, 60, 0.08); }
         .drawer-fold-meta {
             margin-left: 4px;
-            font-size: 11px; font-weight: 600; color: #8B9BB0;
+            font-size: 11px; font-weight: 600; color: #6B6459;
         }
         .drawer-fold-body {
             padding: 0 12px 12px;
-            border-top: 1px solid rgba(255,255,255,0.04);
+            border-top: 1px solid #DAD3C3;
             padding-top: 10px;
         }
         .drawer-fold.has-attention > summary {
-            color: #F0B35A;
+            color: #A85C10;
         }
 
         .drawer-sticky-footer {
-            background: #141A22;
-            box-shadow: 0 -8px 24px rgba(0,0,0,0.25);
+            background: #FFFCF7;
+            box-shadow: 0 -1px 0 #DAD3C3;
         }
         .drawer-approve-btn {
             min-width: 112px;
-            box-shadow: 0 0 0 1px rgba(54,214,174,0.25);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
         }
 
         #audit-drawer-overlay {
             position: fixed; inset: 0; z-index: 190;
-            background: rgba(4, 8, 14, 0.72);
-            backdrop-filter: blur(3px);
+            background: rgba(23, 35, 59, 0.35);
+            backdrop-filter: blur(2px);
             opacity: 0; pointer-events: none;
             transition: opacity 0.3s ease;
         }
@@ -325,7 +301,7 @@
         #toast.active { transform: translateY(0); opacity: 1; }
 
         #invoice-rows-body tr { cursor: pointer; transition: background 0.15s ease; }
-        #invoice-rows-body tr:hover { background: rgba(54, 214, 174, 0.06); }
+        #invoice-rows-body tr:hover { background: rgba(156, 122, 60, 0.08); }
 
         .badge-approved, .badge-flagged, .badge-pending, .badge, .badge-hitl, .badge-rejected, .badge-confirmed {
             display: inline-flex; align-items: center; gap: 4px;
@@ -352,31 +328,31 @@
         }
 
         .audit-form label {
-            display: block; font-size: 11px; font-weight: 600; color: var(--muted);
-            margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.06em;
+            display: block; font-size: 12px; font-weight: 600; color: #6B6459;
+            margin-bottom: 5px; text-transform: none; letter-spacing: 0;
         }
         .audit-form input,
         .audit-form select,
         .audit-form textarea {
-            width: 100%; background: #0C141C;
-            border: 1px solid var(--line); border-radius: 8px;
-            padding: 9px 12px; font-size: 13px; color: var(--text);
-            font-family: var(--font);
+            width: 100%; background: #FFFFFF;
+            border: 1px solid #DAD3C3; border-radius: 8px;
+            padding: 9px 12px; font-size: 13px; color: #17233B;
+            font-family: inherit;
             transition: border-color 0.15s, box-shadow 0.15s; outline: none;
         }
         .audit-form input:focus,
         .audit-form select:focus,
         .audit-form textarea:focus {
-            border-color: var(--teal);
-            box-shadow: 0 0 0 3px rgba(54, 214, 174, 0.15);
+            border-color: #9C7A3C;
+            box-shadow: 0 0 0 3px rgba(156, 122, 60, 0.14);
         }
-        .audit-form select option { background: #121A24; }
-        .audit-form input[type="date"] { color-scheme: dark; }
+        .audit-form select option { background: #FFFFFF; color: #17233B; }
+        .audit-form input[type="date"] { color-scheme: light; }
         .audit-form input[type="number"] { font-variant-numeric: tabular-nums; }
 
-        .gstin-input.valid   { border-color: #36D6AE !important; }
-        .gstin-input.invalid { border-color: #ED6A6A !important; }
-        .validation-label { font-size: 11px; margin-top: 3px; display: block; }
+        .gstin-input.valid   { border-color: #33604A !important; }
+        .gstin-input.invalid { border-color: #8C2F2F !important; }
+        .validation-label { font-size: 11px; margin-top: 3px; display: block; color: #6B6459; }
 
         .timeline-item {
             display: flex; flex-direction: column; gap: 3px;
@@ -436,12 +412,13 @@
         @keyframes spin { to { transform: rotate(360deg); } }
 
         .tab-btn {
-            padding: 7px 14px; border-radius: 8px; font-size: 12px; font-weight: 600;
-            color: var(--muted); transition: all 0.15s; background: transparent; border: 1px solid transparent; cursor: pointer;
+            padding: 8px 12px; border-radius: 0; font-size: 12px; font-weight: 600;
+            color: #6B6459; transition: color 0.16s ease, border-color 0.16s ease, background-color 0.16s ease;
+            background: transparent; border: none; border-bottom: 2px solid transparent; cursor: pointer;
         }
-        .tab-btn:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+        .tab-btn:hover { color: #17233B; background: rgba(156, 122, 60, 0.06); border-bottom-color: rgba(156, 122, 60, 0.35); }
         .tab-btn.active {
-            background: var(--teal-dim); color: #7BE8C8; border-color: rgba(54, 214, 174, 0.28);
+            background: transparent; color: #17233B; border-bottom-color: #9C7A3C;
         }
 
         .progress-bar-container { height: 5px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; margin-top: 6px; }
@@ -451,69 +428,69 @@
         .bg-purple { background: #36D6AE; }
         .bg-red    { background: #ED6A6A; }
 
-        .empty-state { text-align: center; padding: 56px 28px; color: var(--muted); }
+        .empty-state { text-align: center; padding: 56px 28px; color: #6B6459; }
         .empty-state .empty-illu {
             width: 88px; height: 88px; margin: 0 auto 18px;
-            border-radius: 22px; display: flex; align-items: center; justify-content: center;
-            background:
-                radial-gradient(circle at 30% 25%, rgba(54,214,174,0.22), transparent 55%),
-                rgba(54,214,174,0.08);
-            border: 1px solid rgba(54, 214, 174, 0.28);
-            color: var(--teal);
-            box-shadow: 0 12px 28px rgba(0,0,0,0.22);
+            border-radius: 16px; display: flex; align-items: center; justify-content: center;
+            background: rgba(51, 96, 74, 0.1);
+            border: 1px solid rgba(51, 96, 74, 0.28);
+            color: #33604A;
+            box-shadow: none;
             position: relative;
         }
         .empty-state .empty-illu::after {
-            content: '';
-            position: absolute; inset: -6px;
-            border-radius: 26px;
-            border: 1px solid rgba(54,214,174,0.12);
-            pointer-events: none;
+            display: none;
         }
-        .empty-state.is-clear .empty-illu { color: #36D6AE; }
+        .empty-state.is-clear .empty-illu { color: #33604A; }
         .empty-state.is-muted .empty-illu {
-            color: #8B9BB0;
-            background: rgba(255,255,255,0.03);
-            border-color: #2A3848;
+            color: #6B6459;
+            background: #FFFCF7;
+            border-color: #DAD3C3;
         }
         .empty-state .empty-title {
-            font-size: 17px; font-weight: 800; color: #F2F5F8;
+            font-size: 18px; font-weight: 600; color: #17233B;
             letter-spacing: -0.02em; margin-bottom: 6px;
+            font-family: "Source Serif 4", Georgia, serif;
         }
         .empty-state .empty-sub {
-            font-size: 13px; line-height: 1.5; color: #8B9BB0;
-            max-width: 320px; margin: 0 auto 16px;
+            font-size: 13px; line-height: 1.5; color: #6B6459;
+            max-width: 360px; margin: 0 auto 16px;
         }
         .empty-state .empty-actions {
             display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
         }
         .empty-state .empty-btn {
             display: inline-flex; align-items: center; gap: 6px;
-            padding: 9px 14px; border-radius: 9px;
-            border: 1px solid #2A3848;
-            background: rgba(255,255,255,0.03);
-            color: #F2F5F8;
-            font-size: 12px; font-weight: 700;
+            padding: 9px 14px; border-radius: 8px;
+            border: 1px solid #DAD3C3;
+            background: #FFFFFF;
+            color: #17233B;
+            font-size: 12px; font-weight: 600;
             cursor: pointer;
-            transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+            transition: border-color 0.15s ease, background 0.15s ease;
         }
         .empty-state .empty-btn:hover {
-            border-color: rgba(54,214,174,0.45);
-            background: rgba(54,214,174,0.08);
-            transform: translateY(-1px);
+            border-color: #9C7A3C;
+            background: rgba(156, 122, 60, 0.1);
+            transform: none;
+            color: #9C7A3C;
         }
         .empty-state .empty-btn.is-primary {
-            border-color: rgba(54,214,174,0.45);
-            background: rgba(54,214,174,0.14);
-            color: #7BE8C8;
+            border-color: #9C7A3C;
+            background: #9C7A3C;
+            color: #FFFFFF;
+        }
+        .empty-state .empty-btn.is-primary:hover {
+            background: #826432;
+            border-color: #826432;
+            filter: none;
+            color: #FFFFFF;
         }
 
         .doc-viewer-pane {
             display: flex; flex-direction: column;
-            border-right: 1px solid var(--line);
-            background:
-                radial-gradient(ellipse 80% 50% at 50% 0%, rgba(54,214,174,0.06), transparent 55%),
-                #0D1219;
+            border-right: 1px solid #DAD3C3;
+            background: #FFFCF7;
             min-height: 400px;
         }
         #invoice-doc-viewport {
@@ -525,14 +502,7 @@
             padding: 20px;
             overflow: hidden;
             gap: 12px;
-            background:
-                linear-gradient(180deg, rgba(8,12,18,0.2), transparent 30%),
-                repeating-linear-gradient(
-                    0deg,
-                    transparent,
-                    transparent 19px,
-                    rgba(255,255,255,0.012) 20px
-                );
+            background: #F6F3EC;
         }
         .doc-stage {
             position: relative;
@@ -543,27 +513,20 @@
             min-height: 280px;
             max-height: calc(100% - 40px);
             padding: 14px;
-            border-radius: 14px;
-            background: linear-gradient(160deg, #1A2430 0%, #121820 100%);
-            border: 1px solid rgba(44, 60, 78, 0.9);
-            box-shadow:
-                0 1px 0 rgba(255,255,255,0.05) inset,
-                0 18px 40px rgba(0,0,0,0.4),
-                0 0 0 1px rgba(0,0,0,0.35);
+            border-radius: 10px;
+            background: #FFFFFF;
+            border: 1px solid #DAD3C3;
+            box-shadow: 0 1px 0 rgba(23, 35, 59, 0.04);
         }
         .doc-stage::before {
-            content: '';
-            position: absolute; inset: 7px;
-            border-radius: 10px;
-            border: 1px dashed rgba(54,214,174,0.12);
-            pointer-events: none;
+            display: none;
         }
         .invoice-preview-image {
             position: relative; z-index: 1;
             max-width: 100%; max-height: min(58vh, 520px);
             object-fit: contain;
             border-radius: 4px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+            box-shadow: 0 4px 16px rgba(23, 35, 59, 0.1);
             transition: transform 0.25s ease;
             background: #fff;
         }
@@ -573,8 +536,8 @@
             height: min(58vh, 520px);
             border: 0;
             border-radius: 4px;
-            background: #0a0c10;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+            background: #FFFFFF;
+            box-shadow: 0 4px 16px rgba(23, 35, 59, 0.1);
             transition: transform 0.25s ease;
         }
         .invoice-doc-fallback {
@@ -600,10 +563,11 @@
         }
         .queue-table tbody tr {
             transition: background-color 0.18s ease, box-shadow 0.18s ease;
+            cursor: pointer;
         }
         .queue-table tbody tr:hover {
-            background-color: rgba(54, 214, 174, 0.05) !important;
-            box-shadow: inset 3px 0 0 rgba(54, 214, 174, 0.55);
+            background-color: rgba(156, 122, 60, 0.07) !important;
+            box-shadow: inset 3px 0 0 #9C7A3C;
         }
 
         @keyframes softPulse {
@@ -624,25 +588,25 @@
             transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
         }
         .month-close-step.is-active {
-            transform: translateY(-1px);
+            transform: none;
         }
         .month-close-step.is-done .step-dot {
-            box-shadow: 0 0 0 4px rgba(54,214,174,0.15);
+            box-shadow: none;
         }
 
         .tab-btn {
             position: relative;
-            transition: color 0.18s ease, background 0.18s ease;
+            transition: color 0.16s ease, background 0.16s ease, border-color 0.16s ease;
         }
         .tab-btn.active {
-            box-shadow: 0 0 0 1px rgba(54,214,174,0.25);
+            box-shadow: none;
         }
 
         .page-title-accent {
-            background: linear-gradient(120deg, #FFFFFF 10%, #7BE8C8 90%);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
+            background: none;
+            -webkit-background-clip: unset;
+            background-clip: unset;
+            color: #17233B;
         }
 
         @media (prefers-reduced-motion: reduce) {
@@ -686,33 +650,37 @@
             text-overflow: ellipsis;
         }
         .nav-link:hover {
-            background: rgba(255,255,255,0.05);
-            color: var(--text);
-            border-color: rgba(42, 56, 72, 0.9);
+            background: rgba(255,255,255,0.07);
+            color: #F6F3EC;
+            border-color: transparent;
         }
-        .nav-link:active { transform: scale(0.99); }
+        .nav-link:hover .nav-ico,
+        .nav-link:hover .material-symbols-outlined {
+            color: #D4B56A;
+        }
+        .nav-link:active { transform: none; }
         .nav-link.active {
-            background: linear-gradient(90deg, rgba(54, 214, 174, 0.16), rgba(54, 214, 174, 0.04));
-            color: #7BE8C8;
-            border: 1px solid rgba(54, 214, 174, 0.22);
+            background: rgba(255, 255, 255, 0.1);
+            color: #F6F3EC;
+            border: 1px solid transparent;
         }
         .sidebar-cta {
             width: 100%;
             display: flex; align-items: center; justify-content: center; gap: 8px;
             padding: 11px 12px;
-            background: var(--teal);
-            color: #04281F;
+            background: #9C7A3C;
+            color: #FFFFFF;
             font-weight: 700;
             font-size: 13px;
             font-family: inherit;
             border: 0;
             border-radius: 10px;
             cursor: pointer;
-            transition: filter 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
-            box-shadow: 0 8px 20px rgba(54, 214, 174, 0.22);
+            transition: background-color 0.16s ease, box-shadow 0.16s ease;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
         }
-        .sidebar-cta:hover { filter: brightness(1.06); }
-        .sidebar-cta:active { transform: scale(0.98); }
+        .sidebar-cta:hover { background: #826432; filter: none; }
+        .sidebar-cta:active { transform: none; }
 
         .sidebar-shell {
             background: linear-gradient(180deg, #0E1620 0%, #070B12 100%);
@@ -940,8 +908,8 @@
             box-shadow: inset 0 0 0 1px rgba(54, 214, 174, 0.55);
         }
         .header-client-wrap select option {
-            background: #121A24;
-            color: #F2F5F8;
+            background: #FFFFFF;
+            color: #17233B;
         }
         .module-switch {
             display: inline-flex;
@@ -949,28 +917,29 @@
             gap: 2px;
             padding: 3px;
             border-radius: 10px;
-            border: 1px solid rgba(148, 163, 184, 0.22);
-            background: rgba(14, 19, 26, 0.65);
+            border: 1px solid #DAD3C3;
+            background: #EFEAE0;
             flex-shrink: 0;
         }
         .module-switch-btn {
             appearance: none;
             border: none;
             background: transparent;
-            color: #94a3b8;
+            color: #6B6459;
             font-size: 12px;
-            font-weight: 700;
-            letter-spacing: 0.04em;
-            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0;
+            text-transform: none;
             padding: 7px 12px;
             border-radius: 8px;
             cursor: pointer;
             transition: background 0.15s, color 0.15s;
         }
-        .module-switch-btn:hover { color: #e2e8f0; }
+        .module-switch-btn:hover { color: #17233B; background: rgba(255,255,255,0.55); }
         .module-switch-btn.is-active {
-            background: rgba(54, 214, 174, 0.18);
-            color: #36D6AE;
+            background: #FFFFFF;
+            color: #17233B;
+            border: 1px solid #DAD3C3;
         }
         #module-itr { display: none; }
         body.module-itr #module-gst { display: none; }
@@ -1311,33 +1280,33 @@
             margin-top: 12px;
             padding: 10px 12px;
             border-radius: 10px;
-            border: 1px solid rgba(240,179,90,0.35);
-            background: rgba(240,179,90,0.08);
-            color: #F2F5F8;
+            border: 1px solid rgba(168, 92, 16, 0.28);
+            background: rgba(168, 92, 16, 0.1);
+            color: #1E1B16;
             font-size: 12px;
             line-height: 1.4;
         }
-        .month-scope-banner .msb-text { flex: 1 1 180px; min-width: 0; color: #8B9BB0; }
-        .month-scope-banner .msb-text strong { color: #F2F5F8; font-weight: 700; }
+        .month-scope-banner .msb-text { flex: 1 1 180px; min-width: 0; color: #1E1B16; }
+        .month-scope-banner .msb-text strong { color: #17233B; font-weight: 700; }
         .month-scope-banner .msb-btn {
             padding: 6px 10px;
             border-radius: 8px;
-            border: 1px solid #2A3848;
-            background: rgba(255,255,255,0.04);
-            color: #F2F5F8;
+            border: 1px solid #DAD3C3;
+            background: #FFFFFF;
+            color: #17233B;
             font-size: 11px;
             font-weight: 700;
             cursor: pointer;
             font-family: inherit;
         }
         .month-scope-banner .msb-btn:hover {
-            border-color: rgba(54,214,174,0.45);
-            background: rgba(54,214,174,0.08);
+            border-color: #9C7A3C;
+            background: rgba(156, 122, 60, 0.1);
         }
         .month-scope-banner .msb-btn.is-primary {
-            border-color: rgba(240,179,90,0.45);
-            background: rgba(240,179,90,0.14);
-            color: #F0B35A;
+            border-color: #A85C10;
+            background: #A85C10;
+            color: #fff;
         }
 
         .client-context-bar {
@@ -1365,13 +1334,14 @@
             transition: color .15s, border-color .15s, background .15s;
         }
         .advanced-toggle:hover {
-            color: #F2F5F8;
-            border-color: #2A3848;
-            background: rgba(255,255,255,0.03);
+            color: #9C7A3C;
+            border-color: #9C7A3C;
+            background: rgba(156, 122, 60, 0.1);
         }
         .advanced-toggle[aria-expanded="true"] {
-            color: #F2F5F8;
-            border-color: #2A3848;
+            color: #9C7A3C;
+            border-color: #9C7A3C;
+            background: rgba(156, 122, 60, 0.1);
         }
         .advanced-panel {
             display: none;
@@ -1471,48 +1441,48 @@
             margin-top: 2px;
             padding: 10px 12px;
             border-radius: 8px;
-            border: 1px solid #2A3848;
-            background: rgba(255,255,255,0.02);
+            border: 1px solid #DAD3C3;
+            background: #FFFCF7;
             font-size: 12px;
             line-height: 1.4;
         }
         .supplier-portal-check.is-ok {
-            border-color: rgba(54,214,174,0.35);
-            background: rgba(54,214,174,0.06);
+            border-color: rgba(51, 96, 74, 0.4);
+            background: rgba(51, 96, 74, 0.08);
         }
         .supplier-portal-check.is-warn {
-            border-color: rgba(240,179,90,0.4);
-            background: rgba(240,179,90,0.08);
+            border-color: rgba(168, 92, 16, 0.4);
+            background: rgba(168, 92, 16, 0.1);
         }
         .supplier-portal-check.is-bad {
-            border-color: rgba(255,168,160,0.4);
-            background: rgba(255,168,160,0.08);
+            border-color: rgba(140, 47, 47, 0.4);
+            background: rgba(140, 47, 47, 0.08);
         }
         .supplier-portal-check .spc-head {
             display: flex;
             align-items: center;
             gap: 6px;
-            font-size: 10px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: #8B9BB0;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: none;
+            letter-spacing: 0;
+            color: #6B6459;
             margin-bottom: 6px;
         }
         .supplier-portal-check .spc-recheck {
             margin-left: auto;
-            font-size: 10px;
-            font-weight: 700;
-            color: #36D6AE;
+            font-size: 11px;
+            font-weight: 600;
+            color: #9C7A3C;
             background: transparent;
             border: none;
             cursor: pointer;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
+            text-transform: none;
+            letter-spacing: 0;
         }
         .supplier-portal-check .spc-recheck:hover { text-decoration: underline; }
-        .supplier-portal-check .spc-body { color: #F2F5F8; }
-        .supplier-portal-check .spc-meta { color: #8B9BB0; margin-top: 3px; font-size: 11px; }
+        .supplier-portal-check .spc-body { color: #17233B; }
+        .supplier-portal-check .spc-meta { color: #6B6459; margin-top: 3px; font-size: 11px; }
         .icon-btn {
             display: inline-flex; align-items: center; justify-content: center;
             width: 28px; height: 28px; border-radius: 8px;
@@ -1520,17 +1490,18 @@
             transition: color 0.15s, background 0.15s, border-color 0.15s;
         }
         .icon-btn:hover {
-            color: var(--text); background: rgba(255,255,255,0.04);
-            border-color: var(--line);
+            color: #9C7A3C;
+            background: rgba(156, 122, 60, 0.1);
+            border-color: #9C7A3C;
         }
 
         .audit-btn {
             display: inline-flex; align-items: center; gap: 5px;
             padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700;
-            color: #04281F; background: var(--teal); border: none; cursor: pointer;
-            transition: filter 0.15s, transform 0.15s;
+            color: #FFFFFF; background: #9C7A3C; border: none; cursor: pointer;
+            transition: filter 0.15s;
         }
-        .audit-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+        .audit-btn:hover { background: #826432; filter: none; transform: none; }
 
         .row-actions {
             display: inline-flex;
@@ -1544,17 +1515,17 @@
             width: 32px; height: 32px;
             display: inline-flex; align-items: center; justify-content: center;
             border-radius: 8px;
-            border: 1px solid #2A3848;
-            background: rgba(255,255,255,0.03);
-            color: #8B9BB0;
+            border: 1px solid #DAD3C3;
+            background: #FFFFFF;
+            color: #17233B;
             cursor: pointer;
             transition: all 0.15s ease;
             flex-shrink: 0;
         }
         .row-icon-btn .material-symbols-outlined { font-size: 18px; }
-        .row-icon-btn:hover { border-color: rgba(54,214,174,0.45); color: #F2F5F8; background: rgba(54,214,174,0.08); }
-        .row-icon-btn.is-approve { border-color: rgba(54,214,174,0.45); color: #36D6AE; }
-        .row-icon-btn.is-approve:hover { background: rgba(54,214,174,0.15); }
+        .row-icon-btn:hover { border-color: #9C7A3C; color: #17233B; background: rgba(156,122,60,0.1); }
+        .row-icon-btn.is-approve { border-color: rgba(51,96,74,0.45); color: #33604A; }
+        .row-icon-btn.is-approve:hover { background: rgba(51,96,74,0.12); }
         .row-icon-btn:disabled { opacity: 0.45; pointer-events: none; }
 
         .row-actions .audit-btn {
@@ -1644,7 +1615,7 @@
 
         /* GST Filing panel (Phase 1 portal handoff) */
         .gst-filing-panel {
-            border: 1px solid rgba(54, 214, 174, 0.18);
+            border: 1px solid #DAD3C3;
         }
         .gst-filing-head {
             display: flex;
@@ -1658,52 +1629,57 @@
             display: inline-flex;
             align-items: center;
             padding: 3px 10px;
-            border-radius: 999px;
-            font-size: 11px;
-            font-weight: 800;
-            letter-spacing: 0.04em;
-            text-transform: uppercase;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0;
+            text-transform: none;
         }
         .gst-filing-badge.is-pending {
-            background: rgba(154, 167, 181, 0.15);
-            color: #9aa7b5;
+            background: rgba(168, 92, 16, 0.12);
+            color: #A85C10;
+            border: 1px solid rgba(168, 92, 16, 0.35);
         }
         .gst-filing-badge.is-ready {
-            background: rgba(54, 214, 174, 0.15);
-            color: #36D6AE;
+            background: rgba(51, 96, 74, 0.12);
+            color: #33604A;
+            border: 1px solid rgba(51, 96, 74, 0.4);
         }
         .gst-filing-badge.is-blocked {
-            background: rgba(240, 179, 90, 0.15);
-            color: #F0B35A;
+            background: rgba(140, 47, 47, 0.12);
+            color: #8C2F2F;
+            border: 1px solid rgba(140, 47, 47, 0.35);
         }
         .gst-filing-badge.is-filed {
-            background: rgba(54, 214, 174, 0.22);
-            color: #9AF0D6;
+            background: rgba(51, 96, 74, 0.16);
+            color: #33604A;
+            border: 1px solid rgba(51, 96, 74, 0.45);
         }
         .gst-filing-btn {
             display: inline-flex;
             align-items: center;
             gap: 6px;
             padding: 8px 12px;
-            border-radius: 10px;
-            border: 1px solid rgba(255,255,255,0.12);
-            background: rgba(255,255,255,0.03);
-            color: #e8eef4;
+            border-radius: 8px;
+            border: 1px solid #DAD3C3;
+            background: #FFFFFF;
+            color: #17233B;
             font-size: 12px;
-            font-weight: 700;
+            font-weight: 600;
             cursor: pointer;
         }
         .gst-filing-btn:hover:not(:disabled) {
-            border-color: rgba(54, 214, 174, 0.4);
+            border-color: #9C7A3C;
+            background: rgba(156, 122, 60, 0.1);
         }
         .gst-filing-btn:disabled {
-            opacity: 0.4;
+            opacity: 0.45;
             cursor: not-allowed;
         }
         .gst-filing-btn.is-primary {
-            background: rgba(54, 214, 174, 0.14);
-            border-color: rgba(54, 214, 174, 0.35);
-            color: #36D6AE;
+            background: #9C7A3C;
+            border-color: #9C7A3C;
+            color: #FFFFFF;
         }
         .gst-filing-grid {
             display: grid;
@@ -1713,18 +1689,19 @@
             .gst-filing-grid { grid-template-columns: 1fr 1.15fr; }
         }
         .gst-filing-card {
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 12px;
-            padding: 14px;
-            background: rgba(0,0,0,0.18);
+            border: 1px solid #DAD3C3;
+            border-radius: 10px;
+            padding: 16px;
+            background: #FFFCF7;
         }
         .gst-filing-card-title {
-            font-size: 11px;
-            font-weight: 800;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            color: #9aa7b5;
-            margin-bottom: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+            text-transform: none;
+            color: #17233B;
+            margin-bottom: 12px;
+            font-family: "Source Serif 4", Georgia, serif;
         }
         .gst-filing-stats {
             list-style: none;
@@ -1738,76 +1715,77 @@
             display: flex;
             justify-content: space-between;
             gap: 8px;
-            font-size: 12px;
-            color: #9aa7b5;
+            font-size: 13px;
+            color: #6B6459;
         }
-        .gst-filing-stats strong { color: #e8eef4; font-weight: 700; }
+        .gst-filing-stats strong { color: #17233B; font-weight: 700; }
         .gst-filing-blockers {
             margin: 12px 0 0;
-            font-size: 12px;
-            color: #F0B35A;
+            font-size: 13px;
+            color: #A85C10;
             line-height: 1.45;
         }
-        .gst-filing-blockers.is-ok { color: #36D6AE; }
+        .gst-filing-blockers.is-ok { color: #33604A; }
         .gst-filing-portal-steps {
             margin: 0 0 14px;
             padding-left: 18px;
             font-size: 13px;
-            color: #c5d0db;
+            color: #1E1B16;
             line-height: 1.55;
         }
         .gst-filing-portal-steps a {
-            color: #36D6AE;
+            color: #9C7A3C;
             text-decoration: underline;
+            font-weight: 600;
         }
         .gst-filing-track { display: grid; gap: 8px; }
         .gst-filing-check {
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 12px;
-            color: #9aa7b5;
+            font-size: 13px;
+            color: #1E1B16;
             cursor: pointer;
         }
-        .gst-filing-check input { accent-color: #36D6AE; }
+        .gst-filing-check input { accent-color: #9C7A3C; }
         .gst-filing-arn-row label {
             display: block;
-            font-size: 10px;
-            font-weight: 700;
-            letter-spacing: 0.06em;
-            text-transform: uppercase;
-            color: #9aa7b5;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0;
+            text-transform: none;
+            color: #6B6459;
             margin-bottom: 4px;
         }
         .gst-filing-arn-row input {
             width: 100%;
             padding: 8px 10px;
             border-radius: 8px;
-            border: 1px solid rgba(255,255,255,0.12);
-            background: #0E131A;
-            color: #e8eef4;
+            border: 1px solid #DAD3C3;
+            background: #FFFFFF;
+            color: #17233B;
             font-size: 13px;
+        }
+        .gst-filing-arn-row input::placeholder {
+            color: #6B6459;
+            opacity: 0.85;
         }
 
         .month-close-strip {
             margin-top: 12px;
-            padding: 14px 16px;
-            border-radius: 14px;
-            border: 1px solid rgba(54,214,174,0.22);
-            background:
-                linear-gradient(135deg, rgba(54,214,174,0.1), rgba(20,30,40,0.92) 55%),
-                linear-gradient(165deg, rgba(26,38,51,0.95), rgba(14,22,32,0.98));
-            box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 14px 36px rgba(0,0,0,0.2);
+            padding: 18px 20px;
+            border-radius: 10px;
+            border: 1px solid #DAD3C3;
+            background: #FFFFFF;
+            box-shadow: 0 1px 0 rgba(23, 35, 59, 0.04);
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 16px;
             position: relative;
             overflow: hidden;
         }
         .month-close-strip::before {
-            content: '';
-            position: absolute; top: 0; left: 0; right: 0; height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(54,214,174,0.55), transparent);
+            display: none;
         }
         .month-close-head {
             display: flex;
@@ -1817,52 +1795,57 @@
         }
         .month-close-icon {
             font-size: 22px;
-            color: #36D6AE;
-            font-variation-settings: 'FILL' 1;
+            color: #9C7A3C;
+            font-variation-settings: 'FILL' 0;
         }
         .month-close-title {
-            font-size: 11px;
-            font-weight: 800;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            color: #8B9BB0;
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            text-transform: none;
+            color: #17233B;
+            font-family: "Source Serif 4", Georgia, serif;
         }
         .month-close-period {
-            font-size: 14px;
-            font-weight: 700;
-            color: #F2F5F8;
+            font-size: 13px;
+            font-weight: 500;
+            color: #6B6459;
         }
         .month-close-ready {
             margin-left: auto;
             padding: 6px 12px;
-            border-radius: 999px;
-            font-size: 11px;
-            font-weight: 800;
-            letter-spacing: 0.04em;
-            text-transform: uppercase;
-            border: 1px solid #2A3848;
-            color: #8B9BB0;
-            background: rgba(255,255,255,0.03);
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0;
+            text-transform: none;
+            border: 1px solid #DAD3C3;
+            color: #1E1B16;
+            background: #FFFCF7;
         }
         .month-close-ready.is-ready {
-            color: #04281F;
-            background: #36D6AE;
-            border-color: #36D6AE;
+            color: #33604A;
+            background: rgba(51, 96, 74, 0.12);
+            border-color: rgba(51, 96, 74, 0.45);
         }
         .month-close-ready.is-blocked {
-            color: #FFA8A0;
-            background: rgba(255,168,160,0.12);
-            border-color: rgba(255,168,160,0.35);
+            color: #8C2F2F;
+            background: rgba(140, 47, 47, 0.12);
+            border-color: rgba(140, 47, 47, 0.4);
         }
         .month-close-ready.is-pending {
-            color: #F0B35A;
-            background: rgba(240,179,90,0.12);
-            border-color: rgba(240,179,90,0.35);
+            color: #A85C10;
+            background: rgba(168, 92, 16, 0.12);
+            border-color: rgba(168, 92, 16, 0.4);
         }
         .month-close-stats {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 8px;
+            gap: 0;
+            border: 1px solid #DAD3C3;
+            border-radius: 8px;
+            background: #FFFCF7;
+            overflow: hidden;
         }
         @media (min-width: 768px) {
             .month-close-stats {
@@ -1875,33 +1858,38 @@
             }
         }
         .month-close-stat {
-            padding: 10px 12px;
-            border-radius: 10px;
-            border: 1px solid #2A3848;
-            background: rgba(10,16,24,0.55);
+            padding: 14px 16px;
+            border-radius: 0;
+            border: none;
+            border-right: 1px solid #DAD3C3;
+            background: transparent;
             min-width: 0;
         }
+        .month-close-stat:last-child { border-right: none; }
         .month-close-stat .lbl {
             display: block;
-            font-size: 10px;
-            font-weight: 700;
-            letter-spacing: 0.06em;
-            text-transform: uppercase;
-            color: #8B9BB0;
-            margin-bottom: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0;
+            text-transform: none;
+            color: #6B6459;
+            margin-bottom: 6px;
         }
         .month-close-stat .val {
-            font-size: 18px;
-            font-weight: 800;
-            color: #F2F5F8;
+            font-size: 22px;
+            font-weight: 600;
+            color: #17233B;
             font-variant-numeric: tabular-nums;
+            font-family: "Source Serif 4", Georgia, serif;
+            letter-spacing: -0.03em;
+            line-height: 1.1;
         }
-        .month-close-stat .val.is-ok { color: #36D6AE; }
-        .month-close-stat .val.is-warn { color: #F0B35A; }
-        .month-close-stat .val.is-bad { color: #FFA8A0; }
+        .month-close-stat .val.is-ok { color: #33604A; }
+        .month-close-stat .val.is-warn { color: #A85C10; }
+        .month-close-stat .val.is-bad { color: #8C2F2F; }
         .month-close-blockers {
-            font-size: 12px;
-            color: #8B9BB0;
+            font-size: 13px;
+            color: #6B6459;
             line-height: 1.45;
         }
         .month-close-blockers:empty { display: none; }
@@ -1909,7 +1897,11 @@
         .month-close-steps {
             display: grid;
             grid-template-columns: 1fr;
-            gap: 8px;
+            gap: 0;
+            border: 1px solid #DAD3C3;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #FFFCF7;
         }
         @media (min-width: 900px) {
             .month-close-steps {
@@ -1920,32 +1912,37 @@
             display: flex;
             gap: 10px;
             align-items: flex-start;
-            padding: 10px 12px;
-            border-radius: 10px;
-            border: 1px solid #2A3848;
-            background: rgba(10,16,24,0.45);
+            padding: 14px 14px 14px 12px;
+            border-radius: 0;
+            border: none;
+            border-right: 1px solid #DAD3C3;
+            background: transparent;
         }
+        .month-close-step:last-child { border-right: none; }
         .month-close-step.is-done {
-            border-color: rgba(54,214,174,0.35);
-            background: rgba(54,214,174,0.08);
+            border-color: transparent;
+            background: rgba(51, 96, 74, 0.12);
         }
         .month-close-step.is-active {
-            border-color: rgba(240,179,90,0.45);
-            background: rgba(240,179,90,0.08);
+            border-color: transparent;
+            background: rgba(156, 122, 60, 0.14);
         }
         .step-dot {
-            width: 10px; height: 10px; margin-top: 4px;
+            width: 22px; height: 22px; margin-top: 0;
             border-radius: 50%;
-            background: #2A3848;
+            background: #FFFFFF;
+            border: 1.5px solid #DAD3C3;
             flex-shrink: 0;
+            display: grid;
+            place-items: center;
         }
-        .month-close-step.is-done .step-dot { background: #36D6AE; }
-        .month-close-step.is-active .step-dot { background: #F0B35A; }
+        .month-close-step.is-done .step-dot { background: #33604A; border-color: #33604A; }
+        .month-close-step.is-active .step-dot { background: #fff; border-color: #9C7A3C; }
         .step-title {
-            font-size: 12px; font-weight: 800; color: #F2F5F8;
+            font-size: 13px; font-weight: 600; color: #17233B;
         }
         .step-sub {
-            font-size: 11px; color: #8B9BB0; margin-top: 2px;
+            font-size: 12px; color: #6B6459; margin-top: 2px;
         }
         .month-close-actions {
             display: flex;
@@ -1956,52 +1953,63 @@
             display: inline-flex; align-items: center; gap: 6px;
             padding: 8px 12px;
             border-radius: 8px;
-            border: 1px solid #2A3848;
-            background: rgba(255,255,255,0.03);
-            color: #F2F5F8;
-            font-size: 12px; font-weight: 700;
+            border: 1px solid #DAD3C3;
+            background: #FFFFFF;
+            color: #1E1B16;
+            font-size: 12px; font-weight: 600;
             cursor: pointer;
             transition: all 0.15s ease;
         }
-        .month-close-btn:hover { border-color: rgba(54,214,174,0.45); background: rgba(54,214,174,0.08); }
+        .month-close-btn:hover { border-color: #9C7A3C; background: rgba(156,122,60,0.1); }
         .month-close-btn.is-primary {
-            background: #36D6AE; color: #04281F; border-color: #36D6AE;
+            background: #9C7A3C; color: #fff; border-color: #9C7A3C;
         }
-        .month-close-btn.is-primary:hover { filter: brightness(1.06); }
+        .month-close-btn.is-primary:hover {
+            background: #826432;
+            border-color: #826432;
+            filter: none;
+        }
         .month-close-btn:disabled { opacity: 0.45; pointer-events: none; }
 
         .bulk-bar {
             display: inline-flex; align-items: center; gap: 8px;
             padding: 4px 8px; border-radius: 8px;
-            border: 1px solid rgba(54,214,174,0.35);
-            background: rgba(54,214,174,0.08);
+            border: 1px solid #DAD3C3;
+            background: #FFFCF7;
         }
         .bulk-bar-btn {
             padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: 700;
-            border: 1px solid #2A3848; background: rgba(255,255,255,0.04); color: #F2F5F8;
+            border: 1px solid #DAD3C3; background: #FFFFFF; color: #17233B;
             cursor: pointer;
+            transition: border-color 0.16s ease, background-color 0.16s ease, color 0.16s ease;
         }
-        .bulk-bar-btn.is-approve { border-color: rgba(54,214,174,0.45); color: #36D6AE; }
-        .bulk-bar-btn:hover { filter: brightness(1.08); }
+        .bulk-bar-btn.is-approve { border-color: rgba(51,96,74,0.45); color: #33604A; }
+        .bulk-bar-btn:hover {
+            border-color: #9C7A3C;
+            background: rgba(156, 122, 60, 0.1);
+            color: #9C7A3C;
+            filter: none;
+        }
         .queue-check {
-            width: 15px; height: 15px; accent-color: #36D6AE; cursor: pointer;
+            width: 15px; height: 15px; accent-color: #9C7A3C; cursor: pointer;
         }
         .queue-table th, .queue-table td { padding-left: 12px; padding-right: 12px; }
         .drawer-nav {
             display: inline-flex; align-items: center; gap: 4px;
-            padding: 2px; border-radius: 8px; border: 1px solid #2A3848;
-            background: rgba(255,255,255,0.03);
+            padding: 2px; border-radius: 8px; border: 1px solid #DAD3C3;
+            background: #FFFCF7;
         }
         .drawer-nav-btn {
             width: 28px; height: 28px; border: none; border-radius: 6px;
-            background: transparent; color: #8B9BB0; cursor: pointer;
+            background: transparent; color: #6B6459; cursor: pointer;
             display: inline-flex; align-items: center; justify-content: center;
+            transition: color 0.16s ease, background-color 0.16s ease;
         }
-        .drawer-nav-btn:hover { background: rgba(54,214,174,0.12); color: #F2F5F8; }
+        .drawer-nav-btn:hover { background: rgba(156, 122, 60, 0.1); color: #9C7A3C; }
         .drawer-nav-btn:disabled { opacity: 0.35; pointer-events: none; }
         .drawer-nav-pos {
             min-width: 48px; text-align: center;
-            font-size: 11px; font-weight: 700; color: #8B9BB0;
+            font-size: 11px; font-weight: 700; color: #6B6459;
             font-variant-numeric: tabular-nums;
         }
 
@@ -2188,15 +2196,15 @@
         select option { background: #121A24; color: var(--text); }
     </style>
 </head>
-<body class="min-h-screen antialiased selection:bg-primary/30 selection:text-white">
+<body class="min-h-screen antialiased selection:bg-primary/20 selection:text-on-surface" data-view="dashboard">
 
 <!-- ══════════════════════════════════════════════
      SIDEBAR
 ══════════════════════════════════════════════ -->
-<aside class="w-[272px] fixed left-0 top-0 sidebar-shell flex flex-col p-4 z-50">
+<aside class="fixed left-0 top-0 sidebar-shell flex flex-col p-4 z-50" style="width:240px;">
     <div class="brand-hero">
         <div class="brand-mark">
-            <img src="/static/logo.png?v=4" alt="Taxova.ai"/>
+            <img src="/static/logo-on-dark.png?v=2" alt="Taxova.ai"/>
             <div class="brand-text">
                 <div class="brand-name">Taxova.ai</div>
                 <div class="brand-sub">CA Workspace</div>
@@ -2237,7 +2245,7 @@
     </nav>
     <div class="sidebar-foot">
         <div class="sidebar-foot-links">
-            <button type="button" class="nav-link" id="nav-support-btn" data-nav="support" title="Shortcuts & help">
+            <button type="button" class="nav-link" id="nav-support-btn" data-nav="support" title="Shortcuts and help">
                 <span class="material-symbols-outlined nav-ico">help</span>
                 <span class="nav-label">Support</span>
             </button>
@@ -2248,7 +2256,10 @@
         </div>
         <button type="button" id="nav-new-audit-btn" class="sidebar-cta" title="Jump to Needs review and open the next bill">
             <span class="material-symbols-outlined text-[18px]">add</span>
-            New Audit
+            <span class="cta-label">New Audit</span>
+        </button>
+        <button type="button" class="sidebar-collapse-btn" id="sidebar-collapse-btn" title="Collapse sidebar" aria-label="Collapse sidebar">
+            <span class="material-symbols-outlined text-[18px]" id="sidebar-collapse-icon">left_panel_close</span>
         </button>
     </div>
 </aside>
@@ -2256,11 +2267,14 @@
 <!-- ══════════════════════════════════════════════
      TOP HEADER
 ══════════════════════════════════════════════ -->
-<header class="h-16 fixed top-0 right-0 left-[272px] glass-header border-b border-outline-variant z-40" style="overflow:visible;">
+<header class="h-16 fixed top-0 right-0 glass-header border-b border-outline-variant z-40" style="left:240px;overflow:visible;">
     <div class="h-full px-6 flex items-center justify-between gap-4" style="overflow:visible;">
         <div class="header-toolbar">
+            <button type="button" class="sidebar-open-btn" id="sidebar-open-btn" title="Open sidebar" aria-label="Open sidebar">
+                <span class="material-symbols-outlined text-[20px]">menu</span>
+            </button>
             <div class="hidden xl:block shrink-0 pr-2 workspace-label">
-                <div class="text-[10px] font-bold uppercase tracking-[0.14em] text-primary">Workspace</div>
+                <div class="text-[11px] font-semibold text-on-surface-variant">Workspace</div>
                 <div class="text-[13px] font-semibold text-on-surface leading-tight whitespace-nowrap">CA Review Queue</div>
             </div>
             <div class="module-switch" role="tablist" aria-label="Tax module">
@@ -2306,18 +2320,18 @@
             <div class="relative hidden md:block header-search-wrap">
                 <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant pointer-events-none">search</span>
                 <input id="global-search" type="text" placeholder="Search…"
-                    class="bg-surface-container-low border border-outline-variant rounded-[10px] pl-10 pr-3 py-2 text-[13px] focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder:text-on-surface-variant/50 text-on-surface"/>
+                    class="bg-surface-container-low border border-outline-variant rounded-[8px] pl-10 pr-3 py-2 text-[13px] focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder:text-on-surface-variant/50 text-on-surface"/>
             </div>
             <button id="sync-btn" title="Reload invoices and metrics from the database"
-                class="flex items-center gap-2 h-[38px] px-3.5 bg-primary text-on-primary rounded-[10px] text-[13px] font-bold hover:brightness-110 transition-all focus:outline-none shrink-0">
+                class="flex items-center gap-2 h-[38px] px-3.5 bg-primary text-on-primary rounded-[8px] text-[13px] font-semibold hover:brightness-105 transition-all focus:outline-none shrink-0">
                 <span class="material-symbols-outlined text-[16px] sync-icon">sync</span>
                 <span class="hidden sm:inline">Reload</span>
             </button>
             <div class="h-8 w-px bg-outline-variant shrink-0 hidden sm:block"></div>
-            <button type="button" class="p-2 text-on-surface-variant hover:text-white transition-colors relative rounded-[10px] hover:bg-white/5 shrink-0" title="Notifications">
+            <button type="button" class="p-2 text-on-surface-variant hover:text-on-surface transition-colors relative rounded-[8px] hover:bg-black/5 shrink-0" title="Notifications">
                 <span class="material-symbols-outlined text-[22px]">notifications</span>
             </button>
-            <div class="w-9 h-9 rounded-[10px] bg-gradient-to-br from-primary to-primary-container flex items-center justify-center text-on-primary font-bold text-[11px] border border-outline-variant shrink-0" title="CA session">
+            <div class="w-9 h-9 rounded-[8px] bg-[#17233B] flex items-center justify-center text-[#F6F3EC] font-semibold text-[11px] border border-outline-variant shrink-0" title="CA session">
                 CA
             </div>
         </div>
@@ -2327,48 +2341,39 @@
 <!-- ══════════════════════════════════════════════
      MAIN CONTENT
 ══════════════════════════════════════════════ -->
-<main class="dashboard-main pt-16 min-h-screen" style="margin-left: 272px;">
+<main class="dashboard-main pt-16 min-h-screen" style="margin-left: 240px;">
     <div id="module-gst" class="p-6 md:p-8 space-y-5 max-w-container-max mx-auto">
 
         <!-- ── Page Header ── -->
-        <div class="fade-up space-y-4">
+        <div class="fade-up space-y-4 view-hide-on-gstr">
             <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
                 <div class="min-w-0">
-                    <nav class="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-widest text-on-surface-variant mb-2">
+                    <nav class="flex items-center gap-1.5 text-[12px] font-medium text-on-surface-variant mb-2">
                         <a href="/" class="hover:text-primary transition-colors">Home</a>
                         <span class="material-symbols-outlined text-[12px]">chevron_right</span>
                         <span class="text-on-surface">Invoice Review</span>
                     </nav>
-                    <h2 class="text-[28px] md:text-[32px] font-extrabold tracking-tight page-title-accent">Your review queue</h2>
-                    <p class="text-[14px] text-on-surface-variant mt-1.5">
-                        Only bills that need a CA check. Clean ones stay out of your way.
-                        <span class="text-secondary font-semibold" id="record-count-txt">— pending</span>
+                    <h2 class="text-[28px] md:text-[32px] font-semibold tracking-tight page-title-accent">Your review queue</h2>
+                    <p class="text-[14px] text-on-surface-variant mt-1.5" id="record-count-txt">
+                        Loading invoices for this period.
                     </p>
-                    <div class="workflow-guide" id="workflow-guide" aria-label="How to close the month">
-                        <button type="button" class="wf-step is-clickable" data-wf="review" id="wf-step-review" title="Open Needs review">
-                            Review these
-                        </button>
-                        <span class="wf-arrow" aria-hidden="true">→</span>
-                        <button type="button" class="wf-step is-clickable" data-wf="import" id="wf-step-import" title="Import GSTR-2B file">
-                            Import 2B
-                        </button>
-                        <span class="wf-arrow" aria-hidden="true">→</span>
-                        <button type="button" class="wf-step is-clickable" data-wf="close" id="wf-step-close" title="Jump to month close">
-                            Close month
-                        </button>
-                        <span class="wf-hint" id="workflow-hint">Start with the queue</span>
+                    <div class="workflow-guide" id="workflow-guide" aria-hidden="true" style="display:none;">
+                        <button type="button" class="wf-step is-clickable" data-wf="review" id="wf-step-review">Review these</button>
+                        <button type="button" class="wf-step is-clickable" data-wf="import" id="wf-step-import">Import 2B</button>
+                        <button type="button" class="wf-step is-clickable" data-wf="close" id="wf-step-close">Close month</button>
+                        <span class="wf-hint" id="workflow-hint"></span>
                     </div>
                     <div id="month-scope-banner" class="month-scope-banner" style="display:none;" aria-live="polite"></div>
                 </div>
                 <div class="flex flex-wrap items-center gap-2 shrink-0">
                     <div class="metric-chip" title="Local review readiness — not GST portal filing status">
                         <span class="material-symbols-outlined text-secondary text-[14px]" style="font-variation-settings:'FILL' 1;">check_circle</span>
-                        <span class="uppercase tracking-wider text-[10px] font-bold">GSTR-1</span>
+                        <span class="text-[11px] font-semibold">GSTR-1</span>
                         <span id="status-gstr1-val" class="font-semibold">—</span>
                     </div>
                     <div class="metric-chip" title="Local review readiness — not GST portal filing status">
                         <span class="material-symbols-outlined text-tertiary text-[14px]">pending</span>
-                        <span class="uppercase tracking-wider text-[10px] font-bold text-tertiary">GSTR-3B</span>
+                        <span class="text-[11px] font-semibold text-tertiary">GSTR-3B</span>
                         <span id="status-gstr3b-val" class="font-semibold">—</span>
                     </div>
                 </div>
@@ -2378,7 +2383,7 @@
             <div class="panel client-context-bar">
                 <div class="client-context-primary">
                     <div class="flex items-center gap-2 min-w-0">
-                        <span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant shrink-0">Client GSTIN</span>
+                        <span class="text-[12px] font-semibold text-on-surface-variant shrink-0">Client GSTIN</span>
                         <button type="button" id="edit-client-gstin-btn" title="Edit client GSTIN (required for ITC)"
                             class="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-outline-variant hover:border-primary/40 transition-colors min-w-0">
                             <span class="material-symbols-outlined text-[16px] text-primary shrink-0">badge</span>
@@ -2472,28 +2477,28 @@
                     <div class="month-close-step" data-step="bills">
                         <span class="step-dot" id="step-bills-dot"></span>
                         <div class="step-body">
-                            <div class="step-title">1. Bills in</div>
+                            <div class="step-title">Bills in</div>
                             <div class="step-sub" id="step-bills-sub">WhatsApp / uploads</div>
                         </div>
                     </div>
                     <div class="month-close-step" data-step="gstr2b">
                         <span class="step-dot" id="step-2b-dot"></span>
                         <div class="step-body">
-                            <div class="step-title">2. Import 2B</div>
+                            <div class="step-title">Import 2B</div>
                             <div class="step-sub" id="step-2b-sub">Reconcile purchases</div>
                         </div>
                     </div>
                     <div class="month-close-step" data-step="queue">
                         <span class="step-dot" id="step-queue-dot"></span>
                         <div class="step-body">
-                            <div class="step-title">3. Clear queue</div>
+                            <div class="step-title">Clear queue</div>
                             <div class="step-sub" id="step-queue-sub">CA exceptions</div>
                         </div>
                     </div>
                     <div class="month-close-step" data-step="export">
                         <span class="step-dot" id="step-export-dot"></span>
                         <div class="step-body">
-                            <div class="step-title">4. Export draft</div>
+                            <div class="step-title">Export draft</div>
                             <div class="step-sub" id="step-export-sub">GSTR JSON</div>
                         </div>
                     </div>
@@ -2505,7 +2510,7 @@
                     </button>
                     <button type="button" id="month-close-import-btn" class="month-close-btn" title="Import GSTR-2B file">
                         <span class="material-symbols-outlined text-[16px]">compare_arrows</span>
-                        Import 2B
+                        Import GSTR-2B
                     </button>
                     <button type="button" id="month-close-nudge-btn" class="month-close-btn" title="WhatsApp nudge to client">
                         <span class="material-symbols-outlined text-[16px]">sms</span>
@@ -2524,7 +2529,7 @@
             <div class="gst-filing-head">
                 <div class="min-w-0">
                     <div class="flex items-center gap-2 flex-wrap">
-                        <h3 class="text-[15px] font-extrabold text-white m-0">GST Filing</h3>
+                        <h3 class="text-[15px] font-semibold text-on-surface m-0">GST Filing</h3>
                         <span id="gst-filing-ready-badge" class="gst-filing-badge is-pending">—</span>
                     </div>
                     <p class="text-[12px] text-on-surface-variant mt-1.5 mb-0">
@@ -2688,66 +2693,31 @@
             </div>
         </section>
 
-        <!-- ── KPI Cards Grid ── -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 fade-up fade-up-delay-1">
-
-            <div class="panel kpi-card p-5">
-                <div class="flex items-center justify-between mb-4">
-                    <span class="kpi-icon p-2.5 rounded-[10px] bg-tertiary/10 text-tertiary border border-tertiary/15">
-                        <span class="material-symbols-outlined text-[22px]">assignment_late</span>
-                    </span>
-                    <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Needs review</span>
-                </div>
-                <div class="text-[28px] font-extrabold text-white kpi-value" id="kpi-pending-count">—</div>
-                <div class="text-[12px] text-on-surface-variant mt-1" id="kpi-pending-subtext">Your CA queue</div>
-                <div class="mt-3">
-                    <span class="text-[10px] font-bold px-2.5 py-1 rounded-md bg-tertiary/10 text-tertiary border border-tertiary/20" id="kpi-pending-trend">+0 total</span>
-                </div>
+        <!-- ── Ledger KPI strip ── -->
+        <div class="ledger-strip fade-up fade-up-delay-1 view-hide-on-gstr" id="kpi-ledger-strip">
+            <div class="ledger-cell">
+                <div class="ledger-label">Needs review</div>
+                <div class="ledger-figure kpi-value" id="kpi-pending-count">—</div>
+                <div class="ledger-note" id="kpi-pending-subtext">Your CA queue</div>
+                <span id="kpi-pending-trend" class="sr-only">+0 total</span>
             </div>
-
-            <div class="panel kpi-card p-5">
-                <div class="flex items-center justify-between mb-4">
-                    <span class="kpi-icon p-2.5 rounded-[10px] bg-primary/10 text-primary border border-primary/15">
-                        <span class="material-symbols-outlined text-[22px]">receipt_long</span>
-                    </span>
-                    <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest" id="kpi-sales-label">Taxable Value</span>
-                </div>
-                <div class="text-[28px] font-extrabold text-white kpi-value" id="kpi-sales-total">₹0</div>
-                <div class="text-[12px] text-secondary mt-1 flex items-center gap-1 font-semibold" id="kpi-sales-subtext">
-                    <span class="material-symbols-outlined text-[14px]">trending_up</span> this period
-                </div>
-                <div class="mt-3">
-                    <span class="text-[10px] font-bold px-2.5 py-1 rounded-md bg-primary/10 text-primary border border-primary/20" id="kpi-sales-chip">Sales + purchases</span>
-                </div>
+            <div class="ledger-cell">
+                <div class="ledger-label" id="kpi-sales-label">Taxable value</div>
+                <div class="ledger-figure kpi-value" id="kpi-sales-total">₹0</div>
+                <div class="ledger-note" id="kpi-sales-subtext">This period</div>
+                <span id="kpi-sales-chip" class="sr-only">Sales + purchases</span>
             </div>
-
-            <div class="panel kpi-card p-5" id="kpi-itc-card" title="Jump to ITC summary">
-                <div class="flex items-center justify-between mb-4">
-                    <span class="kpi-icon p-2.5 rounded-[10px] bg-secondary/10 text-secondary border border-secondary/15">
-                        <span class="material-symbols-outlined text-[22px]">verified_user</span>
-                    </span>
-                    <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">ITC Claimable</span>
-                </div>
-                <div class="text-[28px] font-extrabold text-white kpi-value" id="kpi-itc-total">₹0</div>
-                <div class="text-[12px] text-on-surface-variant mt-1" id="kpi-itc-subtext">Line-level eligible GST · approved · buyer match</div>
-                <div class="mt-3 flex flex-wrap gap-2">
-                    <span class="text-[10px] font-bold px-2.5 py-1 rounded-md bg-secondary/10 text-secondary border border-secondary/20" id="kpi-itc-chip">Approved invoices</span>
-                    <span class="text-[10px] font-bold px-2.5 py-1 rounded-md bg-tertiary/10 text-tertiary border border-tertiary/20" id="kpi-itc-provisional" style="display:none;">Provisional ₹0</span>
-                </div>
+            <div class="ledger-cell" id="kpi-itc-card" title="Jump to ITC summary" style="cursor:pointer;">
+                <div class="ledger-label">ITC claimable</div>
+                <div class="ledger-figure kpi-value" id="kpi-itc-total">₹0</div>
+                <div class="ledger-note" id="kpi-itc-subtext">Eligible GST on approved bills</div>
+                <span id="kpi-itc-chip" class="sr-only">Approved invoices</span>
+                <span id="kpi-itc-provisional" class="sr-only" style="display:none;">Provisional ₹0</span>
             </div>
-
-            <div class="panel kpi-card p-5">
-                <div class="flex items-center justify-between mb-4">
-                    <span class="kpi-icon p-2.5 rounded-[10px] bg-error/10 text-error border border-error/15">
-                        <span class="material-symbols-outlined text-[22px]">report</span>
-                    </span>
-                    <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Flagged</span>
-                </div>
-                <div class="text-[28px] font-extrabold text-white kpi-value" id="kpi-flagged-count">—</div>
-                <div class="text-[12px] text-error mt-1 font-medium">Math / GSTIN issues</div>
-                <div class="mt-3">
-                    <span class="text-[10px] font-bold px-2.5 py-1 rounded-md bg-error/10 text-error border border-error/20">Needs CA Review</span>
-                </div>
+            <div class="ledger-cell">
+                <div class="ledger-label">Flagged</div>
+                <div class="ledger-figure kpi-value" id="kpi-flagged-count">—</div>
+                <div class="ledger-note">Math or GSTIN issues</div>
             </div>
         </div>
 
@@ -2820,7 +2790,7 @@
                     <p class="text-[11px] text-on-surface-variant m-0 mt-0.5" id="itc-issues-subtitle">Blocked, partial, or 2B mismatches this period</p>
                 </div>
                 <button type="button" id="itc-issues-view-all" class="text-[11px] font-bold text-secondary hover:text-white transition-colors" style="display:none;">
-                    View all in queue →
+                    View all in queue
                 </button>
             </div>
             <div id="itc-issues-list" class="itc-issues-list">
@@ -3169,9 +3139,9 @@
 <div id="audit-drawer-overlay"></div>
 <aside id="audit-drawer">
     <!-- Header -->
-    <div class="flex items-center justify-between px-6 py-4 border-b border-outline-variant shrink-0" style="background:#141A22;">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-outline-variant shrink-0 audit-drawer-header">
         <div class="min-w-0">
-            <h3 class="font-bold text-[16px] text-white truncate" id="drawer-invoice-num">Audit Invoice #—</h3>
+            <h3 class="font-semibold text-[17px] truncate audit-drawer-title" id="drawer-invoice-num">Audit Invoice #—</h3>
             <span class="text-[12px] text-on-surface-variant" id="drawer-invoice-id">DB ID: —</span>
         </div>
         <div class="flex items-center gap-2 shrink-0">
@@ -3184,7 +3154,7 @@
                     <span class="material-symbols-outlined text-[18px]">keyboard_arrow_down</span>
                 </button>
             </div>
-            <button id="close-drawer-btn" class="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant hover:text-white hover:bg-surface-container-high border border-transparent hover:border-outline-variant transition-all">
+            <button id="close-drawer-btn" class="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant border border-outline-variant audit-icon-btn transition-all">
                 <span class="material-symbols-outlined text-[20px]">close</span>
             </button>
         </div>
@@ -3197,11 +3167,11 @@
             <!-- Document Viewer -->
             <div class="doc-viewer-pane">
                 <div class="flex items-center justify-between px-4 py-3 border-b border-outline-variant shrink-0">
-                    <span class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Original Document</span>
+                    <span class="text-[13px] font-semibold text-on-surface audit-section-label">Original Document</span>
                     <div class="flex items-center gap-1">
-                        <button id="zoom-in-btn"  title="Zoom In"  class="w-7 h-7 rounded flex items-center justify-center text-on-surface-variant hover:text-white hover:bg-surface-container-high transition-colors"><span class="material-symbols-outlined text-[16px]">add</span></button>
-                        <button id="zoom-out-btn" title="Zoom Out" class="w-7 h-7 rounded flex items-center justify-center text-on-surface-variant hover:text-white hover:bg-surface-container-high transition-colors"><span class="material-symbols-outlined text-[16px]">remove</span></button>
-                        <button id="rotate-btn"   title="Rotate"   class="w-7 h-7 rounded flex items-center justify-center text-on-surface-variant hover:text-white hover:bg-surface-container-high transition-colors"><span class="material-symbols-outlined text-[16px]">rotate_right</span></button>
+                        <button id="zoom-in-btn"  title="Zoom In"  class="w-7 h-7 rounded flex items-center justify-center text-on-surface-variant audit-icon-btn transition-colors"><span class="material-symbols-outlined text-[16px]">add</span></button>
+                        <button id="zoom-out-btn" title="Zoom Out" class="w-7 h-7 rounded flex items-center justify-center text-on-surface-variant audit-icon-btn transition-colors"><span class="material-symbols-outlined text-[16px]">remove</span></button>
+                        <button id="rotate-btn"   title="Rotate"   class="w-7 h-7 rounded flex items-center justify-center text-on-surface-variant audit-icon-btn transition-colors"><span class="material-symbols-outlined text-[16px]">rotate_right</span></button>
                     </div>
                 </div>
                 <div id="invoice-doc-viewport">
@@ -3216,7 +3186,7 @@
             </div>
 
             <!-- Audit Forms: issue first → decide → details collapsed -->
-            <div class="audit-forms-pane flex flex-col overflow-y-auto p-4 gap-3 bg-surface-container">
+            <div class="audit-forms-pane flex flex-col overflow-y-auto p-4 gap-3">
 
                 <div id="drawer-primary-issue" class="drawer-issue is-warn" role="status">
                     <div class="drawer-issue-head">
@@ -3230,16 +3200,16 @@
                 </div>
 
                 <form id="audit-form" class="audit-form flex flex-col gap-3">
-                    <div class="rounded-lg border border-outline-variant p-3" style="background:#0E131A;">
-                        <h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2">Invoice</h4>
+                    <div class="audit-card rounded-lg border border-outline-variant p-3">
+                        <h4 class="audit-card-title mb-2">Invoice</h4>
                         <div class="grid grid-cols-2 gap-3">
                             <div><label for="f-inv-num">Invoice Number</label><input type="text" id="f-inv-num"/></div>
                             <div><label for="f-inv-date">Invoice Date</label><input type="date" id="f-inv-date"/></div>
                         </div>
                     </div>
 
-                    <div class="rounded-lg border border-outline-variant p-3" style="background:#0E131A;">
-                        <h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2">Supplier</h4>
+                    <div class="audit-card rounded-lg border border-outline-variant p-3">
+                        <h4 class="audit-card-title mb-2">Supplier</h4>
                         <div class="flex flex-col gap-3">
                             <div><label for="f-sup-name">Supplier Legal Name</label><input type="text" id="f-sup-name"/></div>
                             <div>
@@ -3250,8 +3220,8 @@
                         </div>
                     </div>
 
-                    <div class="rounded-lg border border-outline-variant p-3" style="background:#0E131A;">
-                        <h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2">Amounts</h4>
+                    <div class="audit-card rounded-lg border border-outline-variant p-3">
+                        <h4 class="audit-card-title mb-2">Amounts</h4>
                         <div class="grid grid-cols-2 gap-3 mb-3">
                             <div><label for="f-taxable">Taxable Value (₹)</label><input type="number" step="0.01" id="f-taxable"/></div>
                             <div><label for="f-grand">Grand Total (₹)</label><input type="number" step="0.01" id="f-grand"/></div>
@@ -3294,8 +3264,8 @@
                             Recipient, category &amp; ITC status
                         </summary>
                         <div class="drawer-fold-body flex flex-col gap-3">
-                            <div class="rounded-lg border border-outline-variant p-3" style="background:#0d1018;">
-                                <h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2">Recipient</h4>
+                            <div class="audit-card rounded-lg border border-outline-variant p-3">
+                                <h4 class="audit-card-title mb-2">Recipient</h4>
                                 <div class="flex flex-col gap-3">
                                     <div><label for="f-rec-name">Recipient Name</label><input type="text" id="f-rec-name"/></div>
                                     <div>
@@ -3305,8 +3275,8 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="rounded-lg border border-outline-variant p-3" style="background:#0d1018;">
-                                <h4 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2">Supply &amp; ITC</h4>
+                            <div class="audit-card rounded-lg border border-outline-variant p-3">
+                                <h4 class="audit-card-title mb-2">Supply &amp; ITC</h4>
                                 <div class="grid grid-cols-2 gap-3 mb-3">
                                     <div>
                                         <label for="f-category">Business Category</label>
@@ -3423,19 +3393,19 @@
     <!-- Sticky decide footer -->
     <div class="drawer-sticky-footer shrink-0 flex items-center justify-between gap-3 px-5 py-3 border-t border-outline-variant">
         <div class="flex items-center gap-2 min-w-0">
-            <button id="drawer-cancel-btn" class="px-3 py-2 rounded-md text-[12px] font-bold text-on-surface-variant hover:text-white hover:bg-surface-container-high border border-outline-variant transition-colors">
+            <button id="drawer-cancel-btn" class="px-3 py-2 rounded-md text-[12px] font-semibold text-on-surface border border-outline-variant audit-sec-btn transition-colors">
                 Close
             </button>
-            <button id="drawer-save-btn" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-[12px] font-bold text-on-surface-variant border border-outline-variant hover:border-primary/40 hover:text-white transition-all">
+            <button id="drawer-save-btn" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-[12px] font-semibold text-on-surface border border-outline-variant audit-sec-btn transition-all">
                 <span class="material-symbols-outlined text-[15px]">save</span> Save
             </button>
             <span class="text-[11px] text-on-surface-variant hidden md:inline truncate" title="Keyboard shortcuts">A approve · R reject · J/K next</span>
         </div>
         <div class="flex items-center gap-2 shrink-0">
-            <button id="drawer-reject-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-md text-[13px] font-bold text-error border border-error/30 hover:bg-error/10 transition-all">
+            <button id="drawer-reject-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-md text-[13px] font-semibold audit-reject-btn transition-all">
                 <span class="material-symbols-outlined text-[16px]">cancel</span> Reject
             </button>
-            <button id="drawer-approve-btn" class="drawer-approve-btn flex items-center gap-2 px-4 py-2.5 rounded-md text-[13px] font-bold text-on-primary transition-all bg-primary hover:brightness-110">
+            <button id="drawer-approve-btn" class="drawer-approve-btn flex items-center gap-2 px-4 py-2.5 rounded-md text-[13px] font-semibold text-white transition-all">
                 <span class="material-symbols-outlined text-[18px]" style="font-variation-settings:'FILL' 1;">task_alt</span> Approve
             </button>
         </div>
@@ -3585,6 +3555,6 @@
 <!-- Toast -->
 <div id="toast">Filing updated successfully!</div>
 
-<script src="/static/dashboard.js?v=20260911-header2"></script>
+<script src="/static/dashboard.js?v=20260914-drawer1"></script>
 </body>
 </html>
