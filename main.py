@@ -238,6 +238,10 @@ app = FastAPI(
     title="Taxova.ai — WhatsApp Webhook & CA Dashboard",
     version="0.2.0",
     lifespan=lifespan,
+    # Keep Swagger off /docs so the public how-to guide can own that path.
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/openapi.json",
 )
 
 
