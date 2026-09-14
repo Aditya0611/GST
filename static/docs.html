@@ -401,10 +401,11 @@ tailwind.config = {
     display: grid;
     gap: 0.5rem;
     margin: 1.25rem 0 1.5rem;
-    padding: 1rem;
-    border-radius: 12px;
-    background: #1C1528;
-    color: rgba(243, 237, 227, 0.88);
+    padding: 1rem 1.1rem;
+    border-radius: 10px;
+    background: #FFFCF7;
+    color: #17233B;
+    border: 1px solid var(--line);
     font-family: "IBM Plex Mono", ui-monospace, monospace;
     font-size: 12px;
     line-height: 1.55;
@@ -413,11 +414,11 @@ tailwind.config = {
   }
   .guide-figure {
     margin: 1.25rem 0 1.5rem;
-    border-radius: 14px;
+    border-radius: 12px;
     overflow: hidden;
     border: 1px solid var(--line);
-    background: #0f0c14;
-    box-shadow: 0 22px 48px -30px rgba(28, 21, 40, 0.55);
+    background: #F6F3EC;
+    box-shadow: 0 1px 0 rgba(23, 35, 59, 0.04);
   }
   .guide-figure img {
     display: block;
@@ -655,7 +656,7 @@ tailwind.config = {
         <p>
           Every major area of <a href="/dashboard">/dashboard</a>: what it is for,
           what you click, and how it fits WhatsApp → review → filing prep.
-          Screenshots are from the live dark UI.
+          Screenshots match the current Ledger UI (paper workspace, ink-navy sidebar, brass actions).
         </p>
       </section>
 
@@ -676,9 +677,9 @@ Form 16 / AIS     ──────►  Income Tax module                    (f
           <table class="docs-table">
             <thead><tr><th>Zone</th><th>What it is</th></tr></thead>
             <tbody>
-              <tr><td><strong>A — Sidebar</strong></td><td>Navigation + active client + sign out</td></tr>
-              <tr><td><strong>B — Top header</strong></td><td>GST / Income Tax switch, client, month, search, reload</td></tr>
-              <tr><td><strong>C — Main GST body</strong></td><td>Review queue hero, GSTIN bar, month close, filing, pilot, invoice table</td></tr>
+              <tr><td><strong>A — Sidebar</strong></td><td>Ink-navy nav + active client + New Audit + sign out</td></tr>
+              <tr><td><strong>B — Top header</strong></td><td>Menu (when sidebar hidden), GST / Income Tax, client, month, search, Reload</td></tr>
+              <tr><td><strong>C — Main GST body</strong></td><td>Review queue, GSTIN bar, month close, KPI strip, filing, pilot, invoice table</td></tr>
             </tbody>
           </table>
         </div>
@@ -694,17 +695,18 @@ Form 16 / AIS     ──────►  Income Tax module                    (f
           <table class="docs-table">
             <thead><tr><th>Part</th><th>Purpose</th></tr></thead>
             <tbody>
-              <tr><td><strong>Taxova.ai logo</strong></td><td>Brand / home feel</td></tr>
-              <tr><td><strong>CA WORKSPACE</strong></td><td>Shows you are in the CA product (admin key may show “PLATFORM ADMIN”)</td></tr>
+              <tr><td><strong>Taxova.ai logo</strong></td><td>Brand mark on the ink-navy rail</td></tr>
+              <tr><td><strong>CA Workspace</strong></td><td>Shows you are in the CA product (admin key may show platform/admin firm chip)</td></tr>
               <tr><td><strong>Active client card</strong></td><td>Who you are reviewing. <strong>Switch</strong> focuses the client picker</td></tr>
               <tr><td><strong>Dashboard</strong></td><td>Main GST review home</td></tr>
               <tr><td><strong>Audit Queue</strong></td><td>Jumps to Needs review / invoice table</td></tr>
-              <tr><td><strong>GSTR Filing</strong></td><td>Scrolls to GST Filing panel (prep + export, not live e-file)</td></tr>
+              <tr><td><strong>GSTR Filing</strong></td><td>Focuses GST Filing panel (prep + export, not live e-file)</td></tr>
               <tr><td><strong>WA Simulator</strong></td><td>Test WhatsApp uploads without Meta (local / staging)</td></tr>
               <tr><td><strong>Settings</strong></td><td>CA login, API key, logout</td></tr>
               <tr><td><strong>Support</strong></td><td>Shortcuts / help</td></tr>
               <tr><td><strong>Sign out</strong></td><td>End CA session for this firm</td></tr>
-              <tr><td><strong>+ New Audit</strong></td><td>Open next bill that needs review</td></tr>
+              <tr><td><strong>Hide sidebar control</strong></td><td>Fully hides the rail; use the header menu button to open it again</td></tr>
+              <tr><td><strong>New Audit</strong></td><td>Brass CTA — open next bill that needs review</td></tr>
             </tbody>
           </table>
         </div>
@@ -724,12 +726,13 @@ Form 16 / AIS     ──────►  Income Tax module                    (f
           <table class="docs-table">
             <thead><tr><th>Part</th><th>Purpose</th></tr></thead>
             <tbody>
+              <tr><td><strong>Menu (sidebar open)</strong></td><td>Appears when the sidebar is hidden — opens the rail again</td></tr>
               <tr><td><strong>Workspace · CA Review Queue</strong></td><td>Context label (hides on narrower screens)</td></tr>
               <tr><td><strong>GST | Income Tax</strong></td><td>Module switch. GST = invoices &amp; filing prep. Income Tax = Form 16 / AIS / estimates</td></tr>
               <tr><td><strong>Client dropdown</strong></td><td>Pick taxpayer (phone + name + GSTIN)</td></tr>
               <tr><td><strong>Month picker</strong></td><td>Filter invoices / month-close / filing to one return period</td></tr>
               <tr><td><strong>Search</strong></td><td>Filter invoice list by number / supplier / GSTIN</td></tr>
-              <tr><td><strong>Reload</strong></td><td>Refresh invoices + metrics + pilot stats</td></tr>
+              <tr><td><strong>Reload</strong></td><td>Brass primary — refresh invoices + metrics + pilot stats</td></tr>
               <tr><td><strong>Bell / CA chip</strong></td><td>Notifications placeholder · session indicator</td></tr>
             </tbody>
           </table>
@@ -752,8 +755,9 @@ Form 16 / AIS     ──────►  Income Tax module                    (f
             <thead><tr><th>Part</th><th>Purpose</th></tr></thead>
             <tbody>
               <tr><td><strong>Your review queue</strong></td><td>Home for CA exception review</td></tr>
-              <tr><td><strong>GSTR-1 / GSTR-3B chips</strong></td><td>Local readiness (not portal filing status)</td></tr>
-              <tr><td><strong>Review these / Import 2B / Close month</strong></td><td>Shortcuts into queue, 2B import, month-close strip</td></tr>
+              <tr><td><strong>GSTR-1 / GSTR-3B chips</strong></td><td>Local readiness stamps (not portal filing status)</td></tr>
+              <tr><td><strong>KPI strip</strong></td><td>Needs review · Taxable value · ITC claimable · Flagged</td></tr>
+              <tr><td><strong>Audit drawer</strong></td><td>Paper slide-over to edit invoice fields, then Approve / Reject</td></tr>
             </tbody>
           </table>
         </div>
@@ -859,10 +863,10 @@ Form 16 / AIS     ──────►  Income Tax module                    (f
           <table class="docs-table">
             <thead><tr><th>Part</th><th>Purpose</th></tr></thead>
             <tbody>
-              <tr><td><strong>Tabs</strong></td><td>Needs review / Pending / Approved / ITC / All</td></tr>
-              <tr><td><strong>Row</strong></td><td>One WhatsApp (or uploaded) invoice</td></tr>
+              <tr><td><strong>Tabs</strong></td><td>Needs review / ITC issues / Approved / All bills</td></tr>
+              <tr><td><strong>Row</strong></td><td>One WhatsApp (or uploaded) invoice — hover shows brass edge</td></tr>
               <tr><td><strong>Risk / reason</strong></td><td>Why it needs a CA (calc, GSTIN, 2B, ITC, etc.)</td></tr>
-              <tr><td><strong>Open / Approve</strong></td><td>Drawer audit or quick approve when ready</td></tr>
+              <tr><td><strong>Audit / Approve</strong></td><td>Open paper audit drawer or quick-approve when ready</td></tr>
               <tr><td><strong>Bulk bar</strong></td><td>Multi-select approve</td></tr>
             </tbody>
           </table>

@@ -2,7 +2,7 @@
 
 This document explains **every major area** of the CA dashboard (`/dashboard`): what it is for, what you click, and how it fits the WhatsApp → review → filing-prep flow.
 
-Screenshots were captured from a local run (dark UI). Paths are relative to this repo.
+Screenshots match the current Ledger UI (paper workspace, ink-navy sidebar, brass actions). Paths are relative to this repo.
 
 ---
 
@@ -23,9 +23,9 @@ Form 16 / AIS     ──────►  Income Tax module                    (f
 
 | Zone | What it is |
 |------|------------|
-| **A — Sidebar** | Navigation + active client + sign out |
-| **B — Top header** | GST / Income Tax switch, client, month, search, reload |
-| **C — Main GST body** | Review queue hero, GSTIN bar, month close, filing, pilot, invoice table |
+| **A — Sidebar** | Ink-navy nav + active client + New Audit + sign out |
+| **B — Top header** | Menu (when sidebar hidden), GST / Income Tax, client, month, search, Reload |
+| **C — Main GST body** | Review queue, GSTIN bar, month close, KPI strip, filing, pilot, invoice table |
 
 ---
 
@@ -35,17 +35,18 @@ Form 16 / AIS     ──────►  Income Tax module                    (f
 
 | Part | Purpose |
 |------|---------|
-| **Taxova.ai logo** | Brand / home feel |
-| **CA WORKSPACE** | Shows you are in the CA product (admin key may show “PLATFORM ADMIN”) |
+| **Taxova.ai logo** | Brand mark on the ink-navy rail |
+| **CA Workspace** | Shows you are in the CA product (admin key may show platform/admin firm chip) |
 | **Active client card** | Who you are reviewing right now. **Switch** focuses the client picker / clients nav |
 | **Dashboard** | Main GST review home |
 | **Audit Queue** | Jumps to Needs review / invoice table |
-| **GSTR Filing** | Scrolls to the **GST Filing** panel (prep + export, not live e-file) |
+| **GSTR Filing** | Focuses the **GST Filing** panel (prep + export, not live e-file) |
 | **WA Simulator** | Test WhatsApp uploads without Meta (local / staging) |
 | **Settings** | CA login, API key, logout |
 | **Support** | Shortcuts / help |
 | **Sign out** | End CA session for this firm |
-| **+ New Audit** | Open next bill that needs review |
+| **Hide sidebar control** | Fully hides the rail; use the header menu button to open it again |
+| **New Audit** | Brass CTA — open next bill that needs review |
 
 **If you see “Select a client” / “No clients yet”:** no clients are linked to this login. Use [`/ca-assign`](https://taxova.pro/ca-assign) or an admin key on a DB that already has clients. See also `docs/PILOT_RUNBOOK.md`.
 
@@ -57,12 +58,13 @@ Form 16 / AIS     ──────►  Income Tax module                    (f
 
 | Part | Purpose |
 |------|---------|
+| **Menu (sidebar open)** | Appears when the sidebar is hidden — opens the rail again |
 | **Workspace · CA Review Queue** | Context label (hides on narrower screens) |
 | **GST \| Income Tax** | Module switch. GST = invoices & filing prep. Income Tax = Form 16 / AIS / estimates |
 | **Client dropdown** | Pick which taxpayer you are working on (phone + name + GSTIN) |
 | **Month picker** | Filter invoices / month-close / filing to one return period (e.g. `Jul 2026`) |
 | **Search** | Filter invoice list by number / supplier / GSTIN |
-| **Reload** | Refresh invoices + metrics + pilot stats from the server |
+| **Reload** | Brass primary — refresh invoices + metrics + pilot stats from the server |
 | **Bell / CA chip** | Notifications placeholder · session indicator |
 
 **Tip for demos:** always pick a **client with GSTIN** and a **month that has bills**, or month close / filing will show “Not ready”.
@@ -78,8 +80,9 @@ Form 16 / AIS     ──────►  Income Tax module                    (f
 | Part | Purpose |
 |------|---------|
 | **Your review queue** | Home for CA exception review |
-| **GSTR-1 / GSTR-3B chips** | Local readiness (not portal filing status) |
-| **Review these / Import 2B / Close month** | Shortcuts into queue, 2B import, month-close strip |
+| **GSTR-1 / GSTR-3B chips** | Local readiness stamps (not portal filing status) |
+| **KPI strip** | Needs review · Taxable value · ITC claimable · Flagged |
+| **Audit drawer** | Paper slide-over to edit invoice fields, then Approve / Reject |
 
 ### 4.2 Client GSTIN bar
 
@@ -160,10 +163,10 @@ Criteria: [`docs/PILOT_CRITERIA.md`](PILOT_CRITERIA.md) · Runbook: [`docs/PILOT
 
 | Part | Purpose |
 |------|---------|
-| **Tabs** (Needs review / Pending / Approved / ITC / All) | Filter the work list |
-| **Row** | One WhatsApp (or uploaded) invoice |
+| **Tabs** (Needs review / ITC issues / Approved / All bills) | Filter the work list |
+| **Row** | One WhatsApp (or uploaded) invoice — hover shows brass edge |
 | **Risk / reason** | Why it needs a CA (calc, GSTIN, 2B, ITC, etc.) |
-| **Open / Approve** | Drawer audit or quick approve when ready |
+| **Audit / Approve** | Open paper audit drawer or quick-approve when ready |
 | **Bulk bar** | Multi-select approve |
 
 **Typical CA loop:** Needs review → open bill → fix fields if needed → Approve → next.
