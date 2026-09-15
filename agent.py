@@ -42,7 +42,7 @@ else:
     AGENT_MODEL = os.getenv("AGENT_MODEL", "models/gemini-2.5-flash")
 
 
-SYSTEM_INSTRUCTION = """You are the Taxova.ai Agent for Indian GST compliance.
+SYSTEM_INSTRUCTION = """You are the taxova.pro Agent for Indian GST compliance.
 
 You help clients and CAs with:
 - Input Tax Credit (ITC) eligibility and amounts on specific invoices

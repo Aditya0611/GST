@@ -812,7 +812,7 @@ async def _handle_text_message(
             f"• *Inward Expenses:* ₹{metrics['expenses_taxable']:,.2f}\n"
             f"• *Eligible ITC Claimed:* ₹{metrics['itc_claimed']:,.2f}\n\n"
             f"• *Pending CA Review:* {metrics['pending_review']} invoices\n\n"
-            f"🤖 _Taxova.ai Agent_"
+            f"🤖 _taxova.pro Agent_"
         )
         await whatsapp.send_reply(to=sender, message_id=message_id, body=summary_msg)
         return
@@ -840,7 +840,7 @@ async def _handle_text_message(
             to=sender,
             message_id=message_id,
             body=(
-                "👋 Hi! I am your *Taxova.ai* agent.\n\n"
+                "👋 Hi! I am your *taxova.pro* agent.\n\n"
                 "Send *GST invoice* photos/PDFs or your *Form 16* for ITR prep.\n"
                 "You can also ask:\n"
                 "• How much ITC on invoice #12?\n"
@@ -862,7 +862,7 @@ async def _handle_text_message(
         # WhatsApp has message length limits — keep reply tight
         if len(answer) > 3500:
             answer = answer[:3400] + "\n\n…(truncated)"
-        reply_body = f"{answer}\n\n🤖 _Taxova.ai Agent_"
+        reply_body = f"{answer}\n\n🤖 _taxova.pro Agent_"
         await whatsapp.send_reply(to=sender, message_id=message_id, body=reply_body)
     except Exception as e:
         logger.exception("Agent WhatsApp reply failed: %s", e)
@@ -870,7 +870,7 @@ async def _handle_text_message(
             to=sender,
             message_id=message_id,
             body=(
-                "👋 Hi! I am your *Taxova.ai* agent.\n\n"
+                "👋 Hi! I am your *taxova.pro* agent.\n\n"
                 "Send *GST invoice* photos/PDFs or your *Form 16* for ITR prep.\n"
                 "Or ask things like:\n"
                 "• How much ITC on invoice #12?\n"
