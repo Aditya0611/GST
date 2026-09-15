@@ -345,8 +345,9 @@ async def handle_webhook(request: Request, background_tasks: BackgroundTasks):
         )
 
         try:
-            # Map client profile context in database
+            # Map client profile context in database + ensure CA can see them
             await db.get_or_create_client(sender, contact_name)
+            await db.ensure_wa_client_linked(sender)
 
             if msg_type in ("image", "document"):
                 await _handle_media_message(msg, sender, message_id, msg_type, background_tasks)

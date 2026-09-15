@@ -3916,6 +3916,77 @@ async def link_client_to_ca(client_phone: str, invite_code: str) -> dict:
     return ca
 
 
+async def client_has_ca_link(client_phone: str) -> bool:
+    """True if this WhatsApp client is already assigned to a CA."""
+    conn = await get_connection()
+    try:
+        if IS_POSTGRES:
+            row = await conn.fetchrow(
+                "SELECT 1 FROM client_ca_links WHERE client_phone = $1",
+                client_phone,
+            )
+            return row is not None
+        cursor = await conn.execute(
+            "SELECT 1 FROM client_ca_links WHERE client_phone = ?",
+            (client_phone,),
+        )
+        return await cursor.fetchone() is not None
+    finally:
+        await conn.close()
+
+
+async def resolve_default_ca_invite() -> str | None:
+    """
+    Invite code used to auto-assign WhatsApp clients that have no CA link yet.
+    Order: DEFAULT_CA_INVITE_CODE env → sole CA in DB → demo invite 123456 if present.
+    """
+    env_code = (os.getenv("DEFAULT_CA_INVITE_CODE") or "").strip()
+    if env_code and await get_ca_by_invite_code(env_code):
+        return env_code
+
+    conn = await get_connection()
+    try:
+        if IS_POSTGRES:
+            rows = await conn.fetch("SELECT invite_code FROM cas ORDER BY invite_code ASC LIMIT 2")
+            codes = [r["invite_code"] for r in rows]
+        else:
+            cursor = await conn.execute(
+                "SELECT invite_code FROM cas ORDER BY invite_code ASC LIMIT 2"
+            )
+            codes = [r[0] for r in await cursor.fetchall()]
+    finally:
+        await conn.close()
+
+    if len(codes) == 1:
+        return codes[0]
+    if await get_ca_by_invite_code("123456"):
+        return "123456"
+    return None
+
+
+async def ensure_wa_client_linked(client_phone: str) -> str | None:
+    """
+    Make sure a WhatsApp sender is visible on the CA dashboard.
+    Links to DEFAULT_CA_INVITE_CODE / sole CA / demo 123456 when unassigned.
+    Returns the invite code used, or None if already linked / no CA available.
+    """
+    phone = "".join(c for c in str(client_phone or "") if c.isdigit())
+    if not phone:
+        return None
+    if await client_has_ca_link(phone):
+        return None
+    invite = await resolve_default_ca_invite()
+    if not invite:
+        logger.warning(
+            "WhatsApp client %s has no CA link and no default CA — dashboard will show empty for CA logins",
+            phone,
+        )
+        return None
+    await link_client_to_ca(phone, invite)
+    logger.info("Auto-linked WhatsApp client %s → CA invite %s", phone, invite)
+    return invite
+
+
 # ── WhatsApp message deduplication ────────────────────────────────────────────
 async def is_message_processed(message_id: str) -> bool:
     """Return True if this WhatsApp message ID was already handled."""
