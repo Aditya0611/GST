@@ -63,7 +63,7 @@
           }
         }
       </script>
-    <link rel="stylesheet" href="/static/dashboard-ledger.css?v=20260914-hover-all"/>
+    <link rel="stylesheet" href="/static/dashboard-ledger.css?v=20260915-month-cal"/>
     <style>
         :root {
             /* Ledger tokens (mirrored in dashboard-ledger.css) */
@@ -1142,13 +1142,15 @@
             position: absolute;
             top: calc(100% + 8px);
             left: 0;
-            z-index: 80;
-            width: 280px;
+            z-index: 120;
+            width: 288px;
             padding: 14px;
-            border-radius: 12px;
-            background: #121820;
-            border: 1px solid var(--line, #2A3848);
-            box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+            border-radius: 10px;
+            background: #FFFEFA;
+            border: 1px solid #D8CFC0;
+            box-shadow: 0 16px 36px rgba(23, 35, 59, 0.16);
+            color: #17233B;
+            font-family: "IBM Plex Sans", system-ui, sans-serif;
         }
         .month-cal-popover.open { display: block; }
         .month-cal-header {
@@ -1158,73 +1160,77 @@
             margin-bottom: 12px;
         }
         .month-cal-header .year-label {
-            font-size: 14px;
-            font-weight: 800;
-            color: var(--text);
-            letter-spacing: 0.02em;
+            font-family: "Source Serif 4", Georgia, serif;
+            font-size: 16px;
+            font-weight: 600;
+            color: #17233B;
+            letter-spacing: 0;
         }
         .month-cal-nav {
             width: 32px; height: 32px;
             border-radius: 8px;
-            border: 1px solid var(--line, #2A3848);
-            background: transparent;
-            color: var(--muted);
+            border: 1px solid #D8CFC0;
+            background: #FFFEFA;
+            color: #17233B;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
         }
         .month-cal-nav:hover {
-            color: var(--text);
-            border-color: rgba(54,214,174,0.45);
-            background: rgba(54,214,174,0.08);
+            color: #9C7A3C;
+            border-color: #9C7A3C;
+            background: #F8F1E4;
         }
         .month-cal-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 6px;
+            gap: 8px;
         }
         .month-cal-grid button {
             height: 36px;
             border-radius: 8px;
-            border: 1px solid transparent;
-            background: rgba(255,255,255,0.03);
-            color: var(--text);
-            font-size: 12px;
-            font-weight: 700;
+            border: 1px solid #E6DFD2;
+            background: #F6F3EC;
+            color: #17233B;
+            font-size: 13px;
+            font-weight: 600;
             cursor: pointer;
         }
         .month-cal-grid button:hover {
-            border-color: rgba(54,214,174,0.4);
-            background: rgba(54,214,174,0.1);
+            border-color: #9C7A3C;
+            background: #F8F1E4;
+            color: #17233B;
         }
         .month-cal-grid button.is-selected {
-            background: rgba(54,214,174,0.18);
-            border-color: rgba(54,214,174,0.55);
-            color: #36D6AE;
+            background: #17233B;
+            border-color: #17233B;
+            color: #FFFEFA;
         }
         .month-cal-grid button.is-current:not(.is-selected) {
-            border-color: rgba(255,255,255,0.12);
+            border-color: #9C7A3C;
+            box-shadow: inset 0 0 0 1px rgba(156, 122, 60, 0.25);
         }
         .month-cal-footer {
             margin-top: 12px;
             padding-top: 10px;
-            border-top: 1px solid var(--line, #2A3848);
+            border-top: 1px solid #E6DFD2;
         }
         .month-cal-footer button {
             width: 100%;
             height: 34px;
             border-radius: 8px;
-            border: 1px solid var(--line, #2A3848);
-            background: transparent;
-            color: var(--muted);
+            border: 1px solid #D8CFC0;
+            background: #FFFEFA;
+            color: #17233B;
             font-size: 12px;
-            font-weight: 700;
+            font-weight: 600;
             cursor: pointer;
         }
         .month-cal-footer button:hover {
-            color: var(--text);
-            border-color: rgba(54,214,174,0.4);
+            color: #17233B;
+            border-color: #9C7A3C;
+            background: #F8F1E4;
         }
 
         .workflow-guide {
@@ -2291,14 +2297,14 @@
                 <span class="material-symbols-outlined header-client-chevron" aria-hidden="true">expand_more</span>
             </div>
 
-            <div class="header-control month-picker-wrap" id="month-picker-wrap" title="Filter by invoice month">
-                <span class="material-symbols-outlined text-[16px] text-primary shrink-0">calendar_today</span>
+            <div class="header-control month-picker-wrap" id="month-picker-wrap" aria-label="Filter by invoice month">
+                <span class="material-symbols-outlined text-[16px] text-primary shrink-0" aria-hidden="true">calendar_today</span>
                 <span class="month-display" id="month-picker-display">Loading…</span>
-                <span class="material-symbols-outlined month-chevron">expand_more</span>
+                <span class="material-symbols-outlined month-chevron" aria-hidden="true">expand_more</span>
                 <button type="button" id="month-picker-clear" title="Show all months" class="icon-btn shrink-0" aria-label="Clear month filter">
                     <span class="material-symbols-outlined text-[16px]">close</span>
                 </button>
-                <div class="month-cal-popover" id="month-cal-popover" role="dialog" aria-label="Choose month">
+                <div class="month-cal-popover" id="month-cal-popover" role="dialog" aria-label="Filter by invoice month">
                     <div class="month-cal-header">
                         <button type="button" class="month-cal-nav" id="month-cal-prev" aria-label="Previous year">
                             <span class="material-symbols-outlined text-[18px]">chevron_left</span>
