@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="/static/ga.js" defer></script>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Checkout · Taxova.ai</title>
+  <link rel="icon" href="/favicon.ico" sizes="any"/>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --paper: #F3EDE3;
+      --slip: #FFFDF8;
+      --ink: #1C1528;
+      --mist: #6A6258;
+      --line: #D6CBB8;
+      --violet: #4A2C7A;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+    }
+    .wrap {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 32px 20px 48px;
+    }
+    a.back {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--mist);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 28px;
+    }
+    a.back:hover { color: var(--violet); }
+    .card {
+      background: var(--slip);
+      border: 1px solid var(--line);
+      padding: 28px 24px;
+      box-shadow: 0 16px 36px -28px rgba(28, 21, 40, 0.28);
+    }
+    .eyebrow {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--violet);
+      margin: 0 0 8px;
+    }
+    h1 {
+      font-family: "Space Grotesk", system-ui, sans-serif;
+      font-size: 1.75rem;
+      letter-spacing: -0.03em;
+      margin: 0 0 6px;
+    }
+    .who { color: var(--mist); font-size: 14px; margin: 0 0 16px; }
+    .amt {
+      font-family: "Space Grotesk", system-ui, sans-serif;
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.04em;
+      margin: 0 0 20px;
+    }
+    .amt span { font-size: 0.95rem; color: var(--mist); font-weight: 600; }
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin: 14px 0 6px;
+    }
+    input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      font: inherit;
+      color: var(--ink);
+    }
+    input:focus {
+      outline: none;
+      border-color: rgba(74, 44, 122, 0.45);
+      box-shadow: 0 0 0 3px rgba(74, 44, 122, 0.12);
+    }
+    .btn {
+      display: inline-flex;
+      width: 100%;
+      justify-content: center;
+      align-items: center;
+      margin-top: 22px;
+      padding: 13px 18px;
+      border: none;
+      border-radius: 10px;
+      background: var(--violet);
+      color: #fff;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+    .btn:hover:not(:disabled) { filter: brightness(1.06); }
+    .note {
+      margin-top: 14px;
+      font-size: 12.5px;
+      color: var(--mist);
+      line-height: 1.45;
+    }
+    .err {
+      display: none;
+      margin-top: 12px;
+      padding: 10px 12px;
+      background: #F6E4E0;
+      color: #8C2F2F;
+      border-radius: 8px;
+      font-size: 13px;
+    }
+    .err.show { display: block; }
+    .success {
+      display: none;
+    }
+    .success.show { display: block; }
+    .form-block.hide { display: none; }
+    .code-box {
+      margin: 16px 0;
+      padding: 14px;
+      background: #F8F1E4;
+      border: 1px dashed var(--line);
+      border-radius: 10px;
+      font-family: ui-monospace, monospace;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    ul.feats {
+      margin: 0 0 8px;
+      padding: 0;
+      list-style: none;
+    }
+    ul.feats li {
+      padding: 6px 0 6px 1.2rem;
+      position: relative;
+      font-size: 14px;
+      border-bottom: 1px dashed var(--line);
+    }
+    ul.feats li:last-child { border-bottom: 0; }
+    ul.feats li::before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: var(--violet);
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <a class="back" href="/#pricing">← Back to pricing</a>
+
+    <div class="card">
+      <div id="form-block" class="form-block">
+        <p class="eyebrow" id="plan-eyebrow">Checkout</p>
+        <h1 id="plan-name">Loading…</h1>
+        <p class="who" id="plan-who"></p>
+        <p class="amt" id="plan-amt"></p>
+        <ul class="feats" id="plan-feats"></ul>
+
+        <form id="pay-form">
+          <label for="firm_name">Firm / business name</label>
+          <input id="firm_name" name="firm_name" required maxlength="120" placeholder="Your CA firm or business"/>
+
+          <label for="contact_name">Your name</label>
+          <input id="contact_name" name="contact_name" required maxlength="80" placeholder="Full name"/>
+
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" required maxlength="120" placeholder="you@firm.com"/>
+
+          <label for="phone">WhatsApp / mobile</label>
+          <input id="phone" name="phone" required maxlength="15" placeholder="91XXXXXXXXXX"/>
+
+          <button class="btn" type="submit" id="pay-btn">Pay securely with Razorpay</button>
+        </form>
+        <div class="err" id="err"></div>
+        <p class="note">
+          Live payment via Razorpay (INR). After payment you get a CA invite code and password
+          to open the dashboard. GST on subscription may be billed separately.
+        </p>
+      </div>
+
+      <div class="success" id="success">
+        <p class="eyebrow">Payment received</p>
+        <h1>You’re live on Taxova</h1>
+        <p class="who" id="success-plan"></p>
+        <div class="code-box" id="creds"></div>
+        <p class="note">Save these credentials. Change the password after first login (Settings).</p>
+        <a class="btn" href="/dashboard" style="text-decoration:none;margin-top:8px">Open CA dashboard</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <script>
+    const params = new URLSearchParams(location.search);
+    let planId = (params.get("plan") || "growth").toLowerCase();
+    if (planId !== "starter" && planId !== "growth") planId = "growth";
+
+    const errEl = document.getElementById("err");
+    const payBtn = document.getElementById("pay-btn");
+
+    function showErr(msg) {
+      errEl.textContent = msg || "Something went wrong.";
+      errEl.classList.add("show");
+    }
+    function clearErr() {
+      errEl.classList.remove("show");
+      errEl.textContent = "";
+    }
+
+    async function loadPlan() {
+      const res = await fetch("/api/billing/plans");
+      const data = await res.json();
+      const plan = (data.plans || []).find((p) => p.id === planId);
+      if (!plan) {
+        showErr("Unknown plan.");
+        return null;
+      }
+      if (!data.razorpay_configured) {
+        showErr("Payments are not configured yet. Add Razorpay live keys on the server.");
+        payBtn.disabled = true;
+      }
+      document.getElementById("plan-eyebrow").textContent = plan.name;
+      document.getElementById("plan-name").textContent = plan.tagline;
+      document.getElementById("plan-who").textContent = plan.who;
+      document.getElementById("plan-amt").innerHTML =
+        plan.amount_display + ' <span>/ ' + plan.period + "</span>";
+      document.getElementById("plan-feats").innerHTML = (plan.features || [])
+        .map((f) => "<li>" + f + "</li>")
+        .join("");
+      return plan;
+    }
+
+    document.getElementById("pay-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      clearErr();
+      payBtn.disabled = true;
+      payBtn.textContent = "Creating order…";
+      const body = {
+        plan: planId,
+        firm_name: document.getElementById("firm_name").value.trim(),
+        contact_name: document.getElementById("contact_name").value.trim(),
+        email: document.getElementById("email").value.trim(),
+        phone: document.getElementById("phone").value.trim(),
+      };
+      try {
+        const res = await fetch("/api/billing/create-order", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Could not create order");
+
+        const rzp = new Razorpay({
+          key: data.key_id,
+          amount: data.amount,
+          currency: data.currency || "INR",
+          name: "Taxova.ai",
+          description: data.plan_name + " plan",
+          order_id: data.order_id,
+          prefill: {
+            name: body.contact_name,
+            email: body.email,
+            contact: body.phone,
+          },
+          theme: { color: "#4A2C7A" },
+          handler: async function (response) {
+            payBtn.textContent = "Confirming payment…";
+            try {
+              const vres = await fetch("/api/billing/verify", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                }),
+              });
+              const vdata = await vres.json();
+              if (!vres.ok) throw new Error(vdata.detail || "Verification failed");
+              document.getElementById("form-block").classList.add("hide");
+              document.getElementById("success").classList.add("show");
+              document.getElementById("success-plan").textContent =
+                vdata.plan_name + " · " + vdata.amount_display + " / month";
+              document.getElementById("creds").innerHTML =
+                "CA invite code: <strong>" + vdata.invite_code + "</strong><br/>" +
+                "Password: <strong>" + vdata.password + "</strong><br/>" +
+                "Firm: " + (vdata.firm_name || "");
+            } catch (err) {
+              showErr(err.message || String(err));
+              payBtn.disabled = false;
+              payBtn.textContent = "Pay securely with Razorpay";
+            }
+          },
+        });
+        rzp.on("payment.failed", function (resp) {
+          showErr((resp.error && resp.error.description) || "Payment failed.");
+          payBtn.disabled = false;
+          payBtn.textContent = "Pay securely with Razorpay";
+        });
+        rzp.open();
+        payBtn.disabled = false;
+        payBtn.textContent = "Pay securely with Razorpay";
+      } catch (err) {
+        showErr(err.message || String(err));
+        payBtn.disabled = false;
+        payBtn.textContent = "Pay securely with Razorpay";
+      }
+    });
+
+    loadPlan().catch((e) => showErr(e.message || String(e)));
+  </script>
+</body>
+</html>

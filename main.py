@@ -39,6 +39,9 @@ import sandbox
 import itr
 import document_router
 import ais as ais_mod
+import billing
+import secrets
+import string
 
 # ── Load config ───────────────────────────────────────────────────────────────
 WEBHOOK_VERIFY_TOKEN = os.getenv("WEBHOOK_VERIFY_TOKEN", "")
@@ -967,6 +970,207 @@ async def get_onboarding():
     if not os.path.exists(onboarding_path):
         return HTMLResponse("<h1>Onboarding page not found.</h1>", status_code=404)
     return FileResponse(onboarding_path)
+
+
+@app.get("/checkout", response_class=HTMLResponse)
+async def get_checkout():
+    """Razorpay live checkout for Starter / Growth plans."""
+    path = os.path.join("static", "checkout.html")
+    if not os.path.exists(path):
+        return HTMLResponse("<h1>Checkout page not found.</h1>", status_code=404)
+    return FileResponse(path)
+
+
+@app.get("/api/billing/plans")
+async def api_billing_plans():
+    """Public plan catalog for checkout UI."""
+    return {
+        "plans": billing.list_plans(),
+        "razorpay_configured": billing.razorpay_configured(),
+    }
+
+
+@app.post("/api/billing/create-order")
+async def api_billing_create_order(request: Request):
+    """Create a Razorpay order for the selected plan (live or test keys)."""
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="JSON body required")
+
+    plan_id = str(body.get("plan") or "").strip().lower()
+    plan = billing.get_plan(plan_id)
+    if not plan:
+        raise HTTPException(status_code=400, detail="Invalid plan. Use starter or growth.")
+
+    firm_name = str(body.get("firm_name") or "").strip()
+    contact_name = str(body.get("contact_name") or "").strip()
+    email = str(body.get("email") or "").strip().lower()
+    phone = "".join(c for c in str(body.get("phone") or "") if c.isdigit())
+
+    if not firm_name or not contact_name or not email or len(phone) < 10:
+        raise HTTPException(
+            status_code=400,
+            detail="firm_name, contact_name, email, and a valid phone are required.",
+        )
+    if len(phone) == 10:
+        phone = "91" + phone
+
+    if not billing.razorpay_configured():
+        raise HTTPException(
+            status_code=503,
+            detail="Razorpay is not configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET.",
+        )
+
+    receipt = f"txv_{plan_id}_{secrets.token_hex(4)}"
+    try:
+        order = billing.create_razorpay_order(
+            amount_paise=int(plan["amount_paise"]),
+            receipt=receipt,
+            notes={
+                "plan": plan_id,
+                "firm_name": firm_name[:80],
+                "email": email[:80],
+                "phone": phone[:20],
+            },
+        )
+    except Exception as e:
+        logger.exception("Razorpay create order failed")
+        raise HTTPException(status_code=502, detail=str(e)) from e
+
+    razorpay_order_id = order.get("id")
+    if not razorpay_order_id:
+        raise HTTPException(status_code=502, detail="Razorpay did not return an order id.")
+
+    await db.create_billing_order(
+        plan_id=plan_id,
+        amount_paise=int(plan["amount_paise"]),
+        firm_name=firm_name,
+        contact_name=contact_name,
+        email=email,
+        phone=phone,
+        receipt=receipt,
+        razorpay_order_id=razorpay_order_id,
+    )
+
+    return {
+        "order_id": razorpay_order_id,
+        "amount": int(plan["amount_paise"]),
+        "currency": "INR",
+        "key_id": billing.get_razorpay_key_id(),
+        "plan": plan_id,
+        "plan_name": plan["name"],
+        "amount_display": plan["amount_display"],
+    }
+
+
+@app.post("/api/billing/verify")
+async def api_billing_verify(request: Request):
+    """
+    Verify Razorpay payment signature, create firm + first CA, activate plan.
+    Returns one-time invite credentials for dashboard login.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="JSON body required")
+
+    order_id = str(body.get("razorpay_order_id") or "").strip()
+    payment_id = str(body.get("razorpay_payment_id") or "").strip()
+    signature = str(body.get("razorpay_signature") or "").strip()
+    if not order_id or not payment_id or not signature:
+        raise HTTPException(status_code=400, detail="Missing Razorpay payment fields.")
+
+    if not billing.verify_payment_signature(
+        order_id=order_id, payment_id=payment_id, signature=signature
+    ):
+        raise HTTPException(status_code=400, detail="Invalid payment signature.")
+
+    row = await db.get_billing_order_by_razorpay_id(order_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Order not found.")
+    if row.get("status") == "paid" and row.get("invite_code"):
+        plan = billing.get_plan(row.get("plan_id") or "")
+        return {
+            "ok": True,
+            "already_processed": True,
+            "plan": row.get("plan_id"),
+            "plan_name": (plan or {}).get("name"),
+            "amount_display": (plan or {}).get("amount_display"),
+            "firm_name": row.get("firm_name"),
+            "invite_code": row.get("invite_code"),
+            "password": None,
+            "message": "Payment already activated. Use your saved invite code to log in.",
+        }
+
+    plan = billing.get_plan(row.get("plan_id") or "")
+    if not plan:
+        raise HTTPException(status_code=400, detail="Order has an unknown plan.")
+
+    # Unique 6-digit invite
+    invite_code = None
+    for _ in range(12):
+        candidate = f"{secrets.randbelow(1_000_000):06d}"
+        if not await db.get_ca_by_invite_code(candidate):
+            invite_code = candidate
+            break
+    if not invite_code:
+        raise HTTPException(status_code=500, detail="Could not allocate invite code.")
+
+    alphabet = string.ascii_letters + string.digits
+    password = "Txv-" + "".join(secrets.choice(alphabet) for _ in range(10))
+
+    try:
+        firm = await db.create_firm(row.get("firm_name") or "Taxova Firm")
+        firm_id = int(firm["id"])
+        await db.activate_firm_plan(
+            firm_id,
+            plan_tier=plan["id"],
+            client_cap=plan.get("client_cap"),
+            seat_limit=plan.get("seat_limit"),
+            monthly_invoice_cap=plan.get("monthly_invoice_cap"),
+        )
+        await db.create_ca(
+            invite_code=invite_code,
+            name=row.get("contact_name") or "CA Admin",
+            firm_id=firm_id,
+            firm_name=firm.get("name"),
+            phone=row.get("phone"),
+            email=row.get("email"),
+            password=password,
+        )
+        await db.mark_billing_order_paid(
+            razorpay_order_id=order_id,
+            razorpay_payment_id=payment_id,
+            firm_id=firm_id,
+            invite_code=invite_code,
+        )
+    except Exception as e:
+        logger.exception("Billing activation failed after payment")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Payment received but activation failed — contact support with payment id {payment_id}. ({e})",
+        ) from e
+
+    await db.insert_security_audit_log(
+        actor=row.get("email") or "checkout",
+        action="billing_payment_activated",
+        resource_type="firm",
+        resource_id=str(firm_id),
+        detail=json.dumps({"plan": plan["id"], "payment_id": payment_id}),
+        ip=request.client.host if request.client else None,
+    )
+
+    return {
+        "ok": True,
+        "plan": plan["id"],
+        "plan_name": plan["name"],
+        "amount_display": plan["amount_display"],
+        "firm_id": firm_id,
+        "firm_name": firm.get("name"),
+        "invite_code": invite_code,
+        "password": password,
+    }
 
 
 @app.get("/success", response_class=HTMLResponse)

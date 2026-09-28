@@ -269,6 +269,7 @@ async def init_db():
         await _ensure_itr_schema(conn)
         await _ensure_tenancy_schema(conn)
         await _ensure_pricing_schema(conn)
+        await _ensure_billing_orders_schema(conn)
         await _ensure_extraction_edit_schema(conn)
         await _bootstrap_ca_passwords(conn)
         logger.info("Database initialized successfully.")
@@ -1016,6 +1017,235 @@ async def _ensure_pricing_schema(conn) -> None:
             await conn.commit()
     except Exception:
         pass
+
+
+async def _ensure_billing_orders_schema(conn) -> None:
+    """Track Razorpay checkout orders for live plan purchases."""
+    if IS_POSTGRES:
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS billing_orders (
+                id SERIAL PRIMARY KEY,
+                plan_id VARCHAR(32) NOT NULL,
+                amount_paise INTEGER NOT NULL,
+                currency VARCHAR(8) DEFAULT 'INR',
+                status VARCHAR(32) DEFAULT 'created',
+                razorpay_order_id VARCHAR(64) UNIQUE,
+                razorpay_payment_id VARCHAR(64),
+                firm_id INTEGER,
+                firm_name TEXT,
+                contact_name TEXT,
+                email TEXT,
+                phone TEXT,
+                invite_code VARCHAR(6),
+                receipt VARCHAR(64),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                paid_at TIMESTAMP
+            )
+            """
+        )
+    else:
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS billing_orders (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                plan_id TEXT NOT NULL,
+                amount_paise INTEGER NOT NULL,
+                currency TEXT DEFAULT 'INR',
+                status TEXT DEFAULT 'created',
+                razorpay_order_id TEXT UNIQUE,
+                razorpay_payment_id TEXT,
+                firm_id INTEGER,
+                firm_name TEXT,
+                contact_name TEXT,
+                email TEXT,
+                phone TEXT,
+                invite_code TEXT,
+                receipt TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                paid_at TEXT
+            )
+            """
+        )
+        await conn.commit()
+
+
+async def create_billing_order(
+    *,
+    plan_id: str,
+    amount_paise: int,
+    firm_name: str,
+    contact_name: str,
+    email: str,
+    phone: str,
+    receipt: str,
+    razorpay_order_id: str,
+) -> dict:
+    conn = await get_connection()
+    try:
+        if IS_POSTGRES:
+            row = await conn.fetchrow(
+                """
+                INSERT INTO billing_orders (
+                    plan_id, amount_paise, status, razorpay_order_id,
+                    firm_name, contact_name, email, phone, receipt
+                ) VALUES ($1,$2,'created',$3,$4,$5,$6,$7,$8)
+                RETURNING *
+                """,
+                plan_id,
+                amount_paise,
+                razorpay_order_id,
+                firm_name,
+                contact_name,
+                email,
+                phone,
+                receipt,
+            )
+            return dict(row)
+        await conn.execute(
+            """
+            INSERT INTO billing_orders (
+                plan_id, amount_paise, status, razorpay_order_id,
+                firm_name, contact_name, email, phone, receipt
+            ) VALUES (?,?, 'created', ?,?,?,?,?,?)
+            """,
+            (
+                plan_id,
+                amount_paise,
+                razorpay_order_id,
+                firm_name,
+                contact_name,
+                email,
+                phone,
+                receipt,
+            ),
+        )
+        await conn.commit()
+        conn.row_factory = sqlite3.Row
+        cur = await conn.execute(
+            "SELECT * FROM billing_orders WHERE razorpay_order_id = ?",
+            (razorpay_order_id,),
+        )
+        return dict(await cur.fetchone())
+    finally:
+        await conn.close()
+
+
+async def get_billing_order_by_razorpay_id(razorpay_order_id: str) -> dict | None:
+    conn = await get_connection()
+    try:
+        if IS_POSTGRES:
+            row = await conn.fetchrow(
+                "SELECT * FROM billing_orders WHERE razorpay_order_id = $1",
+                razorpay_order_id,
+            )
+            return dict(row) if row else None
+        conn.row_factory = sqlite3.Row
+        cur = await conn.execute(
+            "SELECT * FROM billing_orders WHERE razorpay_order_id = ?",
+            (razorpay_order_id,),
+        )
+        row = await cur.fetchone()
+        return dict(row) if row else None
+    finally:
+        await conn.close()
+
+
+async def mark_billing_order_paid(
+    *,
+    razorpay_order_id: str,
+    razorpay_payment_id: str,
+    firm_id: int,
+    invite_code: str,
+) -> None:
+    conn = await get_connection()
+    try:
+        if IS_POSTGRES:
+            await conn.execute(
+                """
+                UPDATE billing_orders
+                SET status = 'paid',
+                    razorpay_payment_id = $1,
+                    firm_id = $2,
+                    invite_code = $3,
+                    paid_at = CURRENT_TIMESTAMP
+                WHERE razorpay_order_id = $4
+                """,
+                razorpay_payment_id,
+                firm_id,
+                invite_code,
+                razorpay_order_id,
+            )
+        else:
+            await conn.execute(
+                """
+                UPDATE billing_orders
+                SET status = 'paid',
+                    razorpay_payment_id = ?,
+                    firm_id = ?,
+                    invite_code = ?,
+                    paid_at = CURRENT_TIMESTAMP
+                WHERE razorpay_order_id = ?
+                """,
+                (razorpay_payment_id, firm_id, invite_code, razorpay_order_id),
+            )
+            await conn.commit()
+    finally:
+        await conn.close()
+
+
+async def activate_firm_plan(
+    firm_id: int,
+    *,
+    plan_tier: str,
+    client_cap: int | None,
+    seat_limit: int | None,
+    monthly_invoice_cap: int | None,
+) -> None:
+    """Set firm to paid active with plan caps."""
+    conn = await get_connection()
+    try:
+        if IS_POSTGRES:
+            await conn.execute(
+                """
+                UPDATE firms
+                SET plan_tier = $1,
+                    billing_model = 'per_firm',
+                    billing_status = 'active',
+                    client_cap = $2,
+                    seat_limit = $3,
+                    monthly_invoice_cap = $4
+                WHERE id = $5
+                """,
+                plan_tier,
+                client_cap,
+                seat_limit,
+                monthly_invoice_cap,
+                firm_id,
+            )
+        else:
+            await conn.execute(
+                """
+                UPDATE firms
+                SET plan_tier = ?,
+                    billing_model = 'per_firm',
+                    billing_status = 'active',
+                    client_cap = ?,
+                    seat_limit = ?,
+                    monthly_invoice_cap = ?
+                WHERE id = ?
+                """,
+                (
+                    plan_tier,
+                    client_cap,
+                    seat_limit,
+                    monthly_invoice_cap,
+                    firm_id,
+                ),
+            )
+            await conn.commit()
+    finally:
+        await conn.close()
 
 
 # Fields that come from AI extraction — CA edits here = extraction error signal

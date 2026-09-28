@@ -1793,7 +1793,101 @@ tailwind.config = {
     margin: 0;
     width: 100%;
   }
-  #how, #product, #transform, #samples { scroll-margin-top: 88px; }
+  #how, #product, #transform, #samples, #pricing { scroll-margin-top: 88px; }
+
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+    margin-top: 2.75rem;
+    max-width: 52rem;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  @media (min-width: 768px) {
+    .pricing-grid { grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  }
+  .price-card {
+    position: relative;
+    background: var(--slip);
+    border: 1px solid var(--line);
+    padding: 28px 24px 26px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 16px 36px -28px rgba(28, 21, 40, 0.28);
+  }
+  .price-card.is-featured {
+    border-color: rgba(74, 44, 122, 0.35);
+    box-shadow:
+      4px 4px 0 rgba(74, 44, 122, 0.1),
+      0 20px 40px -24px rgba(28, 21, 40, 0.32);
+  }
+  .price-kicker {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--violet);
+    margin: 0 0 8px;
+  }
+  .price-card h3 {
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-size: 1.45rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    margin: 0;
+    color: var(--ink);
+  }
+  .price-who {
+    margin: 6px 0 0;
+    font-size: 14px;
+    color: var(--mist);
+  }
+  .price-amt {
+    margin: 18px 0 4px;
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-size: 2.15rem;
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    color: var(--ink);
+    line-height: 1;
+  }
+  .price-amt span {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--mist);
+    letter-spacing: 0;
+  }
+  .price-card ul {
+    list-style: none;
+    margin: 18px 0 22px;
+    padding: 0;
+    flex: 1;
+  }
+  .price-card ul li {
+    position: relative;
+    padding: 7px 0 7px 1.35rem;
+    font-size: 14.5px;
+    color: var(--ink);
+    border-bottom: 1px dashed var(--line);
+  }
+  .price-card ul li:last-child { border-bottom: 0; }
+  .price-card ul li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: var(--violet);
+    font-weight: 700;
+    font-size: 13px;
+  }
+  .price-note {
+    margin: 1.75rem auto 0;
+    max-width: 36rem;
+    text-align: center;
+    font-size: 13px;
+    color: var(--mist);
+    line-height: 1.5;
+  }
   main { position: relative; z-index: 1; }
 
   .footer-logo { height: auto; }
@@ -1968,6 +2062,7 @@ tailwind.config = {
       <nav class="site-nav">
         <a href="/#how">How it works</a>
         <a href="/#product">Product</a>
+        <a href="/#pricing">Pricing</a>
         <a href="/docs">Guide</a>
         <a href="/careers">Careers</a>
         <a href="/dashboard">CA login</a>
@@ -2276,6 +2371,56 @@ tailwind.config = {
     </div>
   </section>
 
+  <div class="page-shell"><hr class="section-rule"/></div>
+
+  <section id="pricing" class="py-20 md:py-28">
+    <div class="page-shell">
+      <div class="section-intro reveal text-center mx-auto">
+        <p class="eyebrow">Pricing</p>
+        <h2 class="section-h2 text-ink">Simple firm plans.</h2>
+        <p class="section-lead mx-auto">Per CA practice, not per WhatsApp bill. Start with one GSTIN or run a full client book.</p>
+      </div>
+
+      <div class="pricing-grid">
+        <article class="price-card reveal">
+          <p class="price-kicker">Starter</p>
+          <h3>Single business</h3>
+          <p class="price-who">1 GSTIN / WhatsApp client</p>
+          <p class="price-amt">₹999 <span>/ month</span></p>
+          <ul>
+            <li>Invoice photos &amp; PDFs on WhatsApp</li>
+            <li>AI extraction + ITC checks</li>
+            <li>Client CONFIRM / REJECT</li>
+            <li>CA dashboard for that GSTIN</li>
+            <li>Email support</li>
+          </ul>
+          <a href="/checkout?plan=starter" class="btn-ghost text-center">Get started</a>
+        </article>
+
+        <article class="price-card is-featured reveal" style="transition-delay:80ms">
+          <p class="price-kicker">Recommended</p>
+          <h3>Growth</h3>
+          <p class="price-who">CA firms &amp; growing practices</p>
+          <p class="price-amt">₹1,999 <span>/ month</span></p>
+          <ul>
+            <li>Everything in Starter</li>
+            <li>Multi-client CA dashboard</li>
+            <li>CA review / audit queue</li>
+            <li>GSTR-2B import / pull</li>
+            <li>GSTR-1 &amp; 3B draft exports</li>
+            <li>WhatsApp month-end nudges</li>
+            <li>Priority support</li>
+          </ul>
+          <a href="/checkout?plan=growth" class="btn-primary text-center justify-center">Choose Growth</a>
+        </article>
+      </div>
+      <p class="price-note">
+        Indicative INR. GST extra. Taxova prepares filing-ready data — returns are still filed on gst.gov.in.
+        Custom volume on request.
+      </p>
+    </div>
+  </section>
+
   <section class="py-16 md:py-24">
     <div class="page-shell">
       <div class="cta-band text-center reveal">
@@ -2339,6 +2484,7 @@ tailwind.config = {
         <ul class="footer-links">
           <li><a href="/#how">How it works</a></li>
           <li><a href="/#product">For CAs</a></li>
+          <li><a href="/#pricing">Pricing</a></li>
           <li><a href="/#samples">ITC outcomes</a></li>
           <li><a href="/docs">Guide</a></li>
           <li><a href="/onboarding">Get started</a></li>
